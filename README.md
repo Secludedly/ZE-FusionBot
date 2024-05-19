@@ -76,68 +76,60 @@ This bot unites the forks of various other developers - some new, some old, some
 </summary> <br />
 
 <p align="center">
-    <img width="49%" src="https://i.imgur.com/yLYCuAj.png" alt="apis"/>
+    <img width="49%" src="https://i.imgur.com/yLYCuAj.png" alt="img1"/>
 &nbsp;
-    <img width="49%" src="https://i.imgur.com/ShpbwW5.png" alt="data-models"/>
+    <img width="49%" src="https://i.imgur.com/ShpbwW5.png" alt="img2"/>
 </p>
+<p align="center">
+    <img width="49%" src="https://i.imgur.com/7qhL9Ys.png" alt="img3"/>
+&nbsp;
+    <img width="49%" src="https://i.imgur.com/N4QS3e8.png" alt="img4"/>
 </p>
-
+<p align="center">
+    <img width="80%" src="https://i.imgur.com/mHvBUcL.png" alt="img5"/>
+</p>
 </details>
 
-## Usage 
 
-**trade** = Initiate a Link Trade.
 
-**hidetrade** = Initiate a Link Trade without displaying your Pokemon's embed information in the channel.
+<details open>
+<summary>
+ GIFS
+</summary> <br />
 
-**clone** = Initiate a Clone Trade.
+<p align="center">
+    <img width="49%" src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/sbremotestart.gif" alt="gif1"/>
+&nbsp;
+    <img width="49%" src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/sdvrstart.gif" alt="gif2"/>
+</p>
+<p align="center">
+    <img width="49%" src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/batch.gif" alt="gif3"/>
+&nbsp;
+    <img width="49%" src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/batch2.gif" alt="gif4"/>
+</p>
+<p align="center">
+    <img width="80%" src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/video.gif" alt="gif5"/>
+</p>
+</details>
 
-**convert** = Convert Showdown Format to PKM file, legalizing a Pokemon set.
 
-**dump** = The bot DMs you PKM files of the Pokemon you show it.
 
-**seed** = Check for seeds in supported games.
+## BASIC USE COMMANDS
+`trade = Initiate a Link Trade.`
+`hidetrade = Initiate a Link Trade without displaying your Pokemon's embed information in the channel.`
+`tradeuser <Ping User> = Trades a PKM file to a mentioned user.`
+`clone = Initiate a Clone Trade.`
+`dump = The bot DMs you PKM files of the Pokemon you show it.`
+`seed = Check for seeds in supported games.`
+`egg <Showdown Format> = Trade for an egg.`
+`it <Held Item> = Trade an item.`
+`fixot = Scrubs the URL from an admon's nickname and sends you a clean copy.`
+`convert = Convert Showdown Format to PKM file, legalizing a Pokemon set in the process.`
+`lcv = Check if a PKM file is legal.`
+`legalize = Attempts to legalize a PKM file.`
 
-**lcv** = Check if a PKM file is legal.
-
-**legalize** = Attempts to legalize a PKM file.
-
-**qc** = Removes you from a queue.
-
-**qs** = Checks position in the queue.
-
-**egg <Showdown Format>** = Trade for an egg.
-
-**it <Held Item>** = Trade an item.
-
-**fixot** = Scrubs the URL from an admon's nickname and sends you a clean copy.
-
-**tradeuser** = Trades a file to a mentioned user.
-
-**status** = Current generalized bot status.
-
-**info** = Info about the bot.
-
-**me** = Get a mystery egg! All shiny, 6IV, and have their HA.
-
-**brl <species name> <page number>** = List all pre-made Battle-Ready Pokemon for trade.
-
-**le <species name> <page number>** = List all Event Pokemon for trade.
-
-**pokepaste <URL>** = Gen a Pokemon team from a PokePaste URL.
-
-**rt** = DMs you a zip file of a random VGC team, with info about it.
-- *You can trade the actual zip file with $btz.*
-
-**srp <game> <page>** = The user will obtain a list of valid events for each game.
-- *srp commands: gen9, bdsp, pla, swsh, gen7, gen6, gen5, gen4, gen3.*
-
-**dt <LinkCode> <IVToBe0> <Language> <Nature>** = Trades you a Ditto.
-- *Example: $dt 22222222 ATK Japanese Timid*
-
-**hr** = View, trade, and download legal HOME-Ready files for transfer.
-
-## Batch Trading
+## BATCH TRADING
+`btz = Place up to 6 files into a .zip archive and trade it.`
 ```c#
 bt
 Showdown Template
@@ -147,4 +139,61 @@ Showdown Template
 Showdown Template
 ```
 
-**btz** = Place up to 6 files into a .zip archive and trade it.
+## STATUS COMMANDS
+`status = Current bot status.`
+`info = Info about the bot.`
+`help = Brings up the full list of bot options, with descriptions.`
+
+## TRADE MANAGEMENT
+`dtc = Delete current Link Trade Code.`
+`atc <00000000> = Assign a new, personal use Link Trade Code.`
+`qc = Removes you from a queue.`
+`qs = Checks position in the queue.`
+
+## ENHANCED TRADE FEATURES
+`me = Get a mystery egg! All shiny, 6IV, and have their Hidden Ability.`
+`brl <species name> <page number> = List all pre-made Battle-Ready Pokemon for trade.`
+`le <species name> <page number> = List all Event Pokemon for trade.`
+`pp <URL> = Gen a Pokemon team from a PokePaste URL.`
+`hr = View, trade, and download legal HOME-Ready files for transfer.`
+`rt = DMs you a zip file of a random VGC team, with info about it.`
+- You can trade the actual zip file with the btz command.
+`srp <game> <page> = The user will obtain a list of valid events for each game.`
+- srp commands: gen9, bdsp, pla, swsh, gen7, gen6, gen5, gen4, gen3.
+`dt <LinkCode> <IVToBe0> <Language> <Nature> = Trades you a Ditto.`
+- Example: $dt 22222222 ATK Japanese Timid
+
+## BOT MANAGEMENT
+`kill = Terminates the entire bot.`
+`previoususersummary = Prints a list of previously encountered users.`
+`forgetuser <ID> = Forgets users that were previously encountered.`
+`ql = Lists everyone in a queue.`
+`tl = Lists everyone in the Trade queue.`
+`cl = Lists everyone in the Clone queue.`
+`dl = Lists everyone in the Dump queue.`
+`fl = Lists everyone in the FixOT queue.`
+`sl = Lists everyone in the Seed queue.`
+
+## SWITCH MANAGEMENT
+`screenon = Turns your Switch screen on.`
+`screenoff = Turns your Switch screen off.`
+`sysdvr = Opens SysDVR to view live video of your Switch, with setup instructions.`
+`sbr = Opens SysBotRemote, a GUI that emulates buttons presses on the Switch, with instructions.`
+`video = Shows a video gif of your current Switch screen.`
+`peek = Shows an image of your current Switch screen.`
+
+## PERMISSIONS
+`blacklistid <ID> = Blaclists a specified user in or out of your server.`
+`unblacklistid <ID> = Removes blacklisting of a specified user in or out of your server.`
+`blacklistserver <ID> = Blacklists a specified server from using the bot.`
+`unblacklistserver <ID> = Removes blacklisting of a specific server.`
+`banid <ID> = Bans a specified user.`
+`unbanid <ID> = Unbans a specified user.`
+
+## MISC FEATURES
+`setavatar = Sets the bot's avatar to an animated GIF.`
+`hi = Say hi to the bot and it'll respond with something the bot owner's can customize.`
+`joke = Tells a random joke. It's pointless and silly. Probably not even funny.`
+`say = Sends a message as the bot to a channel.`
+`dm = Sends a message as the bot to a user's DM.`
+`ping = Makes the bot respond, indicating that it is running.`
