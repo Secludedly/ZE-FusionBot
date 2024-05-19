@@ -58,7 +58,7 @@ public class CloneModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
 
         await QueueHelper<T>.AddToQueueAsync(Context, tradeCode == 0 ? Info.GetRandomTradeCode(userID) : tradeCode, Context.User.Username, sig, new T(), PokeRoutineType.Clone, PokeTradeType.Clone, Context.User, false, 1, 1, false, false, lgcode);
 
-        var confirmationMessage = await ReplyAsync("Processing your clone request...").ConfigureAwait(false);
+        var confirmationMessage = await ReplyAsync("").ConfigureAwait(false);
 
         await Task.Delay(2000).ConfigureAwait(false);
 
