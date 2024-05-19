@@ -161,7 +161,7 @@ Showdown Template
 `srp <game> <page>` // The user will obtain a list of valid events for each game. <br />
 — **srp commands:** *gen9, bdsp, pla, swsh, gen7, gen6, gen5, gen4, gen3.* <br />
 `dt <LinkCode> <IVToBe0> <Language> <Nature>` // Trades you a Ditto. <br />
-— Example: $dt 22222222 ATK Japanese Timid <br />
+— **Example:** *dt 22222222 ATK Japanese Timid.* <br />
 
 ## BOT MANAGEMENT
 `kill` // Terminates the entire bot. <br />
