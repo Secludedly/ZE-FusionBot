@@ -23,13 +23,13 @@
 
 
 <p align="center">
-    ![gif1](https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/hub.gif)
+    <img src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/hub.gif">
 </p>
 <p align="center">
-    ![gif2](https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/modes.gif)
+    <img src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/modes.gif">
 </p>
 <p align="center">
-    ![gif3](https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/themes.gif)
+    <img src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/themes.gif">
 </p>
 
 
