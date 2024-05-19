@@ -23,13 +23,13 @@
 
 
 <p align="center">
-    ![gif1](https://i.imgur.com/vvaZFdG.gif" alt="dashboard1)
+    ![gif1](https://i.imgur.com/vvaZFdG.gif)
 </p>
 <p align="center">
-    ![gif2](https://i.imgur.com/tZ10x1h.gif" alt="dashboard2")
+    ![gif2](https://i.imgur.com/tZ10x1h.gif)
 </p>
 <p align="center">
-    ![gif3](https://i.imgur.com/axDpP2X.gif" alt="dashboard3")
+    ![gif3](https://i.imgur.com/axDpP2X.gif)
 </p>
 
 
