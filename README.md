@@ -23,13 +23,13 @@
 
 
 <p align="center">
-    ![gif1](https://i.imgur.com/vvaZFdG.gif)
+    ![gif1](./.readme/hub.gif)
 </p>
 <p align="center">
-    ![gif2](https://i.imgur.com/tZ10x1h.gif)
+    ![gif2](./.readme/modes.gif)
 </p>
 <p align="center">
-    ![gif3](https://i.imgur.com/axDpP2X.gif)
+    ![gif3](./.readme/themes.gif)
 </p>
 
 
