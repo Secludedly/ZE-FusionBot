@@ -232,31 +232,33 @@ public class DetailsExtractor<T> where T : PKM, new()
 
     public static string GetUserDetails(int totalTradeCount, TradeCodeStorage.TradeCodeDetails? tradeDetails)
     {
-        string userDetailsText = "";
-
-        // Only include OT, TID, and SID if the user has completed at least one trade
+        // Initialize userDetailsText only if totalTradeCount > 0 and other conditions are met
         if (totalTradeCount > 0 && SysCord<T>.Runner.Config.Trade.TradeConfiguration.StoreTradeCodes && tradeDetails != null)
         {
-            userDetailsText = $"Total User Trades: {totalTradeCount}\n";
+            string userDetailsText = $"Total User Trades: {totalTradeCount}\n";
+
+            List<string> details = new List<string>();
+
             if (!string.IsNullOrEmpty(tradeDetails?.OT))
             {
-                userDetailsText += $"OT: {tradeDetails?.OT}";
+                details.Add($"OT: {tradeDetails?.OT}");
             }
             if (tradeDetails?.TID != null)
             {
-                if (!string.IsNullOrEmpty(userDetailsText))
-                    userDetailsText += " | ";
-                userDetailsText += $"TID: {tradeDetails?.TID}";
+                details.Add($"TID: {tradeDetails?.TID}");
             }
-            // Check for SID and ensure the game version is not SWSH
+            // Ensure the game version is not SWSH before adding SID
             if (tradeDetails?.SID != null && tradeDetails.GameVersion != GameVersion.SWSH)
             {
-                if (!string.IsNullOrEmpty(userDetailsText))
-                    userDetailsText += " | ";
-                userDetailsText += $"SID: {tradeDetails?.SID}";
+                details.Add($"SID: {tradeDetails?.SID}");
             }
+            if (details.Count > 0)
+            {
+                userDetailsText += string.Join(" | ", details);
+            }
+            return userDetailsText;
         }
-        return userDetailsText;
+        return string.Empty;
     }
 
     public static void AddAdditionalText(EmbedBuilder embedBuilder)
