@@ -411,6 +411,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
     {
         var userID = Context.User.Id;
         var code = Info.GetRandomTradeCode(userID);
+        _ = Context.Message.DeleteAsync();
         return HideTradeAsync(code, content);
     }
 
@@ -427,6 +428,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         if (Info.IsUserInQueue(userID))
         {
             _ = ReplyAndDeleteAsync("You already have an existing trade in the queue. Please wait until it is processed.", 2);
+            _ = Context.Message.DeleteAsync();
             return;
         }
 
@@ -440,6 +442,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         {
             var msg = $"Unable to parse Showdown Set:\n{string.Join("\n", set.InvalidLines)}";
             _ = ReplyAndDeleteAsync(msg, 2, Context.Message);
+            _ = Context.Message.DeleteAsync();
             return;
         }
 
@@ -482,6 +485,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
                 if (pkm.Species == (int)Species.Mew && pkm.IsShiny)
                 {
                     await ReplyAsync("Mew can **not** be Shiny in LGPE. PoGo Mew does not transfer and Pokeball Plus Mew is shiny locked.");
+                    _ = Context.Message.DeleteAsync();
                     return;
                 }
             }
@@ -528,7 +532,8 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
                     string userMention = Context.User.Mention;
                     string messageContent = $"{userMention}, here's the report for your request:";
                     var message = await Context.Channel.SendMessageAsync(text: messageContent, embed: embedBuilder.Build()).ConfigureAwait(false);
-                    _ = DeleteMessagesAfterDelayAsync(message, Context.Message, 30);
+                    _ = DeleteMessagesAfterDelayAsync(message, Context.Message, 10);
+                    _ = Context.Message.DeleteAsync();
                     return;
                 }
                 pk = correctedPk;
@@ -544,6 +549,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             var msg = $"An unexpected problem happened with this Showdown Set:\n```{string.Join("\n", set.GetSetLines())}```";
 
             _ = ReplyAndDeleteAsync(msg, 2, Context.Message);
+            _ = Context.Message.DeleteAsync();
         }
     }
 
@@ -556,6 +562,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         [Summary("Ignore AutoOT")] bool ignoreAutoOT = false)
     {
         var sig = Context.User.GetFavor();
+        _ = Context.Message.DeleteAsync();
         return HideTradeAsyncAttach(code, sig, Context.User, ignoreAutoOT);
     }
 
@@ -569,9 +576,10 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         var code = Info.GetRandomTradeCode(userID);
         var sig = Context.User.GetFavor();
         await HideTradeAsyncAttach(code, sig, Context.User, ignoreAutoOT).ConfigureAwait(false);
+        _ = Context.Message.DeleteAsync();
         if (Context.Message is IUserMessage userMessage)
         {
-            _ = DeleteMessagesAfterDelayAsync(userMessage, null, 2);
+            _ = DeleteMessagesAfterDelayAsync(userMessage, null, 0);
         }
     }
 
