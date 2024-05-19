@@ -138,12 +138,13 @@ This bot unites the forks of various other developers - some new, some old, some
 **hr** = View, trade, and download legal HOME-Ready files for transfer.
 
 ## Batch Trading
-
-**bt**
-**Showdown Template**
+```c#
+bt
+Showdown Template
 ---
-**Showdown Template**
+Showdown Template
 ---
-**Showdown Template**
+Showdown Template
+```
 
 **btz** = Place up to 6 files into a .zip archive and trade it.
