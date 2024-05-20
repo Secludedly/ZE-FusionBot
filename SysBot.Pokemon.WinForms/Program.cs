@@ -1,10 +1,12 @@
 using System;
+using System.Drawing;
 using System.IO;
+using System.Threading;
 using System.Windows.Forms;
 
 namespace SysBot.Pokemon.WinForms;
 
-internal static class Program
+static class Program
 {
     public static readonly string WorkingDirectory = Environment.CurrentDirectory = Path.GetDirectoryName(Environment.ProcessPath)!;
     public static string ConfigPath { get; private set; } = Path.Combine(WorkingDirectory, "config.json");
@@ -25,6 +27,28 @@ internal static class Program
 
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
+
+        var splash = new SplashScreen();
+        splash.StartPosition = FormStartPosition.Manual;
+        splash.TopMost = true;
+
+        int screenWidth = Screen.PrimaryScreen.Bounds.Width;
+        int screenHeight = Screen.PrimaryScreen.Bounds.Height;
+        int splashWidth = splash.Width;
+        int splashHeight = splash.Height;
+        int splashLeft = (screenWidth - splashWidth) / 2;
+        int splashTop = (screenHeight - splashHeight) / 2;
+
+        splash.Location = new Point(splashLeft, splashTop);
+        splash.Show();
+        var splashThread = new Thread(new ThreadStart(() =>
+        {
+            Thread.Sleep(3000);
+            splash.Invoke(new Action(() => splash.Close()));
+        }));
+
+        splashThread.Start();
+
         Application.Run(new Main());
     }
 }

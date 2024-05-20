@@ -95,7 +95,6 @@ namespace SysBot.Pokemon.WinForms
             // 
             // B_Stop
             // 
-            B_Stop.Anchor = AnchorStyles.Top | AnchorStyles.Left;
             B_Stop.FlatStyle = FlatStyle.Flat;
             B_Stop.Location = new Point(584, 9);
             B_Stop.Margin = new Padding(5, 4, 5, 4);
@@ -119,7 +118,6 @@ namespace SysBot.Pokemon.WinForms
             // 
             // B_Start
             // 
-            B_Start.Anchor = AnchorStyles.Top | AnchorStyles.Left;
             B_Start.FlatStyle = FlatStyle.Flat;
             B_Start.Location = new Point(505, 9);
             B_Start.Margin = new Padding(5, 4, 5, 4);
@@ -211,7 +209,6 @@ namespace SysBot.Pokemon.WinForms
             // 
             // B_RebootStop
             // 
-            B_RebootStop.Anchor = AnchorStyles.Top | AnchorStyles.Left;
             B_RebootStop.FlatStyle = FlatStyle.Flat;
             B_RebootStop.Location = new Point(679, 9);
             B_RebootStop.Margin = new Padding(5, 4, 5, 4);
@@ -224,7 +221,6 @@ namespace SysBot.Pokemon.WinForms
             // 
             // updater
             // 
-            updater.Anchor = AnchorStyles.Top | AnchorStyles.Left;
             updater.FlatStyle = FlatStyle.Flat;
             updater.Location = new Point(758, 9);
             updater.Margin = new Padding(5, 4, 5, 4);

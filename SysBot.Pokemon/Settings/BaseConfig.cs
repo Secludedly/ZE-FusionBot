@@ -9,7 +9,8 @@ public abstract class BaseConfig
 {
     protected const string FeatureToggle = nameof(FeatureToggle);
     protected const string Operation = nameof(Operation);
-    public const string SysBotRemote = nameof(SysBotRemote);
+    protected const string OtherFolderPaths = nameof(OtherFolderPaths);
+
 
     [Browsable(false)]
     private const string Debug = nameof(Debug);
@@ -26,7 +27,7 @@ public abstract class BaseConfig
     [Category(FeatureToggle), Description("Maximum number of old text log files to retain. Set this to <= 0 to disable log cleanup. Restart to apply changes.")]
     public int MaxArchiveFiles { get; set; } = 14;
 
-    [Category(SysBotRemote), Description("Path to your SysBotRemote folder. Copy the path here."), DisplayName("SysBotRemote Folder Path")]
+    [Category(OtherFolderPaths), Description("Path to your SysBotRemote folder. Copy the path here."), DisplayName("SysBotRemote Folder Path")]
     public string SysBotRemoteFolder { get; set; } = string.Empty;
 
     [Browsable(false)]
