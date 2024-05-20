@@ -183,7 +183,7 @@ Showdown Template
 `peek` // Shows an image of your current Switch screen. <br />
 
 ## PERMISSIONS
-`blacklistid <ID>` // Blaclists a specified user in or out of your server. <br />
+`blacklistid <ID>` // Blacklists a specified user in or out of your server. <br />
 `unblacklistid <ID>` // Removes blacklisting of a specified user in or out of your server. <br />
 `blacklistserver <ID>` // Blacklists a specified server from using the bot. <br />
 `unblacklistserver <ID>` // Removes blacklisting of a specific server. <br />
