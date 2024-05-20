@@ -30,10 +30,11 @@ public static class AutoCorrectShowdown<T> where T : PKM, new()
 
         (string speciesName, string formName, string gender, string heldItem, string nickname) = ParseSpeciesLine(lines[0]);
 
-        string correctedSpeciesName = autoCorrectConfig.AutoCorrectSpeciesAndForm ? await GetClosestSpecies(speciesName).ConfigureAwait(false) ?? speciesName : speciesName;
+        string correctedSpeciesName = autoCorrectConfig.AutoCorrectSpeciesAndForm ? GetClosestSpecies(speciesName) ?? speciesName : speciesName;
         ushort speciesIndex = (ushort)Array.IndexOf(gameStrings.specieslist, correctedSpeciesName);
         string[] formNames = FormConverter.GetFormList(speciesIndex, gameStrings.types, gameStrings.forms, new List<string>(), generation);
-        string correctedFormName = autoCorrectConfig.AutoCorrectSpeciesAndForm ? await GetClosestFormName(formName, formNames).ConfigureAwait(false) ?? formName : formName;
+        Task<string>? formTask = GetClosestFormName(formName, formNames);
+        string correctedFormName = autoCorrectConfig.AutoCorrectSpeciesAndForm ? await formTask.ConfigureAwait(false) ?? formName : formName;
 
         PKM pk = originalPk.Clone();
         LegalityAnalysis la = originalLa;
@@ -52,16 +53,19 @@ public static class AutoCorrectShowdown<T> where T : PKM, new()
         var personalAbilityInfoTask = Task.Run(() => GetPersonalInfo(speciesIndex));
         var closestAbilityTask = GetClosestAbility(abilityName, speciesIndex, gameStrings, await personalAbilityInfoTask);
         var closestNatureTask = GetClosestNature(natureName, gameStrings);
-        var legalBallTask = GetLegalBall(speciesIndex, correctedFormName, ballName, gameStrings, pk);
-        string correctedAbilityName = autoCorrectConfig.AutoCorrectAbility ? await closestAbilityTask : abilityName;
-        string correctedNatureName = autoCorrectConfig.AutoCorrectNature ? await closestNatureTask : natureName;
-        string correctedBallName = autoCorrectConfig.AutoCorrectBall ? await legalBallTask : ballName;
+        var legalBallTask = GetLegalBall(speciesIndex, correctedFormName ?? string.Empty, ballName, gameStrings, pk);
+        string correctedAbilityName = autoCorrectConfig.AutoCorrectAbility && closestAbilityTask != null ? await closestAbilityTask : abilityName;
+        string correctedNatureName = autoCorrectConfig.AutoCorrectNature && closestNatureTask != null ? await closestNatureTask : natureName;
+        string correctedBallName = autoCorrectConfig.AutoCorrectBall && legalBallTask != null ? await legalBallTask : ballName;
 
         var levelVerifier = new LevelVerifier();
         if (autoCorrectConfig.AutoCorrectLevel)
             levelVerifier.Verify(la);
         if (autoCorrectConfig.AutoCorrectGender)
-            gender = await ValidateGender(pk, gender, speciesName);
+        {
+            Task<string>? task = ValidateGender(pk, gender, speciesName);
+            gender = await task;
+        }
 
         if (autoCorrectConfig.AutoCorrectMovesLearnset)
             ValidateMoves(lines, pk, la, gameStrings, correctedSpeciesName, correctedFormName);
@@ -78,7 +82,10 @@ public static class AutoCorrectShowdown<T> where T : PKM, new()
             var markVerifier = new MarkVerifier();
             markVerifier.Verify(la);
             if (!la.Valid)
-                markLine = await CorrectMarks(pk, la.EncounterOriginal, lines);
+            {
+                Task<string>? task = CorrectMarks(pk, la.EncounterOriginal, lines);
+                markLine = await task;
+            }
         }
 
         string correctedHeldItem = autoCorrectConfig.AutoCorrectHeldItem ? ValidateHeldItem(lines, pk, itemlist, heldItem) : heldItem;
@@ -114,6 +121,14 @@ public static class AutoCorrectShowdown<T> where T : PKM, new()
             if (!la.Valid)
             {
                 string fixedNickname = autoCorrectConfig.FixedNickname;
+                correctedLines[0] = CorrectLine(correctedLines[0], 0, speciesName, correctedSpeciesName, correctedFormName ?? string.Empty, gender, correctedHeldItem, correctedAbilityName, correctedNatureName, correctedBallName, levelValue, la, fixedNickname);
+                correctedSpeciesName = correctedSpeciesName ?? speciesName; // Default to speciesName if null
+                correctedFormName = correctedFormName ?? string.Empty; // Default to empty string if null
+                correctedAbilityName = correctedAbilityName ?? abilityName; // Default to abilityName if null
+                correctedNatureName = correctedNatureName ?? natureName; // Default to natureName if null
+                correctedBallName = correctedBallName ?? ballName; // Default to ballName if null
+                fixedNickname = fixedNickname ?? string.Empty; // Default to empty string if null
+
                 correctedLines[0] = CorrectLine(correctedLines[0], 0, speciesName, correctedSpeciesName, correctedFormName, gender, correctedHeldItem, correctedAbilityName, correctedNatureName, correctedBallName, levelValue, la, fixedNickname);
             }
         }
@@ -242,13 +257,19 @@ public static class AutoCorrectShowdown<T> where T : PKM, new()
         return line;
     }
 
-    private static async Task<string>? GetClosestSpecies(string userSpecies)
+    private static string GetClosestSpecies(string userSpecies)
     {
         var gameStrings = GetGameStrings();
-        var pkms = gameStrings.specieslist.Select(s => new T { Species = (ushort)Array.IndexOf(gameStrings.specieslist, s) });
-        var sortedSpecies = pkms.OrderBySpeciesName(gameStrings.specieslist).Select(p => gameStrings.specieslist[p.Species]);
+        if (gameStrings?.specieslist == null)
+            throw new InvalidOperationException("Game strings or species list is not initialized.");
 
-        var speciesName = userSpecies.Split('-')[0].Trim();
+        var speciesList = gameStrings.specieslist;
+        var pkms = speciesList.Select(s => new T { Species = (ushort)Array.IndexOf(speciesList, s) });
+        var sortedSpecies = pkms.OrderBySpeciesName(speciesList).Select(p => speciesList[p.Species]);
+
+        var speciesName = userSpecies?.Split('-')[0].Trim();
+        if (string.IsNullOrEmpty(speciesName))
+            return null;
 
         var fuzzySpecies = sortedSpecies
             .Where(s => !string.IsNullOrEmpty(s))
@@ -600,6 +621,8 @@ public static class AutoCorrectShowdown<T> where T : PKM, new()
 
         if (closestBall != null)
         {
+            LogUtil.LogError("No suitable ball found.", nameof(AutoCorrectShowdown<T>));
+
             pk.Ball = (byte)Array.IndexOf(gameStrings.itemlist, closestBall);
             if (new LegalityAnalysis(pk).Valid)
                 return closestBall;

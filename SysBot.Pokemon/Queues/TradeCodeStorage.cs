@@ -97,7 +97,8 @@ public class TradeCodeStorage
         if (File.Exists(FileName))
         {
             string json = File.ReadAllText(FileName);
-            _tradeCodeDetails = System.Text.Json.JsonSerializer.Deserialize<Dictionary<ulong, TradeCodeDetails>>(json, SerializerOptions);
+            Dictionary<ulong, TradeCodeDetails>? dictionary = System.Text.Json.JsonSerializer.Deserialize<Dictionary<ulong, TradeCodeDetails>>(json, SerializerOptions);
+            _tradeCodeDetails = dictionary;
         }
         else
         {
@@ -134,7 +135,7 @@ public class TradeCodeStorage
         return 0;
     }
 
-    public TradeCodeDetails GetTradeDetails(ulong trainerID)
+    public TradeCodeDetails? GetTradeDetails(ulong trainerID)
     {
         LoadFromFile();
 
@@ -145,16 +146,21 @@ public class TradeCodeStorage
         return null;
     }
 
-    public void UpdateTradeDetails(ulong trainerID, string ot, int tid, int sid)
+    public void UpdateTradeDetails(ulong trainerID, string? ot, int tid, int sid)
     {
-        LoadFromFile();
-
-        if (_tradeCodeDetails.TryGetValue(trainerID, out var details))
+        if (ot == null)
         {
-            details.OT = ot;
-            details.TID = tid;
-            details.SID = sid;
-            SaveToFile();
+            LoadFromFile();
+        }
+        else
+        {
+            if (_tradeCodeDetails.TryGetValue(trainerID, out var details))
+            {
+                details.OT = ot;
+                details.TID = tid;
+                details.SID = sid;
+                SaveToFile();
+            }
         }
     }
 }

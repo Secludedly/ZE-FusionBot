@@ -297,7 +297,7 @@ public class PokeTradeBotLGPE(PokeTradeHub<PB7> Hub, PokeBotState Config) : Poke
         if (tradepartnersav.OT != sav.OT)
         {
             Log($"Found Link Trade Partner: {tradepartnersav.OT}, TID: {tradepartnersav.TID16}, SID: {tradepartnersav.SID16}, Game: {(GameVersion)tradepartnersav.Version}");
-            var modifiedPokemon = await SetPkmWithTradePartnerDetails(toSend, tradepartnersav, token);
+            var modifiedPokemon = SetPkmWithTradePartnerDetails(toSend, tradepartnersav, token);
             if (modifiedPokemon != null)
             {
                 poke.TradeData = modifiedPokemon; // Update the Pokémon to be traded with the modified version
@@ -308,7 +308,7 @@ public class PokeTradeBotLGPE(PokeTradeHub<PB7> Hub, PokeBotState Config) : Poke
         if (tradepartnersav2.OT != sav.OT)
         {
             Log($"Found Link Trade Partner: {tradepartnersav2.OT}, TID: {tradepartnersav2.TID16}, SID: {tradepartnersav2.SID16}");
-            var modifiedPokemon = await SetPkmWithTradePartnerDetails(toSend, tradepartnersav2, token); 
+            var modifiedPokemon = SetPkmWithTradePartnerDetails(toSend, tradepartnersav2, token); 
             if (modifiedPokemon != null)
             {
                 poke.TradeData = modifiedPokemon; // Update the Pokémon to be traded with the modified version
@@ -703,7 +703,7 @@ public class PokeTradeBotLGPE(PokeTradeHub<PB7> Hub, PokeBotState Config) : Poke
         }
     }
 
-    private async Task<PB7> SetPkmWithTradePartnerDetails(PB7 toSend, SAV7b tradePartnerSav, CancellationToken token)
+    private PB7? SetPkmWithTradePartnerDetails(PB7 toSend, SAV7b tradePartnerSav, CancellationToken token)
     {
         var cln = (PB7)toSend.Clone();
 
@@ -727,5 +727,5 @@ public class PokeTradeBotLGPE(PokeTradeHub<PB7> Hub, PokeBotState Config) : Poke
         }
     }
 
-    }
+}
 

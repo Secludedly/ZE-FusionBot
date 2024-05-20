@@ -329,16 +329,27 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState Config) : Poke
         var tradeCodeStorage = new TradeCodeStorage();
         var existingTradeDetails = tradeCodeStorage.GetTradeDetails(poke.Trainer.ID);
 
-        bool shouldUpdateOT = existingTradeDetails?.OT != trainerName;
-        bool shouldUpdateTID = existingTradeDetails?.TID != int.Parse(trainerTID);
-        bool shouldUpdateSID = existingTradeDetails?.SID != int.Parse(trainerSID);
-
-        if (shouldUpdateOT || shouldUpdateTID || shouldUpdateSID)
+        if (existingTradeDetails != null) // Check if existingTradeDetails is not null
         {
-            tradeCodeStorage.UpdateTradeDetails(poke.Trainer.ID, shouldUpdateOT ? trainerName : existingTradeDetails.OT, shouldUpdateTID ? int.Parse(trainerTID) : existingTradeDetails.TID, shouldUpdateSID ? int.Parse(trainerSID) : existingTradeDetails.SID);
+            bool shouldUpdateOT = existingTradeDetails.OT != trainerName;
+            bool shouldUpdateTID = existingTradeDetails.TID != int.Parse(trainerTID);
+            bool shouldUpdateSID = existingTradeDetails.SID != int.Parse(trainerSID);
+
+            if (shouldUpdateOT || shouldUpdateTID || shouldUpdateSID)
+            {
+                tradeCodeStorage.UpdateTradeDetails(
+                    poke.Trainer.ID,
+                    shouldUpdateOT ? trainerName : existingTradeDetails.OT ?? "", // Use existingTradeDetails.OT if not null, else use empty string
+                    shouldUpdateTID ? int.Parse(trainerTID) : existingTradeDetails.TID,
+                    shouldUpdateSID ? int.Parse(trainerSID) : existingTradeDetails.SID);
+            }
+            else
+            {
+                LogUtil.LogError("Existing trade details are null. Unable to update.", nameof(PerformLinkCodeTrade));
+            }
         }
 
-        var partnerCheck = CheckPartnerReputation(this, poke, trainerNID, trainerName, AbuseSettings, token);
+            var partnerCheck = CheckPartnerReputation(this, poke, trainerNID, trainerName, AbuseSettings, token);
         if (partnerCheck != PokeTradeResult.Success)
         {
             await ExitSeedCheckTrade(token).ConfigureAwait(false);

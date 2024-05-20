@@ -38,9 +38,9 @@ namespace SysBot.Pokemon.Discord
             return data;
         }
 
-        private static List<(string TrainerName, string PokePasteUrl, string TeamDescription, string DateShared, string RentalCode)> ParsePokePasteData(List<List<string>> data, string pokemonName = null)
+        private static List<(string? TrainerName, string? PokePasteUrl, string? TeamDescription, string? DateShared, string? RentalCode)> ParsePokePasteData(List<List<string?>> data, string? pokemonName = null)
         {
-            var pokePasteData = new List<(string TrainerName, string PokePasteUrl, string TeamDescription, string DateShared, string RentalCode)>();
+            var pokePasteData = new List<(string? TrainerName, string? PokePasteUrl, string? TeamDescription, string? DateShared, string? RentalCode)>();
             for (int i = 3; i < data.Count; i++)
             {
                 var row = data[i];
@@ -77,7 +77,7 @@ namespace SysBot.Pokemon.Discord
             return pokePasteData;
         }
 
-        private (string PokePasteUrl, List<string> RowData) SelectRandomPokePasteUrl(List<List<string>> data, string pokemonName = null)
+        private (string PokePasteUrl, List<string> RowData) SelectRandomPokePasteUrl(List<List<string?>> data, string? pokemonName = null)
         {
             var filteredData = data.Where(row => row.Count > 40 && Uri.IsWellFormedUriString(row[24]?.Trim('"'), UriKind.Absolute));
 
@@ -90,21 +90,21 @@ namespace SysBot.Pokemon.Discord
 
             var validPokePastes = filteredData.ToList();
 
-            if (validPokePastes.Count == 0) return (null, null);
+            if (validPokePastes.Count == 0) return (string.Empty, new List<string>());
 
             var random = new Random();
             var randomIndex = random.Next(validPokePastes.Count);
             var selectedRow = validPokePastes[randomIndex];
-            var pokePasteUrl = selectedRow[24]?.Trim('"');
+            var pokePasteUrl = selectedRow[24]?.Trim('"') ?? string.Empty; // Provide a default value if null
 
-            return (pokePasteUrl, selectedRow);
+            return (pokePasteUrl, selectedRow.Select(cell => cell ?? string.Empty).ToList()); // Ensure the row data is not null
         }
 
         // Adjusted command method to use the new selection logic with Pokémon name filtering
         [Command("randomteam")]
         [Alias("rt", "RandomTeam", "Rt")]
         [Summary("Generates a random VGC team from the specified Google Spreadsheet and sends it as files via DM.")]
-        public async Task GenerateSpreadsheetTeamAsync(string pokemonName = null)
+        public async Task GenerateSpreadsheetTeamAsync(string? pokemonName = null)
         {
             if (!SysCord<T>.Runner.Config.Trade.VGCPastesConfiguration.AllowRequests)
             {

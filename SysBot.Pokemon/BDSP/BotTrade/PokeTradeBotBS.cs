@@ -312,9 +312,19 @@ public class PokeTradeBotBS(PokeTradeHub<PB8> Hub, PokeBotState Config) : PokeRo
         bool shouldUpdateTID = existingTradeDetails?.TID != int.Parse(tradePartner.TID7);
         bool shouldUpdateSID = existingTradeDetails?.SID != int.Parse(tradePartner.SID7);
 
-        if (shouldUpdateOT || shouldUpdateTID || shouldUpdateSID)
+        if (existingTradeDetails == null)
         {
-            tradeCodeStorage.UpdateTradeDetails(poke.Trainer.ID, shouldUpdateOT ? tradePartner.TrainerName : existingTradeDetails.OT, shouldUpdateTID ? int.Parse(tradePartner.TID7) : existingTradeDetails.TID, shouldUpdateSID ? int.Parse(tradePartner.SID7) : existingTradeDetails.SID);
+            tradeCodeStorage.UpdateTradeDetails(poke.Trainer.ID, tradePartner.TrainerName, int.Parse(tradePartner.TID7), int.Parse(tradePartner.SID7));
+        }
+        else
+        {
+            if (shouldUpdateOT || shouldUpdateTID || shouldUpdateSID)
+            {
+                tradeCodeStorage.UpdateTradeDetails(poke.Trainer.ID,
+                    shouldUpdateOT ? tradePartner.TrainerName : existingTradeDetails.OT,
+                    shouldUpdateTID ? int.Parse(tradePartner.TID7) : existingTradeDetails.TID,
+                    shouldUpdateSID ? int.Parse(tradePartner.SID7) : existingTradeDetails.SID);
+            }
         }
 
         var partnerCheck = CheckPartnerReputation(this, poke, trainerNID, tradePartner.TrainerName, AbuseSettings, token);

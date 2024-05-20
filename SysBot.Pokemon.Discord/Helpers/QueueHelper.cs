@@ -70,7 +70,7 @@ public static class QueueHelper<T> where T : PKM, new()
         var name = user.Username;
 
         var trainer = new PokeTradeTrainerInfo(trainerName, userID);
-        var notifier = new DiscordTradeNotifier<T>(pk, trainer, code, trader, batchTradeNumber, totalBatchTrades, isMysteryEgg, lgcode: lgcode);
+        var notifier = new DiscordTradeNotifier<T>(pk, trainer, code, trader, batchTradeNumber, totalBatchTrades, isMysteryEgg, lgcode ?? new List<Pictocodes>());
         var uniqueTradeID = GenerateUniqueTradeID();
         var detail = new PokeTradeDetail<T>(pk, trainer, notifier, t, code, sig == RequestSignificance.Favored, lgcode, batchTradeNumber, totalBatchTrades, isMysteryEgg, uniqueTradeID, ignoreAutoOT, setEdited);
         var trade = new TradeEntry<T>(detail, userID, PokeRoutineType.LinkTrade, name, uniqueTradeID);
@@ -310,7 +310,7 @@ public static class QueueHelper<T> where T : PKM, new()
             if (speciesImage == null)
             {
                 Console.WriteLine("Species image could not be loaded.");
-                return (null, false);
+                return (null!, false); // Use null! to explicitly indicate that null is not expected
             }
 
             var ballImage = await LoadImageFromUrl(ballImageUrl);

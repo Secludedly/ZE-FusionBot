@@ -217,7 +217,7 @@ public class DetailsExtractor<T> where T : PKM, new()
                isBatchTrade ? $"Batch Trade #{batchTradeNumber} - {shinyEmoji}{pokemonDisplayName}" :
                isFixOTRequest ? "FixOT Request" :
                isSpecialRequest ? "Special Request" :
-               isCloneRequest ? "Clone Pod Activated!" :
+               isCloneRequest ? "Clone Request!" :
                isDumpRequest ? "Pokémon Dump" :
                "";
     }

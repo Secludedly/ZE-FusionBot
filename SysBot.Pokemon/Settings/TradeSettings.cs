@@ -561,7 +561,7 @@ public class TradeSettings : IBotStateSettings, ICountSettings
         public MoveType MoveType { get; set; }
 
         [Description("The Discord emoji string for this move type.")]
-        public string EmojiCode { get; set; }
+        public string? EmojiCode { get; set; }
 
         public MoveTypeEmojiInfo() { }
 
@@ -585,7 +585,7 @@ public class TradeSettings : IBotStateSettings, ICountSettings
         public MoveType MoveType { get; set; }
 
         [Description("The Discord emoji string for this tera type.")]
-        public string EmojiCode { get; set; }
+        public string EmojiCode { get; set; } = ""; // Initialize EmojiCode to an empty string
 
         public TeraTypeEmojiInfo() { }
 
