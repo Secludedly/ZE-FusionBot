@@ -1828,4 +1828,39 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
 
         }
     }
+
+    private static readonly List<string> AvailableSpecies = new List<string>
+    {
+        // Add all available Pokémon species
+    };
+    // Add more data lists as needed (moves, abilities, etc.)
+    [Command("surprise")]
+    [Alias("surprisetrade", "st", "random")]
+    [Summary("Trades a randomly generated Pokémon.")]
+    public async Task SurpriseTradeAsync()
+    {
+        var (randomSpecies, showdownFormat) = GenerateRandomShowdownFormat();
+        await ReplyAsync($"Preparing to trade a randomly generated {randomSpecies}!");
+        // Implement the trade logic here
+    }
+    private (string, string) GenerateRandomShowdownFormat()
+    {
+        var random = new Random();
+        // Generate random species
+        var randomSpecies = AvailableSpecies[random.Next(AvailableSpecies.Count)];
+        // Generate random batch commands
+        var batchCommands = new List<string>
+    {
+         $".Gender=${random.Next(2)},1",
+         $".CurrentLevel=${random.Next(82, 101)},100", // Adjusted level range
+         $".Nature=${random.Next(25)},1", // 25 is the number of natures in Showdown
+         $".AbilityNumber=${random.Next(3)},1", // Assuming abilities are numbered 0, 1, 2
+         $".Ball=${random.Next(10)}" // Assuming 38 different balls
+    };
+        // Concatenate batch commands
+        var formattedCommands = string.Join(Environment.NewLine, batchCommands);
+        // Format for Showdown
+        var showdownFormat = $"{randomSpecies}\r\n{formattedCommands}";
+        return (randomSpecies, showdownFormat);
+    }
 }

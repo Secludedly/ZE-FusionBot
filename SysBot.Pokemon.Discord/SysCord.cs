@@ -118,7 +118,7 @@ public sealed class SysCord<T> where T : PKM, new()
         if (!SysCordSettings.Settings.BotEmbedStatus)
             return;
 
-        var botName = SysCordSettings.HubConfig.BotName;
+        var botName = "Bot";
         if (string.IsNullOrEmpty(botName))
             botName = "Bot";
 
