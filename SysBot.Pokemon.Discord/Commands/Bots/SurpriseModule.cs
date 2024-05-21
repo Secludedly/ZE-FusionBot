@@ -16,10 +16,11 @@ namespace SysBot.Pokemon.Discord
         private static TradeQueueInfo<T> Info => SysCord<T>.Runner.Hub.Queues.Info;
 
         [Command("surprise")]
-        [Alias("random")]
+        [Alias("random", "st", "randomize", "randomtrade", "rt")]
         [Summary("Trades a random Pokémon with perfect stats and shiny appearance.")]
         public async Task TradeRandomPokemonAsync()
         {
+            await ReplyAsync("**Surprise!**");
             var userID = Context.User.Id;
             if (Info.IsUserInQueue(userID))
             {
@@ -34,7 +35,7 @@ namespace SysBot.Pokemon.Discord
         }
 
         [Command("surprise")]
-        [Alias("random")]
+        [Alias("random", "st", "randomize", "randomtrade", "rt")]
         [Summary("Trades a random Pokémon with perfect stats and shiny appearance.")]
         [RequireQueueRole(nameof(DiscordManager.RolesTrade))]
         public async Task TradeRandomPokemonAsync([Summary("Trade Code")] int code)
@@ -48,27 +49,38 @@ namespace SysBot.Pokemon.Discord
 
             try
             {
-                var gameVersion = GetGameVersion();
-                var speciesList = GetBreedableSpecies(gameVersion, "en");
+                T? pk = null;  // loop logic until legal set found
+                bool isValid = false;
 
-                var randomIndex = new Random().Next(speciesList.Count);
-                ushort speciesId = speciesList[randomIndex];
-                var speciesName = GameInfo.GetStrings("en").specieslist[speciesId];
-
-                var showdownSet = new ShowdownSet(speciesName);
-                var template = AutoLegalityWrapper.GetTemplate(showdownSet);
-
-                var sav = AutoLegalityWrapper.GetTrainerInfo<T>();
-                var pkm = sav.GetLegal(template, out var result);
-
-                RandomizePokemon(pkm);
-
-                pkm = EntityConverter.ConvertToType(pkm, typeof(T), out _) ?? pkm;
-
-                if (pkm is not T pk)
+                while (!isValid)
                 {
-                    await ReplyAsync("I wasn't able to create a random Pokémon.").ConfigureAwait(false);
-                    return;
+
+                    var gameVersion = GetGameVersion();
+                    var speciesList = GetBreedableSpecies(gameVersion, "en");
+
+                    var randomIndex = new Random().Next(speciesList.Count);
+                    ushort speciesId = speciesList[randomIndex];
+                    var speciesName = GameInfo.GetStrings("en").specieslist[speciesId];
+
+                    var showdownSet = new ShowdownSet(speciesName);
+                    var template = AutoLegalityWrapper.GetTemplate(showdownSet);
+
+                    var sav = AutoLegalityWrapper.GetTrainerInfo<T>();
+                    var pkm = sav.GetLegal(template, out var result);
+
+                    RandomizePokemon(pkm);
+
+                    pkm = EntityConverter.ConvertToType(pkm, typeof(T), out _) ?? pkm;
+
+                    if (pkm is T generatedPk)
+                    {
+                        var la = new LegalityAnalysis(generatedPk);
+                        if (la.Valid)
+                        {
+                            pk = generatedPk;
+                            isValid = true;
+                        }
+                    }
                 }
 
                 var sig = Context.User.GetFavor();
@@ -92,16 +104,26 @@ namespace SysBot.Pokemon.Discord
             await message.DeleteAsync().ConfigureAwait(false);
         }
 
+
+        // RANDOMIZE POKEMON STATS //
         private static void RandomizePokemon(PKM pk)
         {
             var random = new Random();
 
+            // Shiny
+            bool isShiny = random.Next(0, 100) < 50; // 50% chance of being shiny
+            if (isShiny)
+            {
+                pk.SetShiny(); // make shiny
+            }
 
-            pk.IVs = new[] { 31, 31, 31, 31, 31, 31 };
-            pk.SetShiny();
-            pk.RefreshAbility(2);
-            pk.Nature = (Nature)random.Next(Enum.GetValues(typeof(Nature)).Length);
-            pk.Gender = (byte)random.Next(2);
+            // Ability
+            int abilityCount = 3; // how many abilities
+            int selectedAbility = random.Next(abilityCount); // now randomize them
+            pk.RefreshAbility(selectedAbility); // refresh if selected is good
+
+            // Level
+            pk.CurrentLevel = (byte)random.Next(1, 101); // randomized levels 1-100
         }
 
         private static GameVersion GetGameVersion()
@@ -178,7 +200,7 @@ namespace SysBot.Pokemon.Discord
             {
                 string responseMessage;
                 string speciesName = GameInfo.GetStrings("en").specieslist[pk.Species];
-                responseMessage = $"Couldn't generate a legal Pokémon. Use the command again!";
+                responseMessage = $"Use the command again!";
 
                 var reply = await ReplyAsync(responseMessage).ConfigureAwait(false);
                 await Task.Delay(6000);
