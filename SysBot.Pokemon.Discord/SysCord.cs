@@ -307,14 +307,22 @@ public sealed class SysCord<T> where T : PKM, new()
         if (msg.Author.Id == _client.CurrentUser.Id || msg.Author.IsBot)
             return;
 
-        // Create a number to track where the prefix ends and the command begins
-        int pos = 0;
-        if (msg.HasStringPrefix(Hub.Config.Discord.CommandPrefix, ref pos))
+        var argPos = 0;
+        // Check if the message starts with the correct prefix
+        if (!msg.HasStringPrefix(SysCordSettings.Settings.CommandPrefix, ref argPos))
         {
-            bool handled = await TryHandleCommandAsync(msg, pos).ConfigureAwait(false);
-            if (handled)
-                return;
+            // Send a message back to the user indicating the correct prefix
+            await msg.Channel.SendMessageAsync($"Sorry, <@{msg.Author.Id}>. Incorrect prefix. The prefix is **{SysCordSettings.Settings.CommandPrefix}**.");
+            return;
         }
+
+        // Extract command and arguments
+        var contextprefix = new SocketCommandContext(_client, msg);
+        if (!msg.HasMentionPrefix(_client.CurrentUser, ref argPos) && !msg.HasStringPrefix(SysCordSettings.Settings.CommandPrefix, ref argPos))
+            return;
+
+        // Route commands to handlers
+        await TryHandleCommandAsync(msg, contextprefix, argPos);
 
         await TryHandleMessageAsync(msg).ConfigureAwait(false);
     }
@@ -334,8 +342,9 @@ public sealed class SysCord<T> where T : PKM, new()
                 }
             }
         }
-        // fun little trick for users that like to thank the bot after a trade
-        string thanksText = msg.Content.ToLower();
+
+    // fun little trick for users that like to thank the bot after a trade
+    string thanksText = msg.Content.ToLower();
         if (thanksText.Contains("thank") || thanksText.Contains("thx"))
         {
             var channel = msg.Channel;
@@ -369,10 +378,10 @@ public sealed class SysCord<T> where T : PKM, new()
         return Task.CompletedTask;
     }
 
-    private async Task<bool> TryHandleCommandAsync(SocketUserMessage msg, int pos)
+    private async Task<bool> TryHandleCommandAsync(SocketUserMessage msg, SocketCommandContext context, int pos)
     {
         // Create a Command Context.
-        var context = new SocketCommandContext(_client, msg);
+        var contextprefix = new SocketCommandContext(_client, msg);
         var AbuseSettings = Hub.Config.TradeAbuse;
 
         // Check if the user is in the bannedIDs list
