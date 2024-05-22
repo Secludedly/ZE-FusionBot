@@ -102,29 +102,29 @@ This bot unites the forks of various other developers - some new, some old, some
   <tr>
     <td align="center">
       <p>SysBotRemote Feature</p>
-      <img width="33%" src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/sbremotestart.gif" alt="gif1"/>
+      <img width="70%" src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/sbremotestart.gif" alt="gif1"/>
     </td>
     <td align="center">
       <p>SysDVR Feature</p>
-      <img width="33%" src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/sdvrstart.gif" alt="gif2"/>
+      <img width="70%" src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/sdvrstart.gif" alt="gif2"/>
     </td>
     <td align="center">
       <p>Batch Trading Archives</p>
-      <img width="33%" src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/batch.gif" alt="gif3"/>
+      <img width="70%" src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/batch.gif" alt="gif3"/>
     </td>
   </tr>
   <tr>
     <td align="center">
       <p>Batch Trading Showdown</p>
-      <img width="33%" src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/batch2.gif" alt="gif4"/>
+      <img width="70%" src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/batch2.gif" alt="gif4"/>
     </td>
     <td align="center">
       <p>Video Feature</p>
-      <img width="33%" src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/video.gif" alt="gif5"/>
+      <img width="70%" src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/video.gif" alt="gif5"/>
     </td>
     <td align="center">
       <p>Surprise Trading</p>
-      <img width="33%" src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/surprise.gif" alt="gif6"/>
+      <img width="70%" src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/surprise.gif" alt="gif6"/>
     </td>
   </tr>
 </table>
