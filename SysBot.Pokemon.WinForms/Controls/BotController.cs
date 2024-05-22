@@ -101,8 +101,8 @@ public partial class BotController : UserControl
 
         // Color decay from Green based on time
         const int threshold = 100;
-        Color good = Color.Green;
-        Color bad = Color.Red;
+        Color good = Color.Gold;
+        Color bad = Color.DarkRed;
 
         var delta = DateTime.Now - lastTime;
         var seconds = delta.Seconds;
@@ -142,7 +142,7 @@ public partial class BotController : UserControl
         Remove?.Invoke(this, EventArgs.Empty);
     }
 
-    public void SendCommand(BotControlCommand cmd, bool echo = true)
+    public void SendCommand(BotControlCommand cmd)
     {
         if (Runner?.Config.SkipConsoleBotCreation != false)
         {
@@ -173,8 +173,6 @@ public partial class BotController : UserControl
                 WinFormsUtil.Alert($"{cmd} is not a command that can be sent to the Bot.");
                 return;
         }
-        if (echo)
-            EchoUtil.Echo($"{bot.Bot.Connection.Name} ({bot.Bot.Config.InitialRoutine}) has been issued a command to {cmd}.");
     }
 
     private BotSource<PokeBotState> GetBot()
