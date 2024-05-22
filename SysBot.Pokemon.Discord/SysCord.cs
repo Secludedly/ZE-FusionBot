@@ -29,6 +29,18 @@ public sealed class SysCord<T> where T : PKM, new()
     private readonly DiscordSocketClient _client;
     private readonly DiscordManager Manager;
     public readonly PokeTradeHub<T> Hub;
+    private readonly HashSet<string> _validCommands = new HashSet<string>
+    {
+        "BatchTrade", "Batchtrade", "batchTrade", "batchtradezip", "battlereadylist", "battlereadyrequest", "brl", "brr",
+        "BT", "bt", "BTZ", "btz", "C", "c", "CLONE", "Clone", "clone", "CONVERT", "Convert", "convert", "D", "d", "deleteTradeCode",
+        "Ditto", "ditto", "dittoTrade", "dittotrade", "dt", "DTC", "dtc", "DUMP", "Dump", "dump", "Egg", "egg", "er", "eventrequest",
+        "f", "fix", "FixOT", "fixOT", "fixot", "Hello", "hello", "Help", "help", "Hi", "hi", "Hidetrade", "hideTrade", "hidetrade",
+        "HT", "ht", "INFO", "info", "it", "Item", "item", "itemTrade", "joke", "Lc", "LC", "LCV", "lcv", "le", "Legalize", "legalize",
+        "listevents", "Me", "me", "MysteryEgg", "mysteryegg", "PokePaste", "pokepaste", "PP", "pp", "QC", "Qc", "qc", "QS", "Qs", "qs",
+        "queueClear", "queueclear", "queueStatus", "Random", "random", "RandomTeam", "randomteam", "rt", "SEED", "Seed", "seed",
+        "specialrequestpokemon", "srp", "st", "status", "SURPRISE", "Surprise", "surprise", "surprisetrade", "T", "t", "tc", "TRADE",
+        "Trade", "trade", "ts"
+    };
 
     // Keep the CommandService and DI container around for use with commands.
     // These two types require you install the Discord.Net.Commands package.
@@ -289,11 +301,9 @@ public sealed class SysCord<T> where T : PKM, new()
 
     private async Task HandleMessageAsync(SocketMessage arg)
     {
-        // Bail out if it's a System Message.
         if (arg is not SocketUserMessage msg)
             return;
 
-        // Check if the message is from a server and if that server is blacklisted
         if (msg.Channel is SocketGuildChannel guildChannel)
         {
             if (Manager.BlacklistedServers.Contains(guildChannel.Guild.Id))
@@ -302,28 +312,35 @@ public sealed class SysCord<T> where T : PKM, new()
                 return;
             }
         }
-
-        // We don't want the bot to respond to itself or other bots.
         if (msg.Author.Id == _client.CurrentUser.Id || msg.Author.IsBot)
             return;
 
-        var argPos = 0;
-        // Check if the message starts with the correct prefix
-        if (!msg.HasStringPrefix(SysCordSettings.Settings.CommandPrefix, ref argPos))
+        var correctPrefix = SysCordSettings.Settings.CommandPrefix;
+        var content = msg.Content;
+        var command = content.Split(' ')[0][1..];
+        var prefix = content[0].ToString();
+
+        if (_validCommands.Contains(command))
         {
-            // Send a message back to the user indicating the correct prefix
-            await msg.Channel.SendMessageAsync($"Sorry, <@{msg.Author.Id}>. Incorrect prefix. The prefix is **{SysCordSettings.Settings.CommandPrefix}**.");
-            return;
+            if (prefix != correctPrefix)
+            {
+                var response = await msg.Channel.SendMessageAsync($"Sorry, <@{msg.Author.Id}>. Incorrect prefix. The prefix is **{SysCordSettings.Settings.CommandPrefix}**.");
+
+                _ = Task.Delay(5000).ContinueWith(async _ =>
+                {
+                    await msg.DeleteAsync().ConfigureAwait(false);
+                    await response.DeleteAsync().ConfigureAwait(false);
+                });
+                return;
+            }
         }
 
-        // Extract command and arguments
-        var contextprefix = new SocketCommandContext(_client, msg);
-        if (!msg.HasMentionPrefix(_client.CurrentUser, ref argPos) && !msg.HasStringPrefix(SysCordSettings.Settings.CommandPrefix, ref argPos))
+        var argPos = 0;
+        if (!msg.HasMentionPrefix(_client.CurrentUser, ref argPos) && !msg.HasStringPrefix(correctPrefix, ref argPos))
             return;
 
-        // Route commands to handlers
-        await TryHandleCommandAsync(msg, contextprefix, argPos);
-
+        var context = new SocketCommandContext(_client, msg);
+        await TryHandleCommandAsync(msg, context, argPos);
         await TryHandleMessageAsync(msg).ConfigureAwait(false);
     }
 
