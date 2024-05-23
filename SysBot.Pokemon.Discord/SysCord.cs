@@ -359,37 +359,40 @@ public sealed class SysCord<T> where T : PKM, new()
             }
         }
 
-    // fun little trick for users that like to thank the bot after a trade
-    string thanksText = msg.Content.ToLower();
-        if (thanksText.Contains("thank") || thanksText.Contains("thx"))
+        // Fun little trick for users that like to thank the bot after a trade
+        string thanksText = msg.Content.ToLower();
+        var thanksKeywords = new[] { "thank", "thx", "arigato", "the best", "amazing", "incredible", "i love you", "ilu", "awesome", "thanx", "wtf", "i hate you", "you suck", "<3", ":)", "wow", "cool" };
+
+        if (SysCordSettings.Settings.ReplyToThanks && thanksKeywords.Any(thanksText.Contains))
         {
             var channel = msg.Channel;
             await channel.TriggerTypingAsync();
-            await Task.Delay(1_500);
+            await Task.Delay(1500);
 
             var responses = new List<string>
-        {
-            "You're welcome! ❤️",
-            "No problem at all!",
-            "Anytime, glad to help!",
-            "It's my pleasure! ❤️",
-            "Not a problem! You're welcome!",
-            "Always here to help!",
-            "Glad I could assist!",
-            "Happy to serve!",
-            "Of course! You're welcome!",
-            "Sure thing!"
-        };
+    {
+        "It is an honor for you to be in my presence.",
+        "You good, homie.",
+        "Always here to help people like you, even if you *are* funny looking.",
+        "It's your pleasure.",
+        "It was a little annoying, but I liked you enough, so yay you.",
+        "You should really be showing appreciation to your parents.",
+        "Yes... thank me! :)",
+        "Not a problem, you weak and meager human! :D",
+        "If you were *truly* appreciative, you'd pay me in dance. Now dance, monkey!",
+        "No hablo Espanol or something...",
+        "Did you really just show me appreciation? Lol, I'm a bot, dummy. I don't care.",
+        "Now give me your dog for the sacrifice."
+    };
 
-            var randomResponse = responses[new Random().Next(responses.Count)];
-            var finalResponse = $"{randomResponse}";
+            var random = new Random();
+            var randomResponse = responses[random.Next(responses.Count)];
 
-            await msg.Channel.SendMessageAsync(finalResponse).ConfigureAwait(false);
-            return;
+            await channel.SendMessageAsync(randomResponse).ConfigureAwait(false);
         }
     }
 
-    private Task Client_PresenceUpdated(SocketUser user, SocketPresence before, SocketPresence after)
+        private Task Client_PresenceUpdated(SocketUser user, SocketPresence before, SocketPresence after)
     {
         return Task.CompletedTask;
     }
