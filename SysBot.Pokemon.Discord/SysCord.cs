@@ -4,7 +4,6 @@ using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
 using PKHeX.Core;
 using SysBot.Base;
-using SysBot.Pokemon.Helpers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -64,7 +63,6 @@ public sealed class SysCord<T> where T : PKM, new()
                 tradeBot.ConnectionSuccess += async (sender, e) => await HandleBotStart();
             }
         }
-
         SysCordSettings.Manager = Manager;
         SysCordSettings.HubConfig = Hub.Config;
 
@@ -83,11 +81,9 @@ public sealed class SysCord<T> where T : PKM, new()
         {
             // Again, log level:
             LogLevel = LogSeverity.Info,
-
             // This makes commands get run on the task thread pool instead on the websocket read thread.
             // This ensures long-running logic can't block the websocket connection.
             DefaultRunMode = Hub.Config.Discord.AsyncCommands ? RunMode.Async : RunMode.Sync,
-
             // There's a few more properties you can set,
             // for example, case-insensitive commands.
             CaseSensitiveCommands = false,
@@ -101,7 +97,6 @@ public sealed class SysCord<T> where T : PKM, new()
         _services = ConfigureServices();
 
         _client.PresenceUpdated += Client_PresenceUpdated;
-
     }
 
     public async Task HandleBotStart()
@@ -122,9 +117,9 @@ public sealed class SysCord<T> where T : PKM, new()
         if (!SysCordSettings.Settings.BotEmbedStatus)
             return;
 
-        var botName = "Bot";
+        var botName = SysCordSettings.HubConfig.BotName;
         if (string.IsNullOrEmpty(botName))
-            botName = "Bot";
+            botName = "SysBot";
 
         var fullStatusMessage = $"**Status**: {botName} is {status}!";
 
@@ -175,7 +170,6 @@ public sealed class SysCord<T> where T : PKM, new()
                 var message = await channel.SendMessageAsync(embed: embed);
                 _announcementMessageIds[channelId] = message.Id;
                 LogUtil.LogText($"AnnounceBotStatus: {fullStatusMessage} announced in channel {channelId}.");
-
 
                 // Update channel name with emoji based on bot status
                 if (SysCordSettings.Settings.ChannelStatus)
@@ -314,6 +308,24 @@ public sealed class SysCord<T> where T : PKM, new()
         if (msg.Author.Id == _client.CurrentUser.Id || msg.Author.IsBot)
             return;
 
+        string thanksText = msg.Content.ToLower();
+        if (SysCordSettings.Settings.ReplyToThanks &&
+            (thanksText.Contains("thank") || thanksText.Contains("thx") ||
+            (thanksText.Contains("arigato") || thanksText.Contains("the best") ||
+            (thanksText.Contains("amazing") || thanksText.Contains("incredible") ||
+            (thanksText.Contains("i love you") || thanksText.Contains("ilu") ||
+            (thanksText.Contains("ily") || thanksText.Contains("i love u") ||
+            (thanksText.Contains("awesome") || thanksText.Contains("thanx") ||
+            (thanksText.Contains("tysm") || thanksText.Contains("wtf") ||
+            (thanksText.Contains("i hate you") || thanksText.Contains("you suck") ||
+            (thanksText.Contains("<3>") || thanksText.Contains(":)") ||
+            (thanksText.Contains("wow") || thanksText.Contains("cool")
+            )))))))))))
+        {
+            await SysCord<T>.RespondToThanksMessage(msg).ConfigureAwait(false);
+            return;
+        }
+
         var correctPrefix = SysCordSettings.Settings.CommandPrefix;
         var content = msg.Content;
         var command = content.Split(' ')[0][1..];
@@ -324,7 +336,6 @@ public sealed class SysCord<T> where T : PKM, new()
             if (prefix != correctPrefix)
             {
                 var response = await msg.Channel.SendMessageAsync($"Sorry, <@{msg.Author.Id}>. Incorrect prefix. The prefix is **{SysCordSettings.Settings.CommandPrefix}**.");
-
                 _ = Task.Delay(5000).ContinueWith(async _ =>
                 {
                     await msg.DeleteAsync().ConfigureAwait(false);
@@ -343,33 +354,13 @@ public sealed class SysCord<T> where T : PKM, new()
         await TryHandleMessageAsync(msg).ConfigureAwait(false);
     }
 
-    private async Task TryHandleMessageAsync(SocketMessage msg)
+    private static async Task RespondToThanksMessage(SocketUserMessage msg)
     {
-        if (msg.Attachments.Count > 0)
-        {
-            var mgr = Manager;
-            var cfg = mgr.Config;
-            if (cfg.ConvertPKMToShowdownSet && (cfg.ConvertPKMReplyAnyChannel || mgr.CanUseCommandChannel(msg.Channel.Id)))
-            {
-                if (msg is SocketUserMessage userMessage)
-                {
-                    foreach (var att in msg.Attachments)
-                        await msg.Channel.RepostPKMAsShowdownAsync(att, userMessage).ConfigureAwait(false);
-                }
-            }
-        }
+        var channel = msg.Channel;
+        await channel.TriggerTypingAsync();
+        await Task.Delay(1500);
 
-        // Fun little trick for users that like to thank the bot after a trade
-        string thanksText = msg.Content.ToLower();
-        var thanksKeywords = new[] { "thank", "thx", "arigato", "the best", "amazing", "incredible", "i love you", "ilu", "awesome", "thanx", "wtf", "i hate you", "you suck", "<3", ":)", "wow", "cool" };
-
-        if (SysCordSettings.Settings.ReplyToThanks && thanksKeywords.Any(thanksText.Contains))
-        {
-            var channel = msg.Channel;
-            await channel.TriggerTypingAsync();
-            await Task.Delay(1500);
-
-            var responses = new List<string>
+        var responses = new List<string>
     {
         "It is an honor for you to be in my presence.",
         "You good, homie.",
@@ -385,16 +376,10 @@ public sealed class SysCord<T> where T : PKM, new()
         "Now give me your dog for the sacrifice."
     };
 
-            var random = new Random();
-            var randomResponse = responses[random.Next(responses.Count)];
+        var randomResponse = responses[new Random().Next(responses.Count)];
+        var finalResponse = $"{randomResponse}";
 
-            await channel.SendMessageAsync(randomResponse).ConfigureAwait(false);
-        }
-    }
-
-        private Task Client_PresenceUpdated(SocketUser user, SocketPresence before, SocketPresence after)
-    {
-        return Task.CompletedTask;
+        await msg.Channel.SendMessageAsync(finalResponse).ConfigureAwait(false);
     }
 
     private async Task<bool> TryHandleCommandAsync(SocketUserMessage msg, SocketCommandContext context, int pos)
@@ -427,8 +412,7 @@ public sealed class SysCord<T> where T : PKM, new()
             return true;
         }
 
-        // Execute the command. (result does not indicate a return value, 
-        // rather an object stating if the command executed successfully).
+        // Execute the command.
         var guild = msg.Channel is SocketGuildChannel g ? g.Guild.Name : "Unknown Guild";
         await Log(new LogMessage(LogSeverity.Info, "Command", $"Executing command from {guild}#{msg.Channel.Name}:@{msg.Author.Username}. Content: {msg}")).ConfigureAwait(false);
         var result = await _commands.ExecuteAsync(context, pos, _services).ConfigureAwait(false);
@@ -436,13 +420,31 @@ public sealed class SysCord<T> where T : PKM, new()
         if (result.Error == CommandError.UnknownCommand)
             return false;
 
-        // Uncomment the following lines if you want the bot
-        // to send a message if it failed.
-        // This does not catch errors from commands with 'RunMode.Async',
-        // subscribe a handler for '_commands.CommandExecuted' to see those.
         if (!result.IsSuccess)
             await msg.Channel.SendMessageAsync(result.ErrorReason).ConfigureAwait(false);
         return true;
+    }
+
+    private async Task TryHandleMessageAsync(SocketMessage msg)
+    {
+        if (msg.Attachments.Count > 0)
+        {
+            var mgr = Manager;
+            var cfg = mgr.Config;
+            if (cfg.ConvertPKMToShowdownSet && (cfg.ConvertPKMReplyAnyChannel || mgr.CanUseCommandChannel(msg.Channel.Id)))
+            {
+                if (msg is SocketUserMessage userMessage)
+                {
+                    foreach (var att in msg.Attachments)
+                        await msg.Channel.RepostPKMAsShowdownAsync(att, userMessage).ConfigureAwait(false);
+                }
+            }
+        }
+    }
+
+    private Task Client_PresenceUpdated(SocketUser user, SocketPresence before, SocketPresence after)
+    {
+        return Task.CompletedTask;
     }
 
     private async Task MonitorStatusAsync(CancellationToken token)
