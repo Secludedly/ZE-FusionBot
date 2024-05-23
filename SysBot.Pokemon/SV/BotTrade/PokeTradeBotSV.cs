@@ -16,10 +16,20 @@ using static SysBot.Pokemon.SpecialRequests;
 namespace SysBot.Pokemon;
 
 // ReSharper disable once ClassWithVirtualMembersNeverInherited.Global
-public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRoutineExecutor9SV(Config), ICountBot
+public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRoutineExecutor9SV(Config), ICountBot, ITradeBot
 {
     private readonly TradeSettings TradeSettings = Hub.Config.Trade;
     public readonly TradeAbuseSettings AbuseSettings = Hub.Config.TradeAbuse;
+    public event EventHandler<Exception>? ConnectionError;
+    public event EventHandler? ConnectionSuccess;
+    private void OnConnectionError(Exception ex)
+    {
+        ConnectionError?.Invoke(this, ex);
+    }
+    private void OnConnectionSuccess()
+    {
+        ConnectionSuccess?.Invoke(this, EventArgs.Empty);
+    }
 
     public ICountSettings Counts => TradeSettings;
 
@@ -77,6 +87,8 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
             RecentTrainerCache.SetRecentTrainer(sav);
             await InitializeSessionOffsets(token).ConfigureAwait(false);
 
+            OnConnectionSuccess();
+
             // Force the bot to go through all the motions again on its first pass.
             StartFromOverworld = true;
             LastTradeDistributionFixed = false;
@@ -86,7 +98,8 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
         }
         catch (Exception e)
         {
-            Log(e.Message);
+            OnConnectionError(e);
+            throw;
         }
 
         Log($"Ending {nameof(PokeTradeBotSV)} loop.");
