@@ -306,20 +306,22 @@ public class PokeTradeBotLA(PokeTradeHub<PA8> Hub, PokeBotState Config) : PokeRo
 
         bool shouldUpdateOT = existingTradeDetails?.OT != tradePartner.TrainerName;
         bool shouldUpdateTID = existingTradeDetails?.TID != int.Parse(tradePartner.TID7);
-        bool shouldUpdateSID = existingTradeDetails?.SID != int.Parse(tradePartner.SID7);
+
+        var gameVersion = GameVersion.PLA; // Or set this to the appropriate game version based on context
 
         if (existingTradeDetails == null)
         {
-            tradeCodeStorage.UpdateTradeDetails(poke.Trainer.ID, tradePartner.TrainerName, int.Parse(tradePartner.TID7), int.Parse(tradePartner.SID7));
+            tradeCodeStorage.UpdateTradeDetails(poke.Trainer.ID, tradePartner.TrainerName, int.Parse(tradePartner.TID7), 0, gameVersion);
         }
         else
         {
-            if (shouldUpdateOT || shouldUpdateTID || shouldUpdateSID)
+            if (shouldUpdateOT || shouldUpdateTID)
             {
                 tradeCodeStorage.UpdateTradeDetails(poke.Trainer.ID,
                     shouldUpdateOT ? tradePartner.TrainerName : existingTradeDetails.OT,
                     shouldUpdateTID ? int.Parse(tradePartner.TID7) : existingTradeDetails.TID,
-                    shouldUpdateSID ? int.Parse(tradePartner.SID7) : existingTradeDetails.SID);
+                    0,
+                    gameVersion);
             }
         }
 

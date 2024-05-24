@@ -111,27 +111,26 @@ public static class QueueHelper<T> where T : PKM, new()
                 embedData.HeldItemUrl = $"https://serebii.net/itemdex/sprites/{heldItemName}.png";
             }
             embedData.IsLocalFile = File.Exists(embedData.EmbedImageUrl);
-            var userDetails = DetailsExtractor<T>.GetUserDetails(totalTradeCount, tradeDetails);
+
             var position = Info.CheckPosition(userID, uniqueTradeID, type);
             var botct = Info.Hub.Bots.Count;
             var baseEta = position.Position > botct ? Info.Hub.Config.Queues.EstimateDelay(position.Position, botct) : 0;
-            var etaMessage = $"Estimated: {baseEta:F1} min(s) for trade {batchTradeNumber}/{totalBatchTrades}.";
-            // Modify the footer text to include the ETA message
-            string footerText = $"Current Queue Position: {(position.Position == -1 ? 1 : position.Position)}\n";
-            if (!string.IsNullOrEmpty(userDetails))
-            {
-                footerText += userDetails; // Directly append user details
-            }
-            footerText += "\n" + etaMessage; // Include the ETA message
+            var etaMessage = $"Estimated: {baseEta:F1} min(s) for trade {batchTradeNumber}/{totalBatchTrades}";
+            string footerText = string.Empty;
+
+            var userDetails = DetailsExtractor<T>.GetUserDetails(totalTradeCount, tradeDetails, etaMessage, (position.Position, totalBatchTrades)); // Pass etaMessage here
+
+            footerText += !string.IsNullOrEmpty(userDetails) ? $"{userDetails}\n" : string.Empty; // Check if userDetails is not empty before appending
+            footerText += $"ZE FusionBot {TradeBot.Version}";
 
             var embedBuilder = new EmbedBuilder()
-            .WithColor(embedColor)
-            .WithImageUrl(embedData.IsLocalFile ? $"attachment://{Path.GetFileName(embedData.EmbedImageUrl)}" : embedData.EmbedImageUrl)
-            .WithFooter(footerText)
-            .WithAuthor(new EmbedAuthorBuilder()
-            .WithName(embedData.AuthorName)
-            .WithIconUrl(trader.GetAvatarUrl() ?? trader.GetDefaultAvatarUrl())
-            .WithUrl("https://genpkm.com"));
+                .WithColor(embedColor)
+                .WithImageUrl(embedData.IsLocalFile ? $"attachment://{Path.GetFileName(embedData.EmbedImageUrl)}" : embedData.EmbedImageUrl)
+                .WithFooter(footerText)
+                .WithAuthor(new EmbedAuthorBuilder()
+                .WithName(embedData.AuthorName)
+                .WithIconUrl(trader.GetAvatarUrl() ?? trader.GetDefaultAvatarUrl())
+                .WithUrl("https://genpkm.com"));
             DetailsExtractor<T>.AddAdditionalText(embedBuilder);
             if (!isMysteryEgg && type != PokeRoutineType.Clone && type != PokeRoutineType.Dump && type != PokeRoutineType.FixOT && type != PokeRoutineType.SeedCheck)
             {

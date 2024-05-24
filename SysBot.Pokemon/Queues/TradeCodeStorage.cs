@@ -10,10 +10,9 @@ namespace SysBot.Pokemon;
 public class TradeCodeStorage
 {
 
-    public bool AddOrUpdateTradeCode(ulong userID, int tradeCode, string? ot, int tid, int sid)
+    public bool AddOrUpdateTradeCode(ulong userID, int tradeCode, string? ot, int tid, int sid, GameVersion gameVersion)
     {
         LoadFromFile();
-        var gameVersion = GameVersion.SWSH;
 
         if (gameVersion == GameVersion.SWSH)
         {
@@ -35,7 +34,8 @@ public class TradeCodeStorage
                 OT = ot,
                 TID = tid,
                 SID = sid,
-                TradeCount = 0
+                TradeCount = 0,
+                GameVersion = gameVersion
             };
         }
 
@@ -146,21 +146,17 @@ public class TradeCodeStorage
         return null;
     }
 
-    public void UpdateTradeDetails(ulong trainerID, string? ot, int tid, int sid)
+    public void UpdateTradeDetails(ulong trainerID, string? ot, int tid, int sid, GameVersion gameVersion)
     {
-        if (ot == null)
+        LoadFromFile();
+
+        if (_tradeCodeDetails.TryGetValue(trainerID, out var details))
         {
-            LoadFromFile();
-        }
-        else
-        {
-            if (_tradeCodeDetails.TryGetValue(trainerID, out var details))
-            {
-                details.OT = ot;
-                details.TID = tid;
-                details.SID = sid;
-                SaveToFile();
-            }
+            details.OT = ot ?? details.OT;
+            details.TID = tid;
+            details.SID = gameVersion == GameVersion.SWSH ? 0 : sid;
+            details.GameVersion = gameVersion;
+            SaveToFile();
         }
     }
 }

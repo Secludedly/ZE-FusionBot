@@ -230,28 +230,48 @@ public class DetailsExtractor<T> where T : PKM, new()
                $"{username}'s {isPkmShiny}{pokemonDisplayName}";
     }
 
-    public static string GetUserDetails(int totalTradeCount, TradeCodeStorage.TradeCodeDetails? tradeDetails)
+    public static string GetUserDetails(int totalTradeCount, TradeCodeStorage.TradeCodeDetails? tradeDetails, string etaMessage, (int Position, int TotalBatchTrades) position)
     {
         // Initialize userDetailsText only if totalTradeCount > 0 and other conditions are met
         if (totalTradeCount > 0 && SysCord<T>.Runner.Config.Trade.TradeConfiguration.StoreTradeCodes && tradeDetails != null)
         {
-            string userDetailsText = $"Total User Trades: {totalTradeCount}\n";
+            string userDetailsText = string.Empty;
+
+            // Add ETA message first
+            if (!string.IsNullOrEmpty(etaMessage))
+            {
+                userDetailsText += $"{etaMessage}\n"; // Add a newline after ETA message
+            }
+
+            // Check if "Current Queue Position" is not already included in etaMessage or userDetailsText
+            if (!etaMessage.Contains("Current Queue Position") && !userDetailsText.Contains("Current Queue Position"))
+            {
+                userDetailsText += $"Current Queue Position: {(position.Position == -1 ? 1 : position.Position)}\n";
+            }
+
+            // Add Total User Trades
+            userDetailsText += $"Total User Trades: {totalTradeCount}\n";
 
             List<string> details = new List<string>();
 
+            // Check if the OT is not null
             if (!string.IsNullOrEmpty(tradeDetails?.OT))
             {
                 details.Add($"OT: {tradeDetails?.OT}");
             }
-            if (tradeDetails?.TID != null)
+
+            // Check if the TID is not 0
+            if (tradeDetails?.TID != 0)
             {
                 details.Add($"TID: {tradeDetails?.TID}");
             }
-            // Ensure the game version is not SWSH before adding SID
-            if (tradeDetails?.SID != null && tradeDetails.GameVersion != GameVersion.SWSH)
+
+            // Check if the SID is not 0 and game version is not SWSH
+            if (tradeDetails?.SID != 0 && tradeDetails.GameVersion != GameVersion.SWSH)
             {
                 details.Add($"SID: {tradeDetails?.SID}");
             }
+
             if (details.Count > 0)
             {
                 userDetailsText += string.Join(" | ", details);
@@ -260,6 +280,7 @@ public class DetailsExtractor<T> where T : PKM, new()
         }
         return string.Empty;
     }
+
 
     public static void AddAdditionalText(EmbedBuilder embedBuilder)
     {

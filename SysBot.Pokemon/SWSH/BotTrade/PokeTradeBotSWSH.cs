@@ -334,7 +334,6 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState Config) : Poke
 
         var trainerName = await GetTradePartnerName(TradeMethod.LinkTrade, token).ConfigureAwait(false);
         var trainerTID = await GetTradePartnerTID7(TradeMethod.LinkTrade, token).ConfigureAwait(false);
-        var trainerSID = await GetTradePartnerSID7(TradeMethod.LinkTrade, token).ConfigureAwait(false);
         var trainerNID = await GetTradePartnerNID(token).ConfigureAwait(false);
         RecordUtil<PokeTradeBotSWSH>.Record($"Initiating\t{trainerNID:X16}\t{trainerName}\t{poke.Trainer.TrainerName}\t{poke.Trainer.ID}\t{poke.ID}\t{toSend.EncryptionConstant:X8}");
         Log($"Found Link Trade partner: {trainerName}-{trainerTID} (ID: {trainerNID})");
@@ -342,27 +341,28 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState Config) : Poke
         var tradeCodeStorage = new TradeCodeStorage();
         var existingTradeDetails = tradeCodeStorage.GetTradeDetails(poke.Trainer.ID);
 
-        if (existingTradeDetails != null) // Check if existingTradeDetails is not null
-        {
-            bool shouldUpdateOT = existingTradeDetails.OT != trainerName;
-            bool shouldUpdateTID = existingTradeDetails.TID != int.Parse(trainerTID);
-            bool shouldUpdateSID = existingTradeDetails.SID != int.Parse(trainerSID);
+        bool shouldUpdateOT = existingTradeDetails?.OT != trainerName;
+        bool shouldUpdateTID = existingTradeDetails?.TID != int.Parse(trainerTID);
 
-            if (shouldUpdateOT || shouldUpdateTID || shouldUpdateSID)
+        var gameVersion = GameVersion.SWSH; // Or set this to the appropriate game version based on context
+
+        if (existingTradeDetails == null)
+        {
+            tradeCodeStorage.UpdateTradeDetails(poke.Trainer.ID, trainerName, int.Parse(trainerTID), 0, gameVersion);
+        }
+        else
+        {
+            if (shouldUpdateOT || shouldUpdateTID)
             {
-                tradeCodeStorage.UpdateTradeDetails(
-                    poke.Trainer.ID,
-                    shouldUpdateOT ? trainerName : existingTradeDetails.OT ?? "", // Use existingTradeDetails.OT if not null, else use empty string
+                tradeCodeStorage.UpdateTradeDetails(poke.Trainer.ID,
+                    shouldUpdateOT ? trainerName : existingTradeDetails.OT,
                     shouldUpdateTID ? int.Parse(trainerTID) : existingTradeDetails.TID,
-                    shouldUpdateSID ? int.Parse(trainerSID) : existingTradeDetails.SID);
-            }
-            else
-            {
-                LogUtil.LogError("Existing trade details are null. Unable to update.", nameof(PerformLinkCodeTrade));
+                    0,
+                    gameVersion);
             }
         }
 
-            var partnerCheck = CheckPartnerReputation(this, poke, trainerNID, trainerName, AbuseSettings, token);
+        var partnerCheck = CheckPartnerReputation(this, poke, trainerNID, trainerName, AbuseSettings, token);
         if (partnerCheck != PokeTradeResult.Success)
         {
             await ExitSeedCheckTrade(token).ConfigureAwait(false);
