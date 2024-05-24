@@ -63,6 +63,8 @@ public static class ReusableActions
 
     public static async Task SendPKMAsShowdownSetAsync(this ISocketMessageChannel channel, PKM pkm, SocketUserMessage userMessage)
     {
+        if (!string.IsNullOrWhiteSpace(userMessage.Content))
+            return;
         var txt = GetFormattedShowdownText(pkm);
         bool canGmax = pkm is PK8 pk8 && pk8.CanGigantamax;
         var speciesImageUrl = AbstractTrade<PK9>.PokeImg(pkm, canGmax, false);
