@@ -30,10 +30,10 @@ public class DiscordSettings
     public bool ChannelStatus { get; set; } = true;
 
     [Category(Startup), Description("Custom emoji to use when the bot is online.")]
-    public string OnlineEmoji { get; set; } = "<:green_circle:1243096879626194944>";
+    public string OnlineEmoji { get; set; } = string.Empty;
 
     [Category(Startup), Description("Custom emoji to use when the bot is offline.")]
-    public string OfflineEmoji { get; set; } = "<:red_circle:1243096898588377169>";
+    public string OfflineEmoji { get; set; } = string.Empty;
 
     [Category(Startup), Description("List of modules that will not be loaded when the bot is started (comma separated).")]
     public string ModuleBlacklist { get; set; } = string.Empty;

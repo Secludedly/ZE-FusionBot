@@ -119,7 +119,7 @@ public sealed class SysCord<T> where T : PKM, new()
 
         var botName = SysCordSettings.HubConfig.BotName;
         if (string.IsNullOrEmpty(botName))
-            botName = "SysBot";
+            botName = "Bot";
 
         var fullStatusMessage = $"**Status**: {botName} is {status}!";
 
@@ -179,10 +179,24 @@ public sealed class SysCord<T> where T : PKM, new()
                     var updatedChannelName = $"{emoji}{SysCord<T>.TrimStatusEmoji(channelName)}";
                     await ((ITextChannel)channel).ModifyAsync(x => x.Name = updatedChannelName);
                 }
+
+                // Update "Send Messages" permission for @everyone role based on bot status
+                var textChannel = channel as ITextChannel;
+                if (textChannel != null)
+                {
+                    // Create permission overwrite: Allow send messages if online, deny if offline
+                    var permissions = new OverwritePermissions(sendMessages: status == "Online" ? PermValue.Allow : PermValue.Deny);
+
+                    // Fetch the @everyone role
+                    var everyoneRole = textChannel.Guild.EveryoneRole;
+
+                    // Apply the new permission overwrite for the @everyone role
+                    await textChannel.AddPermissionOverwriteAsync(everyoneRole, permissions);
+                }
             }
             catch (Exception ex)
             {
-                LogUtil.LogText($"AnnounceBotStatus: Exception when sending message to channel {channelId}: {ex.Message}");
+                LogUtil.LogText($"AnnounceBotStatus: Exception in channel {channelId}: {ex.Message}");
             }
         }
     }
