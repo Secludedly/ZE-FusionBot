@@ -141,7 +141,7 @@ public sealed class SysCord<T> where T : PKM, new()
             return;
 
         var botName = SysCordSettings.HubConfig.BotName ?? "Bot";
-        var fullStatusMessage = $"**Status**: {botName} is {status}!";
+        var fullStatusMessage = $"**Status**: {status}!";
 
         var thumbnailUrl = status == "Online"
             ? "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/botgo.png"
