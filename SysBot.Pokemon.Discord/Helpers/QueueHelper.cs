@@ -143,7 +143,7 @@ public static class QueueHelper<T> where T : PKM, new()
             if (setEdited && Info.Hub.Config.Trade.AutoCorrectConfig.AutoCorrectEmbedIndicator)
             {
                 embedBuilder.Footer.IconUrl = "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/setedited.png";
-                embedBuilder.AddField("__Your Showdown Set was Invalid__", "Auto Corrected to make legal.");
+                embedBuilder.AddField("**__Notice__:** Your request was illegal.", "**__Result__:** Auto-Corrected to closest legal match.");
             }
             DetailsExtractor<T>.AddThumbnails(embedBuilder, type == PokeRoutineType.Clone, type == PokeRoutineType.SeedCheck, embedData.HeldItemUrl);
             if (!isHiddenTrade && SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.UseEmbeds)
