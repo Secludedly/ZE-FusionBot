@@ -77,6 +77,10 @@ public sealed class SysCord<T> where T : PKM, new()
             //MessageCacheSize = 50,
         });
 
+        _client.Connected += async () => await HandleBotStart();
+        _client.Disconnected += async (ex) => await HandleBotStop();
+        _client.Ready += async () => await HandleBotStart();
+
         _commands = new CommandService(new CommandServiceConfig
         {
             // Again, log level:
@@ -111,16 +115,32 @@ public sealed class SysCord<T> where T : PKM, new()
 
     private readonly Dictionary<ulong, ulong> _announcementMessageIds = [];
 
+    private async Task UpdateChannelPermissions(ITextChannel channel, bool isOnline)
+    {
+        try
+        {
+            // Create permission overwrite: Allow send messages if online, deny if offline
+            var permissions = new OverwritePermissions(sendMessages: isOnline ? PermValue.Allow : PermValue.Deny);
+
+            // Fetch the @everyone role
+            var everyoneRole = channel.Guild.EveryoneRole;
+
+            // Apply the new permission overwrite for the @everyone role
+            await channel.AddPermissionOverwriteAsync(everyoneRole, permissions);
+        }
+        catch (Exception ex)
+        {
+            LogUtil.LogText($"UpdateChannelPermissions: Exception in channel {channel.Id}: {ex.Message}");
+        }
+    }
+
+
     public async Task AnnounceBotStatus(string status, EmbedColorOption color)
     {
-        // Check the BotEmbedStatus setting before proceeding
         if (!SysCordSettings.Settings.BotEmbedStatus)
             return;
 
-        var botName = SysCordSettings.HubConfig.BotName;
-        if (string.IsNullOrEmpty(botName))
-            botName = "Bot";
-
+        var botName = SysCordSettings.HubConfig.BotName ?? "Bot";
         var fullStatusMessage = $"**Status**: {botName} is {status}!";
 
         var thumbnailUrl = status == "Online"
@@ -135,13 +155,10 @@ public sealed class SysCord<T> where T : PKM, new()
             .WithTimestamp(DateTimeOffset.Now)
             .Build();
 
-        // Iterate over whitelisted channels and send the announcement
         foreach (var channelId in SysCordSettings.Manager.WhitelistedChannels.List.Select(channel => channel.ID))
         {
-            IMessageChannel? channel = _client.GetChannel(channelId) as IMessageChannel;
-            if (channel == null)
+            if (_client.GetChannel(channelId) is not IMessageChannel channel)
             {
-                // If not found in cache, try fetching directly
                 channel = await _client.Rest.GetChannelAsync(channelId) as IMessageChannel;
                 if (channel == null)
                 {
@@ -152,10 +169,8 @@ public sealed class SysCord<T> where T : PKM, new()
 
             try
             {
-                // Check if there's a previous announcement message in this channel
                 if (_announcementMessageIds.TryGetValue(channelId, out ulong messageId))
                 {
-                    // Try to delete the previous announcement message
                     try
                     {
                         await channel.DeleteMessageAsync(messageId);
@@ -166,32 +181,18 @@ public sealed class SysCord<T> where T : PKM, new()
                     }
                 }
 
-                // Send the new announcement and store the message ID
                 var message = await channel.SendMessageAsync(embed: embed);
                 _announcementMessageIds[channelId] = message.Id;
                 LogUtil.LogText($"AnnounceBotStatus: {fullStatusMessage} announced in channel {channelId}.");
 
-                // Update channel name with emoji based on bot status
-                if (SysCordSettings.Settings.ChannelStatus)
+                if (SysCordSettings.Settings.ChannelStatus && channel is ITextChannel textChannel)
                 {
                     var emoji = status == "Online" ? SysCordSettings.Settings.OnlineEmoji : SysCordSettings.Settings.OfflineEmoji;
-                    var channelName = ((ITextChannel)channel).Name;
+                    var channelName = textChannel.Name;
                     var updatedChannelName = $"{emoji}{SysCord<T>.TrimStatusEmoji(channelName)}";
-                    await ((ITextChannel)channel).ModifyAsync(x => x.Name = updatedChannelName);
-                }
+                    await textChannel.ModifyAsync(x => x.Name = updatedChannelName);
 
-                // Update "Send Messages" permission for @everyone role based on bot status
-                var textChannel = channel as ITextChannel;
-                if (textChannel != null)
-                {
-                    // Create permission overwrite: Allow send messages if online, deny if offline
-                    var permissions = new OverwritePermissions(sendMessages: status == "Online" ? PermValue.Allow : PermValue.Deny);
-
-                    // Fetch the @everyone role
-                    var everyoneRole = textChannel.Guild.EveryoneRole;
-
-                    // Apply the new permission overwrite for the @everyone role
-                    await textChannel.AddPermissionOverwriteAsync(everyoneRole, permissions);
+                    await UpdateChannelPermissions(textChannel, status == "Online");
                 }
             }
             catch (Exception ex)
@@ -200,6 +201,7 @@ public sealed class SysCord<T> where T : PKM, new()
             }
         }
     }
+
 
     // If any services require the client, or the CommandService, or something else you keep on hand,
     // pass them as parameters into this method as needed.
