@@ -63,8 +63,6 @@ public static class ReusableActions
 
     public static async Task SendPKMAsShowdownSetAsync(this ISocketMessageChannel channel, PKM pkm, SocketUserMessage userMessage)
     {
-        if (!string.IsNullOrWhiteSpace(userMessage.Content))
-            return;
         var txt = GetFormattedShowdownText(pkm);
         bool canGmax = pkm is PK8 pk8 && pk8.CanGigantamax;
         var speciesImageUrl = AbstractTrade<PK9>.PokeImg(pkm, canGmax, false);
@@ -77,11 +75,19 @@ public static class ReusableActions
             .Build();
 
         var botMessage = await channel.SendMessageAsync(embed: embed).ConfigureAwait(false); // Send the embed
-        await Task.Delay(2000).ConfigureAwait(false);
-        await userMessage.DeleteAsync().ConfigureAwait(false);
-        await Task.Delay(20000).ConfigureAwait(false);
-        await botMessage.DeleteAsync().ConfigureAwait(false);
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(2000).ConfigureAwait(false);
+            await userMessage.DeleteAsync().ConfigureAwait(false);
+        });
+
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(20000).ConfigureAwait(false);
+            await botMessage.DeleteAsync().ConfigureAwait(false);
+        });
     }
+
 
 
     public static string GetFormattedShowdownText(PKM pkm)

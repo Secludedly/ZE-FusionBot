@@ -2,161 +2,149 @@ using System.Collections.Generic;
 using System.Text.Json;
 using System.IO;
 using PKHeX.Core;
-using System.Security.Cryptography;
 using Newtonsoft.Json;
 
-namespace SysBot.Pokemon;
-
-public class TradeCodeStorage
+namespace SysBot.Pokemon
 {
-
-    public bool AddOrUpdateTradeCode(ulong userID, int tradeCode, string? ot, int tid, int sid, GameVersion gameVersion)
+    public class TradeCodeStorage
     {
-        LoadFromFile();
+        private const string FileName = "tradecodes.json";
+        private Dictionary<ulong, TradeCodeDetails> _tradeCodeDetails;
 
-        if (gameVersion == GameVersion.SWSH)
+        public TradeCodeStorage()
         {
-            // Always save SID as 0 for SWSH
-            sid = 0;
+            LoadFromFile();
         }
 
-        if (_tradeCodeDetails.ContainsKey(userID))
+        public bool AddOrUpdateTradeCode(ulong userID, int tradeCode, string? ot, int tid, int sid, GameVersion gameVersion)
         {
-            // If the user already exists, update the trade code and keep the existing OT, TID, and SID
-            _tradeCodeDetails[userID].Code = tradeCode;
-        }
-        else
-        {
-            // If the user doesn't exist, add a new entry with the specified trade code and OT, TID, SID
-            _tradeCodeDetails[userID] = new TradeCodeDetails
+            LoadFromFile();
+
+            if (gameVersion == GameVersion.SWSH)
             {
-                Code = tradeCode,
-                OT = ot,
-                TID = tid,
-                SID = sid,
-                TradeCount = 0,
-                GameVersion = gameVersion
-            };
-        }
+                // Always save SID as 0 for SWSH
+                sid = 0;
+            }
 
-        SaveToFile();
-        return true;
-    }
+            if (_tradeCodeDetails.ContainsKey(userID))
+            {
+                // Update existing entry
+                var details = _tradeCodeDetails[userID];
+                details.Code = tradeCode;
+                details.OT = ot ?? details.OT;
+                details.TID = tid;
+                details.SID = sid;
+                details.GameVersion = gameVersion;
+            }
+            else
+            {
+                // Add new entry
+                _tradeCodeDetails[userID] = new TradeCodeDetails
+                {
+                    Code = tradeCode,
+                    OT = ot,
+                    TID = tid,
+                    SID = sid,
+                    TradeCount = 0,
+                    GameVersion = gameVersion
+                };
+            }
 
-    private const string FileName = "tradecodes.json";
-    private Dictionary<ulong, TradeCodeDetails> _tradeCodeDetails;
-
-    public class TradeCodeDetails
-    {
-        public int Code { get; set; }
-        public string? OT { get; set; }
-        public int TID { get; set; }
-        public int SID { get; set; }
-        public int TradeCount { get; set; }
-
-        [JsonIgnore]
-        public GameVersion GameVersion { get; set; }
-    }
-
-    private static readonly JsonSerializerOptions SerializerOptions = new()
-    {
-        PropertyNameCaseInsensitive = true,
-        WriteIndented = true
-    };
-
-    public TradeCodeStorage()
-    {
-        LoadFromFile();
-    }
-
-    public int GetTradeCode(ulong trainerID)
-    {
-        LoadFromFile();
-
-        if (_tradeCodeDetails.TryGetValue(trainerID, out var details))
-        {
-            details.TradeCount++;
-            SaveToFile();
-            return details.Code;
-        }
-
-        var code = GenerateRandomTradeCode();
-        _tradeCodeDetails[trainerID] = new TradeCodeDetails { Code = code, TradeCount = 1 };
-        SaveToFile();
-        return code;
-    }
-
-    private static int GenerateRandomTradeCode()
-    {
-        var settings = new TradeSettings();
-        return settings.GetRandomTradeCode();
-    }
-
-    private void LoadFromFile()
-    {
-        if (File.Exists(FileName))
-        {
-            string json = File.ReadAllText(FileName);
-            Dictionary<ulong, TradeCodeDetails>? dictionary = System.Text.Json.JsonSerializer.Deserialize<Dictionary<ulong, TradeCodeDetails>>(json, SerializerOptions);
-            _tradeCodeDetails = dictionary;
-        }
-        else
-        {
-            _tradeCodeDetails = new Dictionary<ulong, TradeCodeDetails>();
-        }
-    }
-
-    public bool DeleteTradeCode(ulong trainerID)
-    {
-        LoadFromFile();
-
-        if (_tradeCodeDetails.Remove(trainerID))
-        {
             SaveToFile();
             return true;
         }
-        return false;
-    }
 
-    private void SaveToFile()
-    {
-        string json = System.Text.Json.JsonSerializer.Serialize(_tradeCodeDetails, SerializerOptions);
-        File.WriteAllText(FileName, json);
-    }
-
-    public int GetTradeCount(ulong trainerID)
-    {
-        LoadFromFile();
-
-        if (_tradeCodeDetails.TryGetValue(trainerID, out var details))
+        public int GetTradeCode(ulong trainerID)
         {
-            return details.TradeCount;
-        }
-        return 0;
-    }
+            LoadFromFile();
 
-    public TradeCodeDetails? GetTradeDetails(ulong trainerID)
-    {
-        LoadFromFile();
+            if (_tradeCodeDetails.TryGetValue(trainerID, out var details))
+            {
+                details.TradeCount++;
+                SaveToFile();
+                return details.Code;
+            }
 
-        if (_tradeCodeDetails.TryGetValue(trainerID, out var details))
-        {
-            return details;
-        }
-        return null;
-    }
-
-    public void UpdateTradeDetails(ulong trainerID, string? ot, int tid, int sid, GameVersion gameVersion)
-    {
-        LoadFromFile();
-
-        if (_tradeCodeDetails.TryGetValue(trainerID, out var details))
-        {
-            details.OT = ot ?? details.OT;
-            details.TID = tid;
-            details.SID = gameVersion == GameVersion.SWSH ? 0 : sid;
-            details.GameVersion = gameVersion;
+            var code = GenerateRandomTradeCode();
+            _tradeCodeDetails[trainerID] = new TradeCodeDetails { Code = code, TradeCount = 1 };
             SaveToFile();
+            return code;
+        }
+
+        private static int GenerateRandomTradeCode()
+        {
+            var settings = new TradeSettings();
+            return settings.GetRandomTradeCode();
+        }
+
+        private void LoadFromFile()
+        {
+            if (File.Exists(FileName))
+            {
+                string json = File.ReadAllText(FileName);
+                _tradeCodeDetails = JsonConvert.DeserializeObject<Dictionary<ulong, TradeCodeDetails>>(json)
+                                    ?? new Dictionary<ulong, TradeCodeDetails>();
+            }
+            else
+            {
+                _tradeCodeDetails = new Dictionary<ulong, TradeCodeDetails>();
+            }
+        }
+
+        private void SaveToFile()
+        {
+            string json = JsonConvert.SerializeObject(_tradeCodeDetails, Formatting.Indented);
+            File.WriteAllText(FileName, json);
+        }
+
+        public bool DeleteTradeCode(ulong trainerID)
+        {
+            LoadFromFile();
+
+            if (_tradeCodeDetails.Remove(trainerID))
+            {
+                SaveToFile();
+                return true;
+            }
+            return false;
+        }
+
+        public int GetTradeCount(ulong trainerID)
+        {
+            LoadFromFile();
+
+            return _tradeCodeDetails.TryGetValue(trainerID, out var details) ? details.TradeCount : 0;
+        }
+
+        public TradeCodeDetails? GetTradeDetails(ulong trainerID)
+        {
+            LoadFromFile();
+
+            return _tradeCodeDetails.TryGetValue(trainerID, out var details) ? details : null;
+        }
+
+        public void UpdateTradeDetails(ulong trainerID, string? ot, int tid, int sid, GameVersion gameVersion)
+        {
+            LoadFromFile();
+
+            if (_tradeCodeDetails.TryGetValue(trainerID, out var details))
+            {
+                details.OT = ot ?? details.OT;
+                details.TID = tid;
+                details.SID = gameVersion == GameVersion.SWSH ? 0 : sid;
+                details.GameVersion = gameVersion;
+                SaveToFile();
+            }
+        }
+
+        public class TradeCodeDetails
+        {
+            public int Code { get; set; }
+            public string? OT { get; set; }
+            public int TID { get; set; }
+            public int SID { get; set; }
+            public int TradeCount { get; set; }
+            public GameVersion GameVersion { get; set; }
         }
     }
 }

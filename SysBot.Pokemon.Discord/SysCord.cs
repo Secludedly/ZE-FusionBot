@@ -134,7 +134,6 @@ public sealed class SysCord<T> where T : PKM, new()
         }
     }
 
-
     public async Task AnnounceBotStatus(string status, EmbedColorOption color)
     {
         if (!SysCordSettings.Settings.BotEmbedStatus)
@@ -344,12 +343,21 @@ public sealed class SysCord<T> where T : PKM, new()
 
         var correctPrefix = SysCordSettings.Settings.CommandPrefix;
         var content = msg.Content;
-        var command = content.Split(' ')[0][1..];
-        var prefix = content[0].ToString();
+        var argPos = 0;
 
-        if (_validCommands.Contains(command))
+        if (msg.HasMentionPrefix(_client.CurrentUser, ref argPos) || msg.HasStringPrefix(correctPrefix, ref argPos))
         {
-            if (prefix != correctPrefix)
+            var context = new SocketCommandContext(_client, msg);
+            var handled = await TryHandleCommandAsync(msg, context, argPos);
+            if (handled)
+                return;
+        }
+        else if (content.Length > 1 && content[0] != correctPrefix[0])
+        {
+            var potentialPrefix = content[0].ToString();
+            var command = content.Split(' ')[0][1..];
+
+            if (_validCommands.Contains(command))
             {
                 var response = await msg.Channel.SendMessageAsync($"Sorry, <@{msg.Author.Id}>. Incorrect prefix. The prefix is **{SysCordSettings.Settings.CommandPrefix}**.");
                 _ = Task.Delay(5000).ContinueWith(async _ =>
@@ -361,47 +369,14 @@ public sealed class SysCord<T> where T : PKM, new()
             }
         }
 
-        var argPos = 0;
-        if (!msg.HasMentionPrefix(_client.CurrentUser, ref argPos) && !msg.HasStringPrefix(correctPrefix, ref argPos))
-            return;
-
-        var context = new SocketCommandContext(_client, msg);
-        await TryHandleCommandAsync(msg, context, argPos);
-        await TryHandleMessageAsync(msg).ConfigureAwait(false);
-    }
-
-    private static async Task RespondToThanksMessage(SocketUserMessage msg)
-    {
-        var channel = msg.Channel;
-        await channel.TriggerTypingAsync();
-        await Task.Delay(1500);
-
-        var responses = new List<string>
-    {
-        "It is an honor for you to be in my presence.",
-        "You good, homie.",
-        "Always here to help people like you, even if you *are* funny looking.",
-        "It's your pleasure.",
-        "It was a little annoying, but I liked you enough, so yay you.",
-        "You should really be showing appreciation to your parents.",
-        "Yes... thank me! :)",
-        "Not a problem, you weak and meager human! :D",
-        "If you were *truly* appreciative, you'd pay me in dance. Now dance, monkey!",
-        "No hablo Espanol or something...",
-        "Did you really just show me appreciation? Lol, I'm a bot, dummy. I don't care.",
-        "Now give me your dog for the sacrifice."
-    };
-
-        var randomResponse = responses[new Random().Next(responses.Count)];
-        var finalResponse = $"{randomResponse}";
-
-        await msg.Channel.SendMessageAsync(finalResponse).ConfigureAwait(false);
+        if (msg.Attachments.Count > 0)
+        {
+            await TryHandleAttachmentAsync(msg).ConfigureAwait(false);
+        }
     }
 
     private async Task<bool> TryHandleCommandAsync(SocketUserMessage msg, SocketCommandContext context, int pos)
     {
-        // Create a Command Context.
-        var contextprefix = new SocketCommandContext(_client, msg);
         var AbuseSettings = Hub.Config.TradeAbuse;
 
         // Check if the user is in the bannedIDs list
@@ -414,7 +389,6 @@ public sealed class SysCord<T> where T : PKM, new()
             }
         }
 
-        // Check Permission
         var mgr = Manager;
         if (!mgr.CanUseCommandUser(msg.Author.Id))
         {
@@ -428,7 +402,6 @@ public sealed class SysCord<T> where T : PKM, new()
             return true;
         }
 
-        // Execute the command.
         var guild = msg.Channel is SocketGuildChannel g ? g.Guild.Name : "Unknown Guild";
         await Log(new LogMessage(LogSeverity.Info, "Command", $"Executing command from {guild}#{msg.Channel.Name}:@{msg.Author.Username}. Content: {msg}")).ConfigureAwait(false);
         var result = await _commands.ExecuteAsync(context, pos, _services).ConfigureAwait(false);
@@ -441,22 +414,47 @@ public sealed class SysCord<T> where T : PKM, new()
         return true;
     }
 
-    private async Task TryHandleMessageAsync(SocketMessage msg)
+    private async Task TryHandleAttachmentAsync(SocketMessage msg)
     {
-        if (msg.Attachments.Count > 0)
+        var mgr = Manager;
+        var cfg = mgr.Config;
+        if (cfg.ConvertPKMToShowdownSet && (cfg.ConvertPKMReplyAnyChannel || mgr.CanUseCommandChannel(msg.Channel.Id)))
         {
-            var mgr = Manager;
-            var cfg = mgr.Config;
-            if (cfg.ConvertPKMToShowdownSet && (cfg.ConvertPKMReplyAnyChannel || mgr.CanUseCommandChannel(msg.Channel.Id)))
+            if (msg is SocketUserMessage userMessage)
             {
-                if (msg is SocketUserMessage userMessage)
-                {
-                    foreach (var att in msg.Attachments)
-                        await msg.Channel.RepostPKMAsShowdownAsync(att, userMessage).ConfigureAwait(false);
-                }
+                foreach (var att in msg.Attachments)
+                    await msg.Channel.RepostPKMAsShowdownAsync(att, userMessage).ConfigureAwait(false);
             }
         }
     }
+    private static async Task RespondToThanksMessage(SocketUserMessage msg)
+    {
+        var channel = msg.Channel;
+        await channel.TriggerTypingAsync();
+        await Task.Delay(1500);
+
+        var responses = new List<string>
+        {
+        "It is an honor for you to be in my presence.",
+        "You good, homie.",
+        "Always here to help people like you, even if you *are* funny looking.",
+        "It's your pleasure.",
+        "It was a little annoying, but I liked you enough, so yay you.",
+        "You should really be showing appreciation to your parents.",
+        "Yes... thank me! :)",
+        "Not a problem, you weak and meager human! :D",
+        "If you were *truly* appreciative, you'd pay me in dance. Now dance, monkey!",
+        "No hablo Espanol or something...",
+        "Did you really just show me appreciation? Lol, I'm a bot, dummy. I don't care.",
+        "Now give me your dog for the sacrifice."
+        };
+
+        var randomResponse = responses[new Random().Next(responses.Count)];
+        var finalResponse = $"{randomResponse}";
+
+        await msg.Channel.SendMessageAsync(finalResponse).ConfigureAwait(false);
+    }
+
 
     private Task Client_PresenceUpdated(SocketUser user, SocketPresence before, SocketPresence after)
     {
