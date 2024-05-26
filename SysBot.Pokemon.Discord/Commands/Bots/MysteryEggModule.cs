@@ -51,26 +51,15 @@ namespace SysBot.Pokemon.Discord
                 var gameVersion = GetGameVersion();
                 var speciesList = GetBreedableSpecies(gameVersion, "en");
 
-                var randomIndex = new Random().Next(speciesList.Count);
-                ushort speciesId = speciesList[randomIndex];
-                var speciesName = GameInfo.GetStrings("en").specieslist[speciesId];
-
-                var showdownSet = new ShowdownSet(speciesName);
-                var template = AutoLegalityWrapper.GetTemplate(showdownSet);
-
-                var sav = AutoLegalityWrapper.GetTrainerInfo<T>();
-                var pkm = sav.GetLegal(template, out var result);
-
-                SetPerfectIVsAndShiny(pkm);
-
-                pkm = EntityConverter.ConvertToType(pkm, typeof(T), out _) ?? pkm;
-
-                if (pkm is not T pk)
+                T pk = null;
+                bool isLegal = false;
+                while (!isLegal)
                 {
-                    await ReplyAsync($"I wasn't able to create a mystery egg for that.").ConfigureAwait(false);
-                    return;
+                    pk = await GenerateMysteryEggAsync(speciesList);
+                    isLegal = IsLegal(pk);
                 }
 
+                var template = AutoLegalityWrapper.GetTemplate(new ShowdownSet(GameInfo.GetStrings("en").specieslist[pk.Species]));
                 AbstractTrade<T>.EggTrade(pk, template);
 
                 var sig = Context.User.GetFavor();
@@ -88,6 +77,51 @@ namespace SysBot.Pokemon.Discord
             }
         }
 
+        private static async Task<T> GenerateMysteryEggAsync(List<ushort> speciesList)
+        {
+            var randomIndex = new Random().Next(speciesList.Count);
+            ushort speciesId = speciesList[randomIndex];
+            var speciesName = GameInfo.GetStrings("en").specieslist[speciesId];
+
+            var showdownSet = new ShowdownSet(speciesName);
+            var template = AutoLegalityWrapper.GetTemplate(showdownSet);
+
+            var sav = AutoLegalityWrapper.GetTrainerInfo<T>();
+            var pkm = sav.GetLegal(template, out var result);
+
+            SetPerfectIVsAndShiny(pkm);
+
+            pkm = EntityConverter.ConvertToType(pkm, typeof(T), out _) ?? pkm;
+
+            return pkm as T;
+        }
+
+        private static bool IsLegal(PKM pk)
+        {
+            var la = new LegalityAnalysis(pk);
+            if (la.Valid) return true;
+
+            if (la.Results.Any(m => m.Identifier is CheckIdentifier.Memory))
+            {
+                var clone = (PKM)pk.Clone();
+                clone.HandlingTrainerName = pk.OriginalTrainerName;
+                clone.HandlingTrainerGender = pk.OriginalTrainerGender;
+
+                if (clone is PK8 or PA8 or PB8 or PK9)
+                    ((dynamic)clone).HandlingTrainerLanguage = (byte)pk.Language;
+
+                clone.CurrentHandler = 1;
+                la = new LegalityAnalysis(clone);
+
+                if (la.Valid)
+                {
+                    pk = clone;
+                    return true;
+                }
+            }
+            return false;
+        }
+
         private static async Task DeleteMessageAfterDelay(IUserMessage message, int delayMilliseconds)
         {
             await Task.Delay(delayMilliseconds).ConfigureAwait(false);
@@ -96,23 +130,21 @@ namespace SysBot.Pokemon.Discord
 
         private static void SetPerfectIVsAndShiny(PKM pk)
         {
-            pk.IVs = [31, 31, 31, 31, 31, 31];
+            pk.IVs = new[] { 31, 31, 31, 31, 31, 31 };
             pk.SetShiny();
             pk.RefreshAbility(2);
         }
 
         private static GameVersion GetGameVersion()
         {
-            if (typeof(T) == typeof(PK8))
-                return GameVersion.SWSH;
-            else if (typeof(T) == typeof(PB8))
-                return GameVersion.BDSP;
-            else if (typeof(T) == typeof(PA8))
-                return GameVersion.PLA;
-            else if (typeof(T) == typeof(PK9))
-                return GameVersion.SV;
-            else
-                throw new ArgumentException("Unsupported game version.");
+            return typeof(T) switch
+            {
+                Type _ when typeof(T) == typeof(PK8) => GameVersion.SWSH,
+                Type _ when typeof(T) == typeof(PB8) => GameVersion.BDSP,
+                Type _ when typeof(T) == typeof(PA8) => GameVersion.PLA,
+                Type _ when typeof(T) == typeof(PK9) => GameVersion.SV,
+                _ => throw new ArgumentException("Unsupported game version."),
+            };
         }
 
         public static List<ushort> GetBreedableSpecies(GameVersion gameVersion, string language = "en")
@@ -120,7 +152,7 @@ namespace SysBot.Pokemon.Discord
             var gameStrings = GameInfo.GetStrings(language);
             var availableSpeciesList = gameStrings.specieslist
                 .Select((name, index) => (Name: name, Index: index))
-                .Where(item => item.Name != string.Empty)
+                .Where(item => !string.IsNullOrEmpty(item.Name))
                 .ToList();
 
             var breedableSpecies = new List<ushort>();
