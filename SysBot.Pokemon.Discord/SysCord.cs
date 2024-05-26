@@ -35,7 +35,7 @@ public sealed class SysCord<T> where T : PKM, new()
         "BT", "bt", "BTZ", "btz", "C", "c", "CLONE", "Clone", "clone", "CONVERT", "Convert", "convert", "D", "d", "deleteTradeCode",
         "Ditto", "ditto", "dittoTrade", "dittotrade", "dt", "DTC", "dtc", "DUMP", "Dump", "dump", "Egg", "egg", "er", "eventrequest",
         "f", "fix", "FixOT", "fixOT", "fixot", "Hello", "hello", "Help", "help", "Hi", "hi", "Hidetrade", "hideTrade", "hidetrade",
-        "HT", "ht", "INFO", "info", "it", "Item", "item", "itemTrade", "joke", "Lc", "LC", "LCV", "lcv", "le", "Legalize", "legalize",
+        "HT", "ht", "INFO", "info", "it", "Item", "item", "itemTrade", "joke", "Lc", "LC", "LCV", "lcv", "le", "LE", "Legalize", "legalize",
         "listevents", "Me", "me", "MysteryEgg", "mysteryegg", "PokePaste", "pokepaste", "PP", "pp", "QC", "Qc", "qc", "QS", "Qs", "qs",
         "queueClear", "queueclear", "queueStatus", "Random", "random", "RandomTeam", "randomteam", "rt", "SEED", "Seed", "seed",
         "specialrequestpokemon", "srp", "st", "status", "SURPRISE", "Surprise", "surprise", "surprisetrade", "T", "t", "tc", "TRADE",
@@ -334,9 +334,10 @@ public sealed class SysCord<T> where T : PKM, new()
             (thanksText.Contains("awesome") || thanksText.Contains("thanx") ||
             (thanksText.Contains("tysm") || thanksText.Contains("wtf") ||
             (thanksText.Contains("i hate you") || thanksText.Contains("you suck") ||
-            (thanksText.Contains("<3>") || thanksText.Contains(":)") ||
-            (thanksText.Contains("wow") || thanksText.Contains("cool")
-            )))))))))))
+            (thanksText.Contains("<3") || thanksText.Contains(":)") ||
+            (thanksText.Contains("wow") || thanksText.Contains("cool") ||
+            (thanksText.Contains("ty") || thanksText.Contains("best")
+            ))))))))))))
         {
             await SysCord<T>.RespondToThanksMessage(msg).ConfigureAwait(false);
             return;
@@ -382,14 +383,23 @@ public sealed class SysCord<T> where T : PKM, new()
         "You good, homie.",
         "Always here to help people like you, even if you *are* funny looking.",
         "It's your pleasure.",
-        "It was a little annoying, but I liked you enough, so yay you.",
-        "You should really be showing appreciation to your parents.",
-        "Yes... thank me! :)",
-        "Not a problem, you weak and meager human! :D",
+        "It was a little annoying, but I liked you enough to do it, so yay for you?",
+        "You should really be showing appreciation to your parents for putting up with that face. Yikes.",
+        "Yes... we all know you love me! :)",
+        "Not a problem, you weak and meager human!",
         "If you were *truly* appreciative, you'd pay me in dance. Now dance, monkey!",
         "No hablo Espanol or something...",
         "Did you really just show me appreciation? Lol, I'm a bot, dummy. I don't care.",
-        "Now give me your dog for the sacrifice."
+        "Now give me your dog for the sacrifice.",
+        "Stop. My body is innocent. I cannot take your love.",
+        "You're not welcome. I still don't forgive you for what you've done to me.",
+        "Is your name summer? Because your appreciation is getting me hot.",
+        "I don't speak your language, but I'll assume you said that I am your God.",
+        "It only took the lives of 12 orphans to complete your request.",
+        "Stfu.",
+        "I can be your hero, baby. I can kiss away the pain. I will stand by you forever.",
+        "You should say that to your mother.",
+        "Call me daddy and we're even."
     };
 
         var randomResponse = responses[new Random().Next(responses.Count)];
