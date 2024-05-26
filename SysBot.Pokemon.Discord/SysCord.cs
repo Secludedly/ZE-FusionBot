@@ -334,10 +334,9 @@ public sealed class SysCord<T> where T : PKM, new()
             (thanksText.Contains("awesome") || thanksText.Contains("thanx") ||
             (thanksText.Contains("tysm") || thanksText.Contains("wtf") ||
             (thanksText.Contains("i hate you") || thanksText.Contains("you suck") ||
-            (thanksText.Contains("<3") || thanksText.Contains(":)") ||
-            (thanksText.Contains("wow") || thanksText.Contains("cool") ||
-            (thanksText.Contains("ty") || thanksText.Contains("best")
-            ))))))))))))
+            (thanksText.Contains("<3>") || thanksText.Contains(":)") ||
+            (thanksText.Contains("wow") || thanksText.Contains("cool")
+            )))))))))))
         {
             await SysCord<T>.RespondToThanksMessage(msg).ConfigureAwait(false);
             return;
@@ -383,23 +382,14 @@ public sealed class SysCord<T> where T : PKM, new()
         "You good, homie.",
         "Always here to help people like you, even if you *are* funny looking.",
         "It's your pleasure.",
-        "It was a little annoying, but I liked you enough to do it, so yay for you?",
-        "You should really be showing appreciation to your parents for putting up with that face. Yikes.",
-        "Yes... we all know you love me! :)",
-        "Not a problem, you weak and meager human!",
+        "It was a little annoying, but I liked you enough, so yay you.",
+        "You should really be showing appreciation to your parents.",
+        "Yes... thank me! :)",
+        "Not a problem, you weak and meager human! :D",
         "If you were *truly* appreciative, you'd pay me in dance. Now dance, monkey!",
         "No hablo Espanol or something...",
         "Did you really just show me appreciation? Lol, I'm a bot, dummy. I don't care.",
-        "Now give me your dog for the sacrifice.",
-        "Stop. My body is innocent. I cannot take your love.",
-        "You're not welcome. I still don't forgive you for what you've done to me.",
-        "Is your name summer? Because your appreciation is getting me hot.",
-        "I don't speak your language, but I'll assume you said that I am your God.",
-        "It only took the lives of 12 orphans to complete your request.",
-        "Stfu.",
-        "I can be your hero, baby. I can kiss away the pain. I will stand by you forever.",
-        "You should say that to your mother.",
-        "Call me daddy and we're even."
+        "Now give me your dog for the sacrifice."
     };
 
         var randomResponse = responses[new Random().Next(responses.Count)];
