@@ -1,8 +1,7 @@
 using System.Collections.Generic;
-using System.Text.Json;
 using System.IO;
-using PKHeX.Core;
 using Newtonsoft.Json;
+using PKHeX.Core;
 
 namespace SysBot.Pokemon
 {
@@ -20,12 +19,6 @@ namespace SysBot.Pokemon
         {
             LoadFromFile();
 
-            if (gameVersion == GameVersion.SWSH)
-            {
-                // Always save SID as 0 for SWSH
-                sid = 0;
-            }
-
             if (_tradeCodeDetails.ContainsKey(userID))
             {
                 // Update existing entry
@@ -33,7 +26,7 @@ namespace SysBot.Pokemon
                 details.Code = tradeCode;
                 details.OT = ot ?? details.OT;
                 details.TID = tid;
-                details.SID = sid;
+                details.SID = gameVersion == GameVersion.SWSH ? 0 : sid;
                 details.GameVersion = gameVersion;
             }
             else
@@ -44,7 +37,7 @@ namespace SysBot.Pokemon
                     Code = tradeCode,
                     OT = ot,
                     TID = tid,
-                    SID = sid,
+                    SID = gameVersion == GameVersion.SWSH ? 0 : sid,
                     TradeCount = 0,
                     GameVersion = gameVersion
                 };
@@ -112,14 +105,12 @@ namespace SysBot.Pokemon
         public int GetTradeCount(ulong trainerID)
         {
             LoadFromFile();
-
             return _tradeCodeDetails.TryGetValue(trainerID, out var details) ? details.TradeCount : 0;
         }
 
         public TradeCodeDetails? GetTradeDetails(ulong trainerID)
         {
             LoadFromFile();
-
             return _tradeCodeDetails.TryGetValue(trainerID, out var details) ? details : null;
         }
 
