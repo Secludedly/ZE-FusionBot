@@ -142,12 +142,18 @@ public sealed partial class Main : Form
         comboBox2.Items.Add("Poke");
         comboBox2.Items.Add("Gengar");
         comboBox2.Items.Add("Zeraora");
+        comboBox2.Items.Add("Shiny Zeraora");
         comboBox2.Items.Add("Green");
         comboBox2.Items.Add("Blue");
         comboBox2.Items.Add("Akatsuki");
         comboBox2.Items.Add("Naruto");
         comboBox2.Items.Add("Shiny Mewtwo");
         comboBox2.Items.Add("Shiny Umbreon");
+        comboBox2.Items.Add("Scarlet");
+        comboBox2.Items.Add("Violet");
+        comboBox2.Items.Add("Black & White");
+        comboBox2.Items.Add("Messy Colors");
+        comboBox2.Items.Add("Pitch Black");
 
         // Load the current theme from configuration and set it in the comboBox2
         string theme = Config.Hub.ThemeOption;
@@ -176,6 +182,9 @@ public sealed partial class Main : Form
             case "Zeraora":
                 ApplyZeraoraTheme();
                 break;
+            case "Shiny Zeraora":
+                ApplyShinyZeraoraTheme();
+                break;
             case "Green":
                 ApplyGreenTheme();
                 break;
@@ -193,6 +202,21 @@ public sealed partial class Main : Form
                 break;
             case "Shiny Umbreon":
                 ApplyShinyUmbreonTheme();
+                break;
+            case "Scarlet":
+                ApplyPokemonScarletTheme();
+                break;
+            case "Violet":
+                ApplyPokemonVioletTheme();
+                break;
+            case "Black & White":
+                ApplyBlackAndWhiteTheme();
+                break;
+            case "Messy Colors":
+                ApplyRainbowTheme();
+                break;
+            case "Pitch Black":
+                ApplyPitchBlackTheme();
                 break;
             default:
                 ApplyLightTheme();
@@ -494,6 +518,9 @@ public sealed partial class Main : Form
                 case "Zeraora":
                     ApplyZeraoraTheme();
                     break;
+                case "Shiny Zeraora":
+                    ApplyShinyZeraoraTheme();
+                    break;
                 case "Green":
                     ApplyGreenTheme();
                     break;
@@ -512,6 +539,21 @@ public sealed partial class Main : Form
                 case "Shiny Umbreon":
                     ApplyShinyUmbreonTheme();
                     break;
+                case "Scarlet":
+                    ApplyPokemonScarletTheme();
+                    break;
+                case "Violet":
+                    ApplyPokemonVioletTheme();
+                    break;
+                case "Black & White":
+                    ApplyBlackAndWhiteTheme();
+                    break;
+                case "Messy Colors":
+                    ApplyRainbowTheme();
+                    break;
+                case "Pitch Black":
+                    ApplyPitchBlackTheme();
+                    break;
                 default:
                     ApplyLightTheme();
                     break;
@@ -522,74 +564,145 @@ public sealed partial class Main : Form
     private void ApplyZeraoraTheme()
     {
         // Define Zeraora-theme colors
-        Color TealGreen = Color.FromArgb(0, 128, 128);      // Teal green color
-        Color DeepTeal = Color.FromArgb(0, 128, 128);       // Deep teal color
-        Color DeepGold = Color.FromArgb(218, 165, 32);      // Deep gold color
-        Color ElegantWhite = Color.FromArgb(255, 255, 255); // An elegant white for background and contrast
-        Color MidGold = Color.FromArgb(221, 201, 120);      // Medium gold color
-        Color DeepestTeal = Color.FromArgb(8, 114, 104);      // Darker teal
+        Color SoftGold = Color.FromArgb(218, 165, 32);        // Soft gold color
+        Color SkyBlue = Color.FromArgb(0, 134, 213);          // Sky blue color (RGB: 0, 134, 213)
+        Color MediumDarkGray = Color.FromArgb(80, 80, 80);    // Medium-dark gray color
+        Color White = Color.White;                            // White color
 
         // Set the background color of the Hub form
-        this.BackColor = ElegantWhite;              // Background color of the Hub
+        this.BackColor = MediumDarkGray;                     // Medium-dark gray for the background
 
         // Set the foreground color of the main status form
-        this.ForeColor = Color.Black;               // Text color of the trade type and status information
+        this.ForeColor = White;                              // White text color for the status form
 
         // Set the background color of the tab control
-        TC_Main.BackColor = TealGreen;
+        TC_Main.BackColor = MediumDarkGray;                  // Medium-dark gray for tab control
 
         // Set the background color of each tab page
         foreach (TabPage page in TC_Main.TabPages)
         {
-            page.BackColor = DeepGold;              // Background color that sits behind the IP/Port/Mode/Start/Stop options
+            page.BackColor = SoftGold;                       // Soft gold for each tab page
         }
 
         // Set the background color of the Hub
-        PG_Hub.BackColor = ElegantWhite;           // Background color of Hub
-        PG_Hub.LineColor = ElegantWhite;              // Line color that separates each option in the Hub
-        PG_Hub.CategoryForeColor = DeepestTeal;      // Font color of the category text
-        PG_Hub.CategorySplitterColor = ElegantWhite;  // Background color to each category in the Hub
-        PG_Hub.HelpBackColor = ElegantWhite;       // Background color of the helper text box on the bottom
-        PG_Hub.HelpForeColor = DeepGold;
-        PG_Hub.ViewBackColor = ElegantWhite;
-        PG_Hub.ViewForeColor = DeepGold;
+        PG_Hub.BackColor = MediumDarkGray;                   // Medium-dark gray for Hub
+        PG_Hub.LineColor = MediumDarkGray;                   // Line color for Hub
+        PG_Hub.CategoryForeColor = White;                   // White font color for category text
+        PG_Hub.CategorySplitterColor = MediumDarkGray;       // Category splitter color
+        PG_Hub.HelpBackColor = MediumDarkGray;               // Help background color
+        PG_Hub.HelpForeColor = White;                        // White help text color
+        PG_Hub.ViewBackColor = MediumDarkGray;
+        PG_Hub.ViewForeColor = White;
 
         // Set the colors of the Log tab
-        RTB_Logs.BackColor = ElegantWhite;         // Background color of logs
-        RTB_Logs.ForeColor = DeepGold;             // Text color of logs
+        RTB_Logs.BackColor = MediumDarkGray;                // Medium-dark gray for log background
+        RTB_Logs.ForeColor = White;                         // White text color for logs
 
         // Set the colors of the IP form
-        TB_IP.BackColor = DeepTeal;                // IP form box background color
-        TB_IP.ForeColor = Color.White;             // IP form box text color
+        TB_IP.BackColor = SkyBlue;                          // Sky blue for IP form box background
+        TB_IP.ForeColor = White;                             // White text color for IP form box
 
-        CB_Routine.BackColor = TealGreen;
-        CB_Routine.ForeColor = DeepGold;
+        CB_Routine.BackColor = MediumDarkGray;              // Medium-dark gray for combo box background
+        CB_Routine.ForeColor = White;                        // White text color for combo box
 
-        NUD_Port.BackColor = DeepTeal;             // Background color of the Port box
-        NUD_Port.ForeColor = Color.White;          // Font color of the Port box
+        NUD_Port.BackColor = SkyBlue;                       // Sky blue for Port box background
+        NUD_Port.ForeColor = White;                          // White text color for Port box
 
-        B_New.BackColor = DeepTeal;
-        B_New.ForeColor = ElegantWhite;
+        B_New.BackColor = SkyBlue;                          // Sky blue for button background
+        B_New.ForeColor = White;                            // White text color for button
 
-        FLP_Bots.BackColor = MidGold;              // Background color behind the trade type and status information
+        FLP_Bots.BackColor = MediumDarkGray;                // Medium-dark gray for panel behind trade type and status information
 
-        CB_Protocol.BackColor = TealGreen;
-        CB_Protocol.ForeColor = DeepGold;
+        CB_Protocol.BackColor = MediumDarkGray;             // Medium-dark gray for protocol combo box background
+        CB_Protocol.ForeColor = White;                       // White text color for protocol combo box
 
-        comboBox1.BackColor = TealGreen;
-        comboBox1.ForeColor = DeepGold;
+        comboBox1.BackColor = MediumDarkGray;               // Medium-dark gray for combo box background
+        comboBox1.ForeColor = White;                         // White text color for combo box
 
-        B_Stop.BackColor = DeepTeal;               // Background color of the STOP button
-        B_Stop.ForeColor = ElegantWhite;           // Font color of the STOP button
+        B_Stop.BackColor = SkyBlue;                         // Sky blue for STOP button background
+        B_Stop.ForeColor = White;                            // White text color for STOP button font
 
-        B_Start.BackColor = DeepTeal;              // Background color of the START button
-        B_Start.ForeColor = ElegantWhite;          // Font color of the START button
+        B_Start.BackColor = SkyBlue;                        // Sky blue for START button background
+        B_Start.ForeColor = White;                           // White text color for START button font
 
-        B_RebootStop.BackColor = DeepestTeal;
-        B_RebootStop.ForeColor = ElegantWhite;
+        B_RebootStop.BackColor = SkyBlue;                   // Sky blue for REBOOT STOP button background
+        B_RebootStop.ForeColor = White;                      // White text color for REBOOT STOP button font
 
-        updater.BackColor = DeepestTeal;
-        updater.ForeColor = ElegantWhite;
+        updater.BackColor = SkyBlue;                        // Sky blue for updater background
+        updater.ForeColor = White;                           // White text color for updater font
+    }
+
+    private void ApplyShinyZeraoraTheme()
+    {
+        // Define shiny Zeraora-theme colors
+        Color SoftMatteWhite = Color.FromArgb(240, 240, 240);      // Soft matte white color
+        Color SoftMatteTurquoise = Color.FromArgb(64, 224, 208);   // Soft matte turquoise color (more green)
+        Color SoftMatteTeal = Color.FromArgb(0, 128, 128);        // Soft matte teal color
+        Color SoftMatteGold = Color.FromArgb(255, 215, 0);         // Bolder brighter gold color
+        Color SoftMatteText = Color.Black;                         // Soft matte text color
+        Color SoftMatteGrey = Color.FromArgb(180, 180, 180);      // Soft matte grey color
+
+        // Set the background color of the Hub form
+        this.BackColor = SoftMatteWhite;
+
+        // Set the foreground color of the main status form
+        this.ForeColor = SoftMatteText;
+
+        // Set the background color of the tab control
+        TC_Main.BackColor = SoftMatteWhite;
+
+        // Set the background color of each tab page
+        foreach (TabPage page in TC_Main.TabPages)
+        {
+            page.BackColor = SoftMatteGrey;
+        }
+
+        // Set the background color of the Hub
+        PG_Hub.BackColor = SoftMatteWhite;
+        PG_Hub.LineColor = SoftMatteWhite;
+        PG_Hub.CategoryForeColor = SoftMatteText;
+        PG_Hub.CategorySplitterColor = SoftMatteWhite;
+        PG_Hub.HelpBackColor = SoftMatteWhite;
+        PG_Hub.HelpForeColor = SoftMatteText;
+        PG_Hub.ViewBackColor = SoftMatteWhite;
+        PG_Hub.ViewForeColor = SoftMatteText;
+
+        // Set the colors of the Log tab
+        RTB_Logs.BackColor = SoftMatteWhite;
+        RTB_Logs.ForeColor = SoftMatteText;
+
+        // Set the colors of the IP form
+        TB_IP.BackColor = SoftMatteWhite;
+        TB_IP.ForeColor = SoftMatteText;
+
+        CB_Routine.BackColor = SoftMatteWhite;
+        CB_Routine.ForeColor = SoftMatteText;
+
+        NUD_Port.BackColor = SoftMatteWhite;
+        NUD_Port.ForeColor = SoftMatteText;
+
+        B_New.BackColor = SoftMatteWhite;
+        B_New.ForeColor = SoftMatteText;
+
+        FLP_Bots.BackColor = SoftMatteWhite;
+
+        CB_Protocol.BackColor = SoftMatteWhite;
+        CB_Protocol.ForeColor = SoftMatteText;
+
+        comboBox1.BackColor = SoftMatteWhite;
+        comboBox1.ForeColor = SoftMatteText;
+
+        B_Stop.BackColor = SoftMatteTeal;
+        B_Stop.ForeColor = SoftMatteWhite;
+
+        B_Start.BackColor = SoftMatteTeal;
+        B_Start.ForeColor = SoftMatteWhite;
+
+        B_RebootStop.BackColor = SoftMatteGold;
+        B_RebootStop.ForeColor = SoftMatteText;
+
+        updater.BackColor = SoftMatteGold;
+        updater.ForeColor = SoftMatteText;
     }
 
     private void ApplyGengarTheme()
@@ -1315,6 +1428,354 @@ public sealed partial class Main : Form
 
         updater.BackColor = DarkBlue;
         updater.ForeColor = White;
+    }
+    private void ApplyBlackAndWhiteTheme()
+    {
+        // Define Black & White theme colors
+        Color SoftGray = Color.FromArgb(180, 180, 180);      // Soft gray color
+        Color MediumGray = Color.FromArgb(120, 120, 120);    // Medium gray color
+        Color White = Color.White;
+        Color Black = Color.Black;  // White color for fonts
+
+        // Set the background color of the Hub form
+        this.BackColor = SoftGray;                           // Soft gray for the background
+
+        // Set the foreground color of the main status form
+        this.ForeColor = Black;                              // Black text color
+
+        // Set the background color of the tab control
+        TC_Main.BackColor = MediumGray;                      // Medium gray for tab control
+
+        // Set the background color of each tab page
+        foreach (TabPage page in TC_Main.TabPages)
+        {
+            page.BackColor = SoftGray;                       // Soft gray for each tab page
+        }
+
+        // Set the background color of the Hub
+        PG_Hub.BackColor = SoftGray;                        // Soft gray for Hub
+        PG_Hub.LineColor = SoftGray;                        // Line color for Hub
+        PG_Hub.CategoryForeColor = Black;                   // Black font color for category text
+        PG_Hub.CategorySplitterColor = SoftGray;            // Category splitter color
+        PG_Hub.HelpBackColor = SoftGray;                   // Help background color
+        PG_Hub.HelpForeColor = Black;                       // Black help text color
+        PG_Hub.ViewBackColor = SoftGray;
+        PG_Hub.ViewForeColor = Black;
+
+        // Set the colors of the Log tab
+        RTB_Logs.BackColor = SoftGray;                     // Soft gray for log background
+        RTB_Logs.ForeColor = Black;                         // Black text color for logs
+
+        // Set the colors of the IP form
+        TB_IP.BackColor = MediumGray;                       // Medium gray for IP form box background
+        TB_IP.ForeColor = White;                             // White text color for IP form box
+
+        CB_Routine.BackColor = SoftGray;                   // Soft gray for combo box background
+        CB_Routine.ForeColor = Black;                        // Black text color for combo box
+
+        NUD_Port.BackColor = MediumGray;                    // Medium gray for Port box background
+        NUD_Port.ForeColor = White;                          // White text color for Port box
+
+        B_New.BackColor = MediumGray;                       // Medium gray for button background
+        B_New.ForeColor = Black;                             // Black text color for button
+
+        FLP_Bots.BackColor = SoftGray;                      // Soft gray for panel behind trade type and status information
+
+        CB_Protocol.BackColor = SoftGray;                  // Soft gray for protocol combo box background
+        CB_Protocol.ForeColor = Black;                       // Black text color for protocol combo box
+
+        comboBox1.BackColor = MediumGray;                   // Medium gray for combo box background
+        comboBox1.ForeColor = Black;                         // Black text color for combo box
+
+        B_Stop.BackColor = MediumGray;                      // Medium gray for STOP button background
+        B_Stop.ForeColor = White;                            // White text color for STOP button font
+
+        B_Start.BackColor = MediumGray;                     // Medium gray for START button background
+        B_Start.ForeColor = White;                           // White text color for START button font
+
+        B_RebootStop.BackColor = MediumGray;                // Medium gray for REBOOT STOP button background
+        B_RebootStop.ForeColor = White;                      // White text color for REBOOT STOP button font
+
+        updater.BackColor = MediumGray;                     // Medium gray for updater background
+        updater.ForeColor = White;                           // White text color for updater font
+    }
+    private void ApplyPokemonScarletTheme()
+    {
+        // Define Pokémon Scarlet theme colors
+        Color SoftRed = Color.FromArgb(204, 102, 102);       // Softened matte red color
+        Color DarkRed = Color.FromArgb(102, 0, 0);           // Softened dark red color
+        Color MatteYellow = Color.FromArgb(242, 195, 0);     // Softened matte yellow color
+        Color White = Color.FromArgb(240, 240, 240);         // Softened white color
+
+        // Set the background color of the Hub form
+        this.BackColor = SoftRed;                            // Softened red for the background
+
+        // Set the foreground color of the main status form
+        this.ForeColor = White;                             // White text color
+
+        // Set the background color of the tab control
+        TC_Main.BackColor = SoftRed;                         // Soft red for tab control background
+
+        // Set the background color of each tab page
+        foreach (TabPage page in TC_Main.TabPages)
+        {
+            page.BackColor = MatteYellow;                    // Matte yellow for each tab page
+        }
+
+        // Set the background color of the Hub
+        PG_Hub.BackColor = SoftRed;                          // Softened red for Hub background
+        PG_Hub.LineColor = DarkRed;                          // Dark red for line color in Hub
+        PG_Hub.CategoryForeColor = White;                    // White font color for category text
+        PG_Hub.CategorySplitterColor = SoftRed;              // Softened red for category splitter color
+        PG_Hub.HelpBackColor = SoftRed;                     // Softened red for help background color
+        PG_Hub.HelpForeColor = White;                        // White font color for help text
+        PG_Hub.ViewBackColor = SoftRed;
+        PG_Hub.ViewForeColor = White;
+
+        // Set the colors of the Log tab
+        RTB_Logs.BackColor = SoftRed;                       // Softened red for log background
+        RTB_Logs.ForeColor = White;                          // White text color for logs
+
+        // Set the colors of the IP form
+        TB_IP.BackColor = SoftRed;                      // Dark red for IP form box background
+        TB_IP.ForeColor = White;                             // White text color for IP form box
+
+        CB_Routine.BackColor = SoftRed;                      // Softened red for combo box background
+        CB_Routine.ForeColor = White;                         // White text color for combo box
+
+        NUD_Port.BackColor = SoftRed;                    // Dark red for Port box background
+        NUD_Port.ForeColor = White;                          // White text color for Port box
+
+        B_New.BackColor = DarkRed;                       // Dark red for button background
+        B_New.ForeColor = White;                             // White text color for button
+
+        FLP_Bots.BackColor = DarkRed;                        // Dark red for panel behind trade type and status information
+
+        CB_Protocol.BackColor = SoftRed;                     // Softened red for protocol combo box background
+        CB_Protocol.ForeColor = White;                        // White text color for protocol combo box
+
+        comboBox1.BackColor = MatteYellow;                   // Matte yellow for combo box background
+        comboBox1.ForeColor = White;                         // White text color for combo box
+
+        B_Stop.BackColor = DarkRed;                      // Dark red for STOP button background
+        B_Stop.ForeColor = White;                            // White text color for STOP button font
+
+        B_Start.BackColor = DarkRed;                     // Dark red for START button background
+        B_Start.ForeColor = White;                           // White text color for START button font
+
+        B_RebootStop.BackColor = DarkRed;                // Dark red for REBOOT STOP button background
+        B_RebootStop.ForeColor = White;                      // White text color for REBOOT STOP button font
+
+        updater.BackColor = DarkRed;                     // Matte yellow for updater background
+        updater.ForeColor = White;                           // White text color for updater font
+    }
+    private void ApplyPokemonVioletTheme()
+    {
+        // Define Pokémon Scarlet theme colors
+        Color SoftViolet = Color.FromArgb(153, 102, 204);       // Softened matte violet color
+        Color DarkViolet = Color.FromArgb(102, 0, 102);         // Softened dark violet color
+        Color MatteYellow = Color.FromArgb(242, 195, 0);        // Softened matte yellow color
+        Color White = Color.FromArgb(240, 240, 240);            // Softened white color
+
+        // Set the background color of the Hub form
+        this.BackColor = DarkViolet;                            // Softened violet for the background
+
+        // Set the foreground color of the main status form
+        this.ForeColor = White;                                 // White text color
+
+        // Set the background color of the tab control
+        TC_Main.BackColor = DarkViolet;                         // Soft violet for tab control background
+
+        // Set the background color of each tab page
+        foreach (TabPage page in TC_Main.TabPages)
+        {
+            page.BackColor = MatteYellow;                        // Matte yellow for each tab page
+        }
+
+        // Set the background color of the Hub
+        PG_Hub.BackColor = DarkViolet;                          // Softened violet for Hub background
+        PG_Hub.LineColor = DarkViolet;                          // Dark violet for line color in Hub
+        PG_Hub.CategoryForeColor = White;                       // White font color for category text
+        PG_Hub.CategorySplitterColor = SoftViolet;              // Softened violet for category splitter color
+        PG_Hub.HelpBackColor = SoftViolet;                     // Softened violet for help background color
+        PG_Hub.HelpForeColor = White;                           // White font color for help text
+        PG_Hub.ViewBackColor = SoftViolet;
+        PG_Hub.ViewForeColor = White;
+
+        // Set the colors of the Log tab
+        RTB_Logs.BackColor = SoftViolet;                        // Softened violet for log background
+        RTB_Logs.ForeColor = White;                              // White text color for logs
+
+        // Set the colors of the IP form
+        TB_IP.BackColor = DarkViolet;                           // Soft violet for IP form box background
+        TB_IP.ForeColor = White;                                 // White text color for IP form box
+
+        CB_Routine.BackColor = SoftViolet;                       // Softened violet for combo box background
+        CB_Routine.ForeColor = White;                            // White text color for combo box
+
+        NUD_Port.BackColor = DarkViolet;                         // Soft violet for Port box background
+        NUD_Port.ForeColor = White;                              // White text color for Port box
+
+        B_New.BackColor = DarkViolet;                            // Dark violet for button background
+        B_New.ForeColor = White;                                 // White text color for button
+
+        FLP_Bots.BackColor = DarkViolet;                         // Dark violet for panel behind trade type and status information
+
+        CB_Protocol.BackColor = SoftViolet;                      // Softened violet for protocol combo box background
+        CB_Protocol.ForeColor = White;                           // White text color for protocol combo box
+
+        comboBox1.BackColor = MatteYellow;                      // Matte yellow for combo box background
+        comboBox1.ForeColor = White;                            // White text color for combo box
+
+        B_Stop.BackColor = DarkViolet;                          // Dark violet for STOP button background
+        B_Stop.ForeColor = White;                                // White text color for STOP button font
+
+        B_Start.BackColor = DarkViolet;                         // Dark violet for START button background
+        B_Start.ForeColor = White;                               // White text color for START button font
+
+        B_RebootStop.BackColor = DarkViolet;                    // Dark violet for REBOOT STOP button background
+        B_RebootStop.ForeColor = White;                          // White text color for REBOOT STOP button font
+
+        updater.BackColor = DarkViolet;                         // Dark violet for updater background
+        updater.ForeColor = White;                               // White text color for updater font
+    }
+    private void ApplyRainbowTheme()
+    {
+        // Define Rainbow theme colors
+        Color DarkRed = Color.FromArgb(102, 0, 0);          // Dark matte red color
+        Color DarkOrange = Color.FromArgb(204, 102, 0);     // Dark matte orange color
+        Color DarkYellow = Color.FromArgb(153, 153, 0);     // Dark matte yellow color
+        Color DarkGreen = Color.FromArgb(0, 102, 0);        // Dark matte green color
+        Color DarkBlue = Color.FromArgb(0, 51, 102);        // Dark matte blue color
+        Color DarkIndigo = Color.FromArgb(51, 0, 102);      // Dark matte indigo color
+        Color DarkViolet = Color.FromArgb(102, 0, 102);     // Dark matte violet color
+        Color White = Color.FromArgb(240, 240, 240);        // Softened white color
+
+        // Set the background color of the Hub form
+        this.BackColor = DarkRed;                            // Dark red for the background
+
+        // Set the foreground color of the main status form
+        this.ForeColor = White;                              // White text color
+
+        // Set the background color of the tab control
+        TC_Main.BackColor = DarkOrange;                      // Dark orange for tab control background
+
+        // Set the background color of each tab page
+        foreach (TabPage page in TC_Main.TabPages)
+        {
+            page.BackColor = DarkYellow;                     // Dark yellow for each tab page
+        }
+
+        // Set the background color of the Hub
+        PG_Hub.BackColor = DarkGreen;                       // Dark green for Hub background
+        PG_Hub.LineColor = DarkBlue;                        // Dark blue for line color in Hub
+        PG_Hub.CategoryForeColor = White;                   // White font color for category text
+        PG_Hub.CategorySplitterColor = DarkGreen;           // Dark green for category splitter color
+        PG_Hub.HelpBackColor = DarkIndigo;                 // Dark indigo for help background color
+        PG_Hub.HelpForeColor = White;                       // White font color for help text
+        PG_Hub.ViewBackColor = DarkViolet;
+        PG_Hub.ViewForeColor = White;
+
+        // Set the colors of the Log tab
+        RTB_Logs.BackColor = DarkRed;                       // Dark red for log background
+        RTB_Logs.ForeColor = White;                         // White text color for logs
+
+        // Set the colors of the IP form
+        TB_IP.BackColor = DarkOrange;                       // Dark orange for IP form box background
+        TB_IP.ForeColor = White;                             // White text color for IP form box
+
+        CB_Routine.BackColor = DarkYellow;                  // Dark yellow for combo box background
+        CB_Routine.ForeColor = White;                        // White text color for combo box
+
+        NUD_Port.BackColor = DarkGreen;                     // Dark green for Port box background
+        NUD_Port.ForeColor = White;                          // White text color for Port box
+
+        B_New.BackColor = DarkBlue;                         // Dark blue for button background
+        B_New.ForeColor = White;                             // White text color for button
+
+        FLP_Bots.BackColor = DarkIndigo;                    // Dark indigo for panel behind trade type and status information
+
+        CB_Protocol.BackColor = DarkViolet;                 // Dark violet for protocol combo box background
+        CB_Protocol.ForeColor = White;                       // White text color for protocol combo box
+
+        comboBox1.BackColor = DarkRed;                      // Dark red for combo box background
+        comboBox1.ForeColor = White;                         // White text color for combo box
+
+        B_Stop.BackColor = DarkOrange;                      // Dark orange for STOP button background
+        B_Stop.ForeColor = White;                            // White text color for STOP button font
+
+        B_Start.BackColor = DarkYellow;                     // Dark yellow for START button background
+        B_Start.ForeColor = White;                           // White text color for START button font
+
+        B_RebootStop.BackColor = DarkGreen;                 // Dark green for REBOOT STOP button background
+        B_RebootStop.ForeColor = White;                      // White text color for REBOOT STOP button font
+
+        updater.BackColor = DarkBlue;                      // Dark blue for updater background
+        updater.ForeColor = White;                           // White text color for updater font
+    }
+    private void ApplyPitchBlackTheme()
+    {
+        // Set the background color of the Hub form
+        this.BackColor = Color.Black;               // Black background
+
+        // Set the foreground color of the main status form
+        this.ForeColor = Color.White;               // White text color
+
+        // Set the background color of the tab control
+        TC_Main.BackColor = Color.Black;            // Black background for tab control
+
+        // Set the background color of each tab page
+        foreach (TabPage page in TC_Main.TabPages)
+        {
+            page.BackColor = Color.Black;           // Black background for each tab page
+        }
+
+        // Set the background color of the Hub
+        PG_Hub.BackColor = Color.Black;            // Black background for Hub
+        PG_Hub.LineColor = Color.White;            // White line color in Hub
+        PG_Hub.CategoryForeColor = Color.Black;    // White font color for category text
+        PG_Hub.CategorySplitterColor = Color.Black; // Black category splitter color
+        PG_Hub.HelpBackColor = Color.Black;        // Black help background color
+        PG_Hub.HelpForeColor = Color.White;        // White help text color
+        PG_Hub.ViewBackColor = Color.Black;        // Black view background color
+        PG_Hub.ViewForeColor = Color.White;        // White view text color
+
+        // Set the colors of the Log tab
+        RTB_Logs.BackColor = Color.Black;          // Black log background
+        RTB_Logs.ForeColor = Color.White;          // White log text color
+
+        // Set the colors of the IP form
+        TB_IP.BackColor = Color.Black;             // Black IP form box background
+        TB_IP.ForeColor = Color.White;             // White IP form box text color
+
+        CB_Routine.BackColor = Color.Black;        // Black combo box background
+        CB_Routine.ForeColor = Color.White;        // White combo box text color
+
+        NUD_Port.BackColor = Color.Black;          // Black Port box background
+        NUD_Port.ForeColor = Color.White;          // White Port box text color
+
+        B_New.BackColor = Color.Black;             // Black button background
+        B_New.ForeColor = Color.White;             // White button text color
+
+        FLP_Bots.BackColor = Color.Black;          // Black panel background behind trade type and status information
+
+        CB_Protocol.BackColor = Color.Black;       // Black protocol combo box background
+        CB_Protocol.ForeColor = Color.White;       // White protocol combo box text color
+
+        comboBox1.BackColor = Color.Black;         // Black combo box background
+        comboBox1.ForeColor = Color.White;         // White combo box text color
+
+        B_Stop.BackColor = Color.Black;            // Black STOP button background
+        B_Stop.ForeColor = Color.White;            // White STOP button text color
+
+        B_Start.BackColor = Color.Black;           // Black START button background
+        B_Start.ForeColor = Color.White;           // White START button text color
+
+        B_RebootStop.BackColor = Color.Black;      // Black REBOOT STOP button background
+        B_RebootStop.ForeColor = Color.White;      // White REBOOT STOP button text color
+
+        updater.BackColor = Color.Black;           // Black updater background
+        updater.ForeColor = Color.White;           // White updater text color
     }
 }
 
