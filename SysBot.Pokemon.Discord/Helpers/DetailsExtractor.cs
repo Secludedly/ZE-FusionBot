@@ -271,6 +271,10 @@ public class DetailsExtractor<T> where T : PKM, new()
             {
                 details.Add($"SID: {tradeDetails?.SID}");
             }
+            else if (tradeDetails?.SID != 0 && (tradeDetails.GameVersion == GameVersion.SV || tradeDetails.GameVersion == GameVersion.PLA || tradeDetails.GameVersion == GameVersion.BDSP))
+            {
+                details.Add($"SID: {tradeDetails?.SID}");
+            }
 
             if (details.Count > 0)
             {

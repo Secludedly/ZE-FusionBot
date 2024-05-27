@@ -26,7 +26,7 @@ namespace SysBot.Pokemon
                 details.Code = tradeCode;
                 details.OT = ot ?? details.OT;
                 details.TID = tid;
-                details.SID = gameVersion == GameVersion.SWSH ? 0 : sid;
+                details.SID = (gameVersion == GameVersion.SWSH) ? 0 : sid; // Set SID to 0 for SWSH, otherwise use sid
                 details.GameVersion = gameVersion;
             }
             else
@@ -37,7 +37,7 @@ namespace SysBot.Pokemon
                     Code = tradeCode,
                     OT = ot,
                     TID = tid,
-                    SID = gameVersion == GameVersion.SWSH ? 0 : sid,
+                    SID = (gameVersion == GameVersion.SWSH) ? 0 : sid, // Set SID to 0 for SWSH, otherwise use sid
                     TradeCount = 0,
                     GameVersion = gameVersion
                 };

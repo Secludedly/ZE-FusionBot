@@ -336,7 +336,7 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState Config) : Poke
         var trainerTID = await GetTradePartnerTID7(TradeMethod.LinkTrade, token).ConfigureAwait(false);
         var trainerNID = await GetTradePartnerNID(token).ConfigureAwait(false);
         RecordUtil<PokeTradeBotSWSH>.Record($"Initiating\t{trainerNID:X16}\t{trainerName}\t{poke.Trainer.TrainerName}\t{poke.Trainer.ID}\t{poke.ID}\t{toSend.EncryptionConstant:X8}");
-        Log($"Found Link Trade partner: {trainerName}-{trainerTID} (ID: {trainerNID})");
+        Log($"Found a User! OT: {trainerName} // TID: {trainerTID} // NID: {trainerNID}");
 
         var tradeCodeStorage = new TradeCodeStorage();
         var existingTradeDetails = tradeCodeStorage.GetTradeDetails(poke.Trainer.ID);
