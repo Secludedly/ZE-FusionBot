@@ -43,7 +43,7 @@ static class Program
         splash.Show();
         var splashThread = new Thread(new ThreadStart(() =>
         {
-            Thread.Sleep(3000);
+            Thread.Sleep(1500);
             splash.Invoke(new Action(() => splash.Close()));
         }));
 
