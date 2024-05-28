@@ -20,7 +20,6 @@ namespace SysBot.Pokemon.Discord
         [Summary("Trades a random Pokémon with perfect stats and shiny appearance.")]
         public async Task TradeRandomPokemonAsync()
         {
-            await ReplyAsync("**Surprise!**");
             var userID = Context.User.Id;
             if (Info.IsUserInQueue(userID))
             {
@@ -56,7 +55,7 @@ namespace SysBot.Pokemon.Discord
                 {
 
                     var gameVersion = GetGameVersion();
-                    var speciesList = GetBreedableSpecies(gameVersion, "en");
+                    var speciesList = GetSpecies(gameVersion, "en");
 
                     var randomIndex = new Random().Next(speciesList.Count);
                     ushort speciesId = speciesList[randomIndex];
@@ -110,20 +109,85 @@ namespace SysBot.Pokemon.Discord
         {
             var random = new Random();
 
-            // Shiny
+            //--------------- Shiny
             bool isShiny = random.Next(0, 100) < 50; // 50% chance of being shiny
             if (isShiny)
             {
                 pk.SetShiny(); // make shiny
             }
 
-            // Ability
-            int abilityCount = 3; // how many abilities
-            int selectedAbility = random.Next(abilityCount); // now randomize them
-            pk.RefreshAbility(selectedAbility); // refresh if selected is good
-
-            // Level
+            //--------------- Level
             pk.CurrentLevel = (byte)random.Next(1, 101); // randomized levels 1-100
+
+            //--------------- IVs
+            var randomIV = new Random();
+            for (int i = 0; i < 6; i++) // there are 6 IV types
+            {
+                // IVs can be from 0 to 31
+                pk.IV_HP = (byte)random.Next(0, 32);
+                pk.IV_ATK = (byte)random.Next(0, 32);
+                pk.IV_DEF = (byte)random.Next(0, 32);
+                pk.IV_SPA = (byte)random.Next(0, 32);
+                pk.IV_SPD = (byte)random.Next(0, 32);
+                pk.IV_SPE = (byte)random.Next(0, 32);
+            }
+
+            //--------------- EVs
+            int totalEVs = 0; // Initialize total EV count
+
+            for (int i = 0; i < 6; i++) // there are 6 EVs
+            {
+                int ev = random.Next(0, 253); // random value between 0 and 252
+
+                if (totalEVs + ev > 510) // total EVs do not exceed 510
+                {
+                    ev = 510 - totalEVs; // make sure EVs stay within the limit
+                }
+                // do not let EVs exceed 252
+                if (ev > 252)
+                {
+                    ev = 252;
+                }
+
+                // register the random EV to stats
+                switch (i)
+                {
+                    case 0: // HP
+                        pk.EV_HP = (byte)ev;
+                        break;
+                    case 1: // Attack
+                        pk.EV_ATK = (byte)ev;
+                        break;
+                    case 2: // Defense
+                        pk.EV_DEF = (byte)ev;
+                        break;
+                    case 3: // Special Attack
+                        pk.EV_SPA = (byte)ev;
+                        break;
+                    case 4: // Special Defense
+                        pk.EV_SPD = (byte)ev;
+                        break;
+                    case 5: // Speed
+                        pk.EV_SPE = (byte)ev;
+                        break;
+                }
+
+                totalEVs += ev; // update total EV counts
+            }
+
+            //--------------- Ability
+            var randomAbility = new Random(); // register sending random ability
+
+            int abilityIndex = randomAbility.Next(0, 3); // generate a random number between 0, 1, or 2
+
+            byte abilityNumber = (byte)(abilityIndex * 2); // how the ability index assigns itself an ability number (0, 2, or 4)
+
+            if (abilityIndex == 2) // if the ability index is 2 
+            {
+                abilityNumber = 4; // then set the ability number to 4
+            }
+
+            pk.AbilityNumber = abilityNumber; // send random ability number to pokemon
         }
 
         private static GameVersion GetGameVersion()
@@ -140,7 +204,7 @@ namespace SysBot.Pokemon.Discord
                 throw new ArgumentException("Unsupported game version.");
         }
 
-        public static List<ushort> GetBreedableSpecies(GameVersion gameVersion, string language = "en")
+        public static List<ushort> GetSpecies(GameVersion gameVersion, string language = "en")
         {
             var gameStrings = GameInfo.GetStrings(language);
             var availableSpeciesList = gameStrings.specieslist
@@ -148,25 +212,15 @@ namespace SysBot.Pokemon.Discord
                 .Where(item => item.Name != string.Empty)
                 .ToList();
 
-            var breedableSpecies = new List<ushort>();
+            var speciesList = new List<ushort>();
             var pt = GetPersonalTable(gameVersion);
             foreach (var species in availableSpeciesList)
             {
                 var speciesId = (ushort)species.Index;
-                var speciesName = species.Name;
-                var pi = GetFormEntry(pt, speciesId, 0);
-                if (IsBreedable(pi) && pi.EvoStage == 1)
-                {
-                    breedableSpecies.Add(speciesId);
-                }
+                speciesList.Add(speciesId);
             }
 
-            return breedableSpecies;
-        }
-
-        private static bool IsBreedable(PersonalInfo pi)
-        {
-            return pi.EggGroup1 != 0 || pi.EggGroup2 != 0;
+            return speciesList;
         }
 
         private static PersonalInfo GetFormEntry(object personalTable, ushort species, byte form)
