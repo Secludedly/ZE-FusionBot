@@ -581,8 +581,8 @@ public class OwnerModule<T> : SudoModule<T> where T : PKM, new()
         }
 
         [Command("startcontroller")]
-        [Alias("controllerstart", "startcontrol", "controlstart", "startsysbotremote", "sbrstart")]
-        [Summary("Makes the bot open SysBotRemote - a GUI game controller for your Switch.")]
+        [Alias("controllerstart", "startcontrol", "controlstart", "startremote", "remotestart")]
+        [Summary("Makes the bot open Switch Remote for PC - a GUI game controller for your Switch.")]
         [RequireOwner]
         public async Task StartSysRemote()
         {
@@ -592,7 +592,7 @@ public class OwnerModule<T> : SudoModule<T> where T : PKM, new()
 
                 if (Directory.Exists(sysBotRemotePath))
                 {
-                    string executablePath = Path.Combine(sysBotRemotePath, "SysBotRemote.exe");
+                    string executablePath = Path.Combine(sysBotRemotePath, "Switch.Remote.for.PC");
 
                     if (File.Exists(executablePath))
                     {
@@ -600,21 +600,21 @@ public class OwnerModule<T> : SudoModule<T> where T : PKM, new()
                         startInfo.WorkingDirectory = sysBotRemotePath;
                         Process.Start(startInfo);
 
-                        await ReplyAsync("SysBotRemote has been initiated. You can now control your Switch!");
+                        await ReplyAsync("Switch Remote for PC has been initiated. You can now control your Switch!");
                     }
                     else
                     {
-                        await ReplyAsync("**SysBotRemote.exe** cannot be found in the specified folder.");
+                        await ReplyAsync("**Switch.Remote.for.PC.exe** cannot be found in the specified folder.");
                     }
                 }
                 else
                 {
-                    await ReplyAsync("The SysBotRemote folder does not exist.");
+                    await ReplyAsync("The Switch Remote for PC folder does not exist.");
                 }
             }
             catch (Exception ex)
             {
-                await ReplyAsync($"**SysBotRemote Error:** {ex.Message}");
+                await ReplyAsync($"**Switch Remote for PC Error:** {ex.Message}");
             }
         }
     }
