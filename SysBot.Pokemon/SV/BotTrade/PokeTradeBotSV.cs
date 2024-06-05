@@ -390,7 +390,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
 
         if (existingTradeDetails == null)
         {
-            tradeCodeStorage.UpdateTradeDetails(poke.Trainer.ID, tradePartner.TrainerName, int.Parse(tradePartner.TID7), int.Parse(tradePartner.SID7), gameVersion);
+            tradeCodeStorage.UpdateTradeDetails(poke.Trainer.ID, tradePartner.TrainerName, int.Parse(tradePartner.TID7), int.Parse(tradePartner.SID7));
         }
         else
         {
@@ -399,8 +399,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
                 tradeCodeStorage.UpdateTradeDetails(poke.Trainer.ID,
                     shouldUpdateOT ? tradePartner.TrainerName : existingTradeDetails.OT,
                     shouldUpdateTID ? int.Parse(tradePartner.TID7) : existingTradeDetails.TID,
-                    shouldUpdateSID ? int.Parse(tradePartner.SID7) : existingTradeDetails.SID,
-                    gameVersion);
+                    shouldUpdateSID ? int.Parse(tradePartner.SID7) : existingTradeDetails.SID);
             }
         }
 
@@ -604,7 +603,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
 
             if (existingTradeDetails == null)
             {
-                tradeCodeStorage.UpdateTradeDetails(poke.Trainer.ID, tradePartner.TrainerName, int.Parse(tradePartner.TID7), int.Parse(tradePartner.SID7), gameVersion);
+                tradeCodeStorage.UpdateTradeDetails(poke.Trainer.ID, tradePartner.TrainerName, int.Parse(tradePartner.TID7), int.Parse(tradePartner.SID7));
             }
             else
             {
@@ -613,8 +612,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
                     tradeCodeStorage.UpdateTradeDetails(poke.Trainer.ID,
                         shouldUpdateOT ? tradePartner.TrainerName : existingTradeDetails.OT,
                         shouldUpdateTID ? int.Parse(tradePartner.TID7) : existingTradeDetails.TID,
-                        shouldUpdateSID ? int.Parse(tradePartner.SID7) : existingTradeDetails.SID,
-                        gameVersion);
+                        shouldUpdateSID ? int.Parse(tradePartner.SID7) : existingTradeDetails.SID);
                 }
             }
 

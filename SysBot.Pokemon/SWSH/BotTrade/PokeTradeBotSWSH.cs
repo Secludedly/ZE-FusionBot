@@ -195,7 +195,7 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState Config) : Poke
         {
             result = await PerformLinkCodeTrade(sav, detail, token).ConfigureAwait(false);
             if (result == PokeTradeResult.Success)
-            return;
+                return;
         }
         catch (SocketException socket)
         {
@@ -334,31 +334,30 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState Config) : Poke
 
         var trainerName = await GetTradePartnerName(TradeMethod.LinkTrade, token).ConfigureAwait(false);
         var trainerTID = await GetTradePartnerTID7(TradeMethod.LinkTrade, token).ConfigureAwait(false);
+        var trainerSID = await GetTradePartnerSID7(TradeMethod.LinkTrade, token).ConfigureAwait(false);
         var trainerNID = await GetTradePartnerNID(token).ConfigureAwait(false);
         RecordUtil<PokeTradeBotSWSH>.Record($"Initiating\t{trainerNID:X16}\t{trainerName}\t{poke.Trainer.TrainerName}\t{poke.Trainer.ID}\t{poke.ID}\t{toSend.EncryptionConstant:X8}");
-        Log($"Found a User! OT: {trainerName} // TID: {trainerTID} // NID: {trainerNID}");
+        Log($"Found a User! OT: {trainerName} // TID: {trainerTID} // SID: {trainerSID} // NID: {trainerNID}");
 
         var tradeCodeStorage = new TradeCodeStorage();
         var existingTradeDetails = tradeCodeStorage.GetTradeDetails(poke.Trainer.ID);
 
-        bool shouldUpdateOT = existingTradeDetails?.OT != trainerName;
-        bool shouldUpdateTID = existingTradeDetails?.TID != int.Parse(trainerTID);
-
-        var gameVersion = GameVersion.SWSH; // Or set this to the appropriate game version based on context
-
         if (existingTradeDetails == null)
         {
-            tradeCodeStorage.UpdateTradeDetails(poke.Trainer.ID, trainerName, int.Parse(trainerTID), 0, gameVersion);
+            tradeCodeStorage.UpdateTradeDetails(poke.Trainer.ID, trainerName, int.Parse(trainerTID), int.Parse(trainerSID));
         }
         else
         {
-            if (shouldUpdateOT || shouldUpdateTID)
+            bool shouldUpdateOT = existingTradeDetails.OT != trainerName;
+            bool shouldUpdateTID = existingTradeDetails.TID != int.Parse(trainerTID);
+            bool shouldUpdateSID = existingTradeDetails.SID != int.Parse(trainerSID);
+
+            if (shouldUpdateOT || shouldUpdateTID || shouldUpdateSID)
             {
                 tradeCodeStorage.UpdateTradeDetails(poke.Trainer.ID,
                     shouldUpdateOT ? trainerName : existingTradeDetails.OT,
                     shouldUpdateTID ? int.Parse(trainerTID) : existingTradeDetails.TID,
-                    0,
-                    gameVersion);
+                    shouldUpdateSID ? int.Parse(trainerSID) : existingTradeDetails.SID);
             }
         }
 
@@ -1027,7 +1026,7 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState Config) : Poke
         var data = await Connection.ReadBytesAsync(ofs, 8, token).ConfigureAwait(false);
 
         var tidsid = BitConverter.ToUInt32(data, 0);
-        var sid7 = $"{tidsid % 1_000_000:000000}";
+        var sid7 = $"{tidsid / 1_000_000:0000}";
         return sid7;
     }
 

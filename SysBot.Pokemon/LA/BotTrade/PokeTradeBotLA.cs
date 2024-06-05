@@ -197,7 +197,7 @@ public class PokeTradeBotLA(PokeTradeHub<PA8> Hub, PokeBotState Config) : PokeRo
         {
             result = await PerformLinkCodeTrade(sav, detail, token).ConfigureAwait(false);
             if (result == PokeTradeResult.Success)
-            return;
+                return;
         }
         catch (SocketException socket)
         {
@@ -312,7 +312,7 @@ public class PokeTradeBotLA(PokeTradeHub<PA8> Hub, PokeBotState Config) : PokeRo
 
         if (existingTradeDetails == null)
         {
-            tradeCodeStorage.UpdateTradeDetails(poke.Trainer.ID, tradePartner.TrainerName, int.Parse(tradePartner.TID7), int.Parse(tradePartner.SID7), gameVersion);
+            tradeCodeStorage.UpdateTradeDetails(poke.Trainer.ID, tradePartner.TrainerName, int.Parse(tradePartner.TID7), int.Parse(tradePartner.SID7));
         }
         else
         {
@@ -321,8 +321,7 @@ public class PokeTradeBotLA(PokeTradeHub<PA8> Hub, PokeBotState Config) : PokeRo
                 tradeCodeStorage.UpdateTradeDetails(poke.Trainer.ID,
                     shouldUpdateOT ? tradePartner.TrainerName : existingTradeDetails.OT,
                     shouldUpdateTID ? int.Parse(tradePartner.TID7) : existingTradeDetails.TID,
-                    shouldUpdateSID ? int.Parse(tradePartner.SID7) : existingTradeDetails.SID,
-                    gameVersion);
+                    shouldUpdateSID ? int.Parse(tradePartner.SID7) : existingTradeDetails.SID);
             }
         }
 

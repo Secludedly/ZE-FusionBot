@@ -26,8 +26,7 @@ namespace SysBot.Pokemon
                 details.Code = tradeCode;
                 details.OT = ot ?? details.OT;
                 details.TID = tid;
-                details.SID = (gameVersion == GameVersion.SWSH) ? 0 : sid; // Set SID to 0 for SWSH, otherwise use sid
-                details.GameVersion = gameVersion;
+                details.SID = sid;
             }
             else
             {
@@ -37,9 +36,8 @@ namespace SysBot.Pokemon
                     Code = tradeCode,
                     OT = ot,
                     TID = tid,
-                    SID = (gameVersion == GameVersion.SWSH) ? 0 : sid, // Set SID to 0 for SWSH, otherwise use sid
+                    SID = sid,
                     TradeCount = 0,
-                    GameVersion = gameVersion
                 };
             }
 
@@ -114,7 +112,7 @@ namespace SysBot.Pokemon
             return _tradeCodeDetails.TryGetValue(trainerID, out var details) ? details : null;
         }
 
-        public void UpdateTradeDetails(ulong trainerID, string? ot, int tid, int sid, GameVersion gameVersion)
+        public void UpdateTradeDetails(ulong trainerID, string? ot, int tid, int sid)
         {
             LoadFromFile();
 
@@ -122,8 +120,7 @@ namespace SysBot.Pokemon
             {
                 details.OT = ot ?? details.OT;
                 details.TID = tid;
-                details.SID = gameVersion == GameVersion.SWSH ? 0 : sid;
-                details.GameVersion = gameVersion;
+                details.SID = sid;
                 SaveToFile();
             }
         }
@@ -135,7 +132,6 @@ namespace SysBot.Pokemon
             public int TID { get; set; }
             public int SID { get; set; }
             public int TradeCount { get; set; }
-            public GameVersion GameVersion { get; set; }
         }
     }
 }

@@ -266,12 +266,8 @@ public class DetailsExtractor<T> where T : PKM, new()
                 details.Add($"TID: {tradeDetails?.TID}");
             }
 
-            // Check if the SID is not 0 and game version is not SWSH
-            if (tradeDetails?.SID != 0 && tradeDetails.GameVersion != GameVersion.SWSH)
-            {
-                details.Add($"SID: {tradeDetails?.SID}");
-            }
-            else if (tradeDetails?.SID != 0 && (tradeDetails.GameVersion == GameVersion.SV || tradeDetails.GameVersion == GameVersion.PLA || tradeDetails.GameVersion == GameVersion.BDSP))
+            // Check if the SID is not 0
+            if (tradeDetails?.SID != 0)
             {
                 details.Add($"SID: {tradeDetails?.SID}");
             }

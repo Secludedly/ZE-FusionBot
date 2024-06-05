@@ -185,7 +185,7 @@ public class PokeTradeBotLGPE(PokeTradeHub<PB7> Hub, PokeBotState Config) : Poke
         {
             result = await PerformLinkCodeTrade(sav, detail, token).ConfigureAwait(false);
             if (result == PokeTradeResult.Success)
-            return;
+                return;
         }
         catch (SocketException socket)
         {
@@ -319,7 +319,7 @@ public class PokeTradeBotLGPE(PokeTradeHub<PB7> Hub, PokeBotState Config) : Poke
         if (tradepartnersav2.OT != sav.OT)
         {
             Log($"Found Link Trade Partner: {tradepartnersav2.OT}, TID: {tradepartnersav2.TID16}, SID: {tradepartnersav2.SID16}");
-            var modifiedPokemon = SetPkmWithTradePartnerDetails(toSend, tradepartnersav2, token); 
+            var modifiedPokemon = SetPkmWithTradePartnerDetails(toSend, tradepartnersav2, token);
             if (modifiedPokemon != null)
             {
                 poke.TradeData = modifiedPokemon; // Update the Pokémon to be traded with the modified version
