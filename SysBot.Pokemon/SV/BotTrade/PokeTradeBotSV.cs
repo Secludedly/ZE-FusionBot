@@ -1385,13 +1385,13 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
         var tradeSV = new LegalityAnalysis(cln);
         if (tradeSV.Valid)
         {
-            Log($"Pokemon is valid with Trade Partner Info applied.  Swapping details.");
+            Log($"Pokemon is valid with the user's trainer info applied. Now implementing the swap.");
             await SetBoxPokemonAbsolute(BoxStartOffset, cln, token, sav).ConfigureAwait(false);
             return true;
         }
         else
         {
-            Log($"Pokemon not valid after using Trade Partner Info, keeping original object.");
+            Log($"Pokemon is invalid with the user's trainer info applied. Keeping the original object.");
             return false;
         }
     }
