@@ -67,7 +67,7 @@ namespace SysBot.Pokemon.Discord
                     var sav = AutoLegalityWrapper.GetTrainerInfo<T>();
                     var pkm = sav.GetLegal(template, out var result);
 
-                    RandomizePokemon(pkm);
+                    RandomizePokemon(pkm, gameVersion);
 
                     pkm = EntityConverter.ConvertToType(pkm, typeof(T), out _) ?? pkm;
 
@@ -103,91 +103,130 @@ namespace SysBot.Pokemon.Discord
             await message.DeleteAsync().ConfigureAwait(false);
         }
 
+        /////////////////////////////////////////////////////////////////
+        //////////////////// RANDOMIZE POKEMON STATS ////////////////////
+        /////////////////////////////////////////////////////////////////
 
-        // RANDOMIZE POKEMON STATS //
-        private static void RandomizePokemon(PKM pk)
+        private static void RandomizePokemon(PKM pk, GameVersion gameVersion)
         {
             var random = new Random();
 
-            //--------------- Shiny
-            bool isShiny = random.Next(0, 100) < 50; // 50% chance of being shiny
-            if (isShiny)
+            //--------------- Held Items --------------//
+            List<int> heldItems = new List<int>
+    {
+        1, 236, 244, 286, 81, 217, 221, 248, 228, 230, 233, 281, 541, 234,
+        265, 158, 241, 155, 269, 157, 287, 210, 645, 1606, 275, 223, 297,
+        220, 270, 268, 1128, 50, 82, 84, 85, 1120, 109
+    };
+            if (gameVersion != GameVersion.PLA)
             {
-                pk.SetShiny(); // make shiny
+                pk.HeldItem = heldItems[random.Next(heldItems.Count)];
             }
 
-            //--------------- Level
-            pk.CurrentLevel = (byte)random.Next(1, 101); // randomized levels 1-100
-
-            //--------------- IVs
-            var randomIV = new Random();
-            for (int i = 0; i < 6; i++) // there are 6 IV types
+            //--------------- Fateful Encounter --------------//
+            pk.FatefulEncounter = random.Next(0, 100) < 12; // 12% chance of being "True" for being an Event/Gift
+            if (!pk.FatefulEncounter)
             {
-                // IVs can be from 0 to 31
-                pk.IV_HP = (byte)random.Next(0, 32);
-                pk.IV_ATK = (byte)random.Next(0, 32);
-                pk.IV_DEF = (byte)random.Next(0, 32);
-                pk.IV_SPA = (byte)random.Next(0, 32);
-                pk.IV_SPD = (byte)random.Next(0, 32);
-                pk.IV_SPE = (byte)random.Next(0, 32);
-            }
-
-            //--------------- EVs
-            int totalEVs = 0; // Initialize total EV count
-
-            for (int i = 0; i < 6; i++) // there are 6 EVs
-            {
-                int ev = random.Next(0, 253); // random value between 0 and 252
-
-                if (totalEVs + ev > 510) // total EVs do not exceed 510
+                //--------------- Shiny --------------//
+                bool isShiny = random.Next(0, 100) < 65; // 65% chance of being shiny
+                if (isShiny)
                 {
-                    ev = 510 - totalEVs; // make sure EVs stay within the limit
-                }
-                // do not let EVs exceed 252
-                if (ev > 252)
-                {
-                    ev = 252;
+                    pk.SetShiny(); // Make shiny
                 }
 
-                // register the random EV to stats
-                switch (i)
+                //--------------- Level --------------//
+                bool isLevel100 = random.Next(0, 100) < 5; // 5% chance of being Level 100 (Not really though, more like 20%)
+                if (isLevel100)
                 {
-                    case 0: // HP
-                        pk.EV_HP = (byte)ev;
-                        break;
-                    case 1: // Attack
-                        pk.EV_ATK = (byte)ev;
-                        break;
-                    case 2: // Defense
-                        pk.EV_DEF = (byte)ev;
-                        break;
-                    case 3: // Special Attack
-                        pk.EV_SPA = (byte)ev;
-                        break;
-                    case 4: // Special Defense
-                        pk.EV_SPD = (byte)ev;
-                        break;
-                    case 5: // Speed
-                        pk.EV_SPE = (byte)ev;
-                        break;
+                    pk.CurrentLevel = 100; // Set to Level 100
+
+                    // Set all IVs to 31 if generated Pokemon is Level 100
+                    pk.IV_HP = 31;  // HP
+                    pk.IV_ATK = 31; // Attack
+                    pk.IV_DEF = 31; // Defense
+                    pk.IV_SPA = 31; // Special Attack
+                    pk.IV_SPD = 31; // Special Defense
+                    pk.IV_SPE = 31; // Speed
+                }
+                else
+                {
+                    pk.CurrentLevel = (byte)random.Next(1, 100); // Randomize Levels from 1-99
+
+                    //--------------- IVs --------------//
+                    bool isPerfectIVs = random.Next(0, 100) < 15; // 15% chance of having perfect IVs if not Level 100
+                    if (isPerfectIVs)
+                    {
+                        // Set all IVs to 31
+                        pk.IV_HP = 31;
+                        pk.IV_ATK = 31;
+                        pk.IV_DEF = 31;
+                        pk.IV_SPA = 31;
+                        pk.IV_SPD = 31;
+                        pk.IV_SPE = 31;
+                    }
+                    else
+                    {
+                        // Otherwise, set IVs randomly
+                        pk.IV_HP = (byte)random.Next(0, 32);
+                        pk.IV_ATK = (byte)random.Next(0, 32);
+                        pk.IV_DEF = (byte)random.Next(0, 32);
+                        pk.IV_SPA = (byte)random.Next(0, 32);
+                        pk.IV_SPD = (byte)random.Next(0, 32);
+                        pk.IV_SPE = (byte)random.Next(0, 32);
+                    }
                 }
 
-                totalEVs += ev; // update total EV counts
+                //--------------- EVs --------------//
+                int totalEVs = 0; // Initialize total EV count
+                for (int i = 0; i < 6; i++) // There are 6 EVs
+                {
+                    int ev = random.Next(0, 253); // Random EV values between 0 and 252
+                    if (totalEVs + ev > 510) // Total EVs cannot exceed 510
+                    {
+                        ev = 510 - totalEVs; // Keep EVs within the 510 limit
+                    }
+                    // Do not let EVs exceed 252
+                    if (ev > 252)
+                    {
+                        ev = 252;
+                    }
+                    // Register the random EVs to stats
+                    switch (i)
+                    {
+                        case 0: // HP
+                            pk.EV_HP = (byte)ev;
+                            break;
+                        case 1: // Attack
+                            pk.EV_ATK = (byte)ev;
+                            break;
+                        case 2: // Defense
+                            pk.EV_DEF = (byte)ev;
+                            break;
+                        case 3: // Special Attack
+                            pk.EV_SPA = (byte)ev;
+                            break;
+                        case 4: // Special Defense
+                            pk.EV_SPD = (byte)ev;
+                            break;
+                        case 5: // Speed
+                            pk.EV_SPE = (byte)ev;
+                            break;
+                    }
+                    totalEVs += ev; // Update the total EVs
+                }
+
+                //--------------- Ability --------------//
+                var randomAbility = new Random(); // Register sending a random ability
+                int abilityIndex = randomAbility.Next(0, 3); // Generate a random number between 0, 1, or 2
+                byte abilityNumber = (byte)(abilityIndex * 2); // How the ability index assigns itself an ability number (0, 2, or 4)
+                if (abilityIndex == 2) // If the ability index is 2...
+                {
+                    abilityNumber = 4; // ...Then set the ability number to 4
+                }
+                pk.AbilityNumber = abilityNumber; // Send the random ability number to the Pokemon
+
+
             }
-
-            //--------------- Ability
-            var randomAbility = new Random(); // register sending random ability
-
-            int abilityIndex = randomAbility.Next(0, 3); // generate a random number between 0, 1, or 2
-
-            byte abilityNumber = (byte)(abilityIndex * 2); // how the ability index assigns itself an ability number (0, 2, or 4)
-
-            if (abilityIndex == 2) // if the ability index is 2 
-            {
-                abilityNumber = 4; // then set the ability number to 4
-            }
-
-            pk.AbilityNumber = abilityNumber; // send random ability number to pokemon
         }
 
         private static GameVersion GetGameVersion()
