@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Sockets;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using static SysBot.Base.SwitchButton;
@@ -429,10 +430,6 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
             await ExitTradeToPortal(false, token).ConfigureAwait(false);
             return result;
         }
-        if (Hub.Config.Legality.UseTradePartnerInfo && !poke.IgnoreAutoOT)
-        {
-            await SetBoxPkmWithSwappedIDDetailsSV(toSend, tradePartnerFullInfo, sav, token);
-        }
         // Wait for user input...
         var offered = await ReadUntilPresent(TradePartnerOfferedOffset, 25_000, 1_000, BoxFormatSlotSize, token).ConfigureAwait(false);
         var oldEC = await SwitchConnection.ReadBytesAbsoluteAsync(TradePartnerOfferedOffset, 8, token).ConfigureAwait(false);
@@ -635,10 +632,6 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
 
             poke.SendNotification(this, $"Found Link Trade partner: {tradePartner.TrainerName}. TID: {tradePartner.TID7} SID: {tradePartner.SID7} Waiting for a Pokémon...");
 
-            if (Hub.Config.Legality.UseTradePartnerInfo && !poke.IgnoreAutoOT)
-            {
-                await SetBoxPkmWithSwappedIDDetailsSV(toSend, tradePartnerFullInfo, sav, token);
-            }
             // Wait for user input...
             var offered = await ReadUntilPresent(TradePartnerOfferedOffset, 25_000, 1_000, BoxFormatSlotSize, token).ConfigureAwait(false);
             var oldEC = await SwitchConnection.ReadBytesAbsoluteAsync(TradePartnerOfferedOffset, 8, token).ConfigureAwait(false);
@@ -1363,152 +1356,5 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
         await SetBoxPokemonAbsolute(BoxStartOffset, clone, token, sav).ConfigureAwait(false);
 
         return (clone, PokeTradeResult.Success);
-    }
-
-    private async Task<bool> SetBoxPkmWithSwappedIDDetailsSV(PK9 toSend, TradeMyStatus tradePartner, SAV9SV sav, CancellationToken token)
-    {
-        if (toSend.Species == (ushort)Species.Ditto)
-        {
-            Log($"No changes needed for Ditto.");
-            return false;
-        }
-
-        var cln = toSend.Clone();
-
-        UpdateTrainerDetails(cln, tradePartner);
-        cln.Version = DetermineVersion(cln.Species, cln.Form, tradePartner);
-        ClearNicknameIfNeeded(cln);
-        if (toSend.MetLocation == Locations.TeraCavern9 && toSend.IsShiny)
-        {
-            uint id32 = (uint)((cln.TID16) | (cln.SID16 << 16));
-            uint pid = cln.PID;
-            ShinyUtil.ForceShinyState(true, ref pid, id32, 1u);
-            cln.PID = pid;
-        }
-        else if (toSend.IsShiny)
-        {
-            cln.SetShiny();
-        }
-        cln.RefreshChecksum();
-        var tradeSV = new LegalityAnalysis(cln);
-        if (tradeSV.Valid)
-        {
-            Log($"Pokemon is valid with the user's trainer info applied. Now implementing the swap.");
-            await SetBoxPokemonAbsolute(BoxStartOffset, cln, token, sav).ConfigureAwait(false);
-            return true;
-        }
-        else
-        {
-            Log($"Pokemon is invalid with the user's trainer info applied. Keeping the original object.");
-            return false;
-        }
-    }
-
-    private static void UpdateTrainerDetails(PK9 pokemon, TradeMyStatus tradePartner)
-    {
-        pokemon.OriginalTrainerGender = (byte)tradePartner.Gender;
-        pokemon.TrainerTID7 = (uint)Math.Abs(tradePartner.DisplayTID);
-        pokemon.TrainerSID7 = (uint)Math.Abs(tradePartner.DisplaySID);
-        pokemon.Language = tradePartner.Language;
-
-        Span<byte> trash = pokemon.OriginalTrainerTrash;
-        trash.Clear();
-
-        string name = tradePartner.OT;
-        int maxLength = trash.Length / 2;
-        int actualLength = Math.Min(name.Length, maxLength);
-
-        for (int i = 0; i < actualLength; i++)
-        {
-            char value = name[i];
-            trash[i * 2] = (byte)value;
-            trash[i * 2 + 1] = (byte)(value >> 8);
-        }
-
-        if (actualLength < maxLength)
-        {
-            trash[actualLength * 2] = 0x00;
-            trash[actualLength * 2 + 1] = 0x00;
-        }
-    }
-
-    private GameVersion DetermineVersion(ushort species, ushort form, TradeMyStatus tradePartner)
-    {
-        switch (species)
-        {
-            case (ushort)Species.Koraidon:
-            case (ushort)Species.GougingFire:
-            case (ushort)Species.RagingBolt:
-            case (ushort)Species.Armarouge:
-            case (ushort)Species.Larvitar:
-            case (ushort)Species.Pupitar:
-            case (ushort)Species.Tyranitar:
-            case (ushort)Species.Stonjourner:
-            case (ushort)Species.Drifloon:
-            case (ushort)Species.Drifblim:
-            case (ushort)Species.Oranguru:
-            case (ushort)Species.Stunky:
-            case (ushort)Species.Skuntank:
-            case (ushort)Species.Skrelp:
-            case (ushort)Species.Dragalge:
-            case (ushort)Species.Deino:
-            case (ushort)Species.Zweilous:
-            case (ushort)Species.Hydreigon:
-            case (ushort)Species.Gligar:
-            case (ushort)Species.Gliscor:
-            case (ushort)Species.Cramorant:
-                Log("Scarlet version exclusive Pokémon, changing the version to Scarlet.");
-                return GameVersion.SL;
-
-            case (ushort)Species.Miraidon:
-            case (ushort)Species.IronCrown:
-            case (ushort)Species.IronBoulder:
-            case (ushort)Species.Ceruledge:
-            case (ushort)Species.IronTreads:
-            case (ushort)Species.IronBundle:
-            case (ushort)Species.IronHands:
-            case (ushort)Species.IronJugulis:
-            case (ushort)Species.IronMoth:
-            case (ushort)Species.IronThorns:
-            case (ushort)Species.IronValiant:
-            case (ushort)Species.Misdreavus:
-            case (ushort)Species.Gulpin:
-            case (ushort)Species.Swalot:
-            case (ushort)Species.Bagon:
-            case (ushort)Species.Shelgon:
-            case (ushort)Species.Salamence:
-            case (ushort)Species.Mismagius:
-            case (ushort)Species.Clauncher:
-            case (ushort)Species.Clawitzer:
-            case (ushort)Species.Passimian:
-            case (ushort)Species.Eiscue:
-            case (ushort)Species.Dreepy:
-            case (ushort)Species.Drakloak:
-            case (ushort)Species.Dragapult:
-                Log("Violet version exclusive Pokémon, changing the version to Violet.");
-                return GameVersion.VL;
-
-            case (ushort)Species.Tauros:
-                switch (form)
-                {
-                    case 2:
-                        Log("Scarlet version exclusive Tauros (Blaze form), changing the version to Scarlet.");
-                        return GameVersion.SL;
-                    case 3:
-                        Log("Violet version exclusive Tauros (Aqua form), changing the version to Violet.");
-                        return GameVersion.VL;
-                    default:
-                        return (GameVersion)tradePartner.Game;
-                }
-
-            default:
-                return (GameVersion)tradePartner.Game;
-        }
-    }
-
-    private static void ClearNicknameIfNeeded(PK9 pokemon)
-    {
-        if (!pokemon.IsNicknamed)
-            pokemon.ClearNickname();
     }
 }

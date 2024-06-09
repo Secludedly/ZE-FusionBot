@@ -369,11 +369,6 @@ public class PokeTradeBotLA(PokeTradeHub<PA8> Hub, PokeBotState Config) : PokeRo
             return update;
         }
 
-        if (Hub.Config.Legality.UseTradePartnerInfo && !poke.IgnoreAutoOT)
-        {
-            await SetBoxPkmWithSwappedIDDetailsPLA(toSend, tradePartner, sav, token);
-        }
-
         Log("Confirming trade.");
         var tradeResult = await ConfirmAndStartTrading(poke, token).ConfigureAwait(false);
         if (tradeResult != PokeTradeResult.Success)
@@ -844,60 +839,5 @@ public class PokeTradeBotLA(PokeTradeHub<PA8> Hub, PokeBotState Config) : PokeRo
 
         await SetBoxPokemonAbsolute(BoxStartOffset, clone, token, sav).ConfigureAwait(false);
         return (clone, PokeTradeResult.Success);
-    }
-
-    // based on https://github.com/Muchacho13Scripts/SysBot.NET/commit/f7879386f33bcdbd95c7a56e7add897273867106
-    // and https://github.com/berichan/SysBot.PLA/commit/84042d4716007dc6ff3100ad4be4a483d622ccf8
-    private async Task<bool> SetBoxPkmWithSwappedIDDetailsPLA(PA8 toSend, TradePartnerLA tradePartner, SAV8LA sav, CancellationToken token)
-    {
-        var cln = (PA8)toSend.Clone();
-        UpdateTrainerDetails(cln, tradePartner);
-
-        if (!toSend.IsNicknamed)
-            cln.ClearNickname();
-
-        if (toSend.IsShiny)
-            cln.SetShiny();
-
-        cln.RefreshChecksum();
-
-        var tradela = new LegalityAnalysis(cln);
-        if (tradela.Valid)
-        {
-            Log($"Pokemon is valid with the user's trainer info applied. Now implementing the swap.");
-            await SetBoxPokemonAbsolute(BoxStartOffset, cln, token, sav).ConfigureAwait(false);
-        }
-        else
-        {
-            Log($"Pokemon is invalid with the user's trainer info applied. Keeping the original object.");
-        }
-
-        return tradela.Valid;
-    }
-    private static void UpdateTrainerDetails(PA8 pokemon, TradePartnerLA tradePartner)
-    {
-        pokemon.OriginalTrainerGender = tradePartner.Gender;
-        pokemon.TrainerTID7 = uint.Parse(tradePartner.TID7);
-        pokemon.TrainerSID7 = uint.Parse(tradePartner.SID7);
-        pokemon.Language = tradePartner.Language;
-
-        Span<byte> trash = pokemon.OriginalTrainerTrash;
-        trash.Clear();
-
-        int maxLength = trash.Length / 2;
-        int actualLength = Math.Min(tradePartner.TrainerName.Length, maxLength);
-
-        for (int i = 0; i < actualLength; i++)
-        {
-            char value = tradePartner.TrainerName[i];
-            trash[i * 2] = (byte)value;
-            trash[i * 2 + 1] = (byte)(value >> 8);
-        }
-
-        if (actualLength < maxLength)
-        {
-            trash[actualLength * 2] = 0x00;
-            trash[actualLength * 2 + 1] = 0x00;
-        }
     }
 }

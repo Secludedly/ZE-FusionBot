@@ -133,6 +133,8 @@ namespace SysBot.Pokemon.Discord
             pk.IVs = new[] { 31, 31, 31, 31, 31, 31 };
             pk.SetShiny();
             pk.RefreshAbility(2);
+            pk.MaximizeFriendship();
+            pk.RefreshChecksum();
         }
 
         private static GameVersion GetGameVersion()

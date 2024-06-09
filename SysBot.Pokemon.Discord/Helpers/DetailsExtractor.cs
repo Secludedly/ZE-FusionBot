@@ -254,19 +254,17 @@ public class DetailsExtractor<T> where T : PKM, new()
 
             List<string> details = new List<string>();
 
-            // Check if the OT is not null
+            // Add Trainer Info, Use Null & 0 for Unknown Info
             if (!string.IsNullOrEmpty(tradeDetails?.OT))
             {
                 details.Add($"OT: {tradeDetails?.OT}");
             }
 
-            // Check if the TID is not 0
             if (tradeDetails?.TID != 0)
             {
                 details.Add($"TID: {tradeDetails?.TID}");
             }
 
-            // Check if the SID is not 0
             if (tradeDetails?.SID != 0)
             {
                 details.Add($"SID: {tradeDetails?.SID}");

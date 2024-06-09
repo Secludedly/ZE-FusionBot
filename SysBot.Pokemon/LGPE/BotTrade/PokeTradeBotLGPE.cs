@@ -11,6 +11,7 @@ using System.Linq;
 using System.Text;
 using static SysBot.Base.SwitchButton;
 using static SysBot.Pokemon.PokeDataOffsetsLGPE;
+using System.Buffers.Binary;
 using SysBot.Pokemon.Helpers;
 namespace SysBot.Pokemon;
 
@@ -223,6 +224,7 @@ public class PokeTradeBotLGPE(PokeTradeHub<PB7> Hub, PokeBotState Config) : Poke
         poke.TradeInitialize(this);
         Hub.Config.Stream.EndEnterCode(this);
         var toSend = poke.TradeData;
+
         if (toSend.Species != 0)
             await WriteBoxPokemon(toSend, 0, 0, token);
         if (!await IsOnOverworldStandard(token))
@@ -237,7 +239,7 @@ public class PokeTradeBotLGPE(PokeTradeHub<PB7> Hub, PokeBotState Config) : Poke
             await Click(B, 2000, token);
             await Click(X, 2000, token);
         }
-        Log("Selecting Communicate......");
+        Log("Selecting Communicate...");
         await SetStick(SwitchStick.RIGHT, 30000, 0, 0, token).ConfigureAwait(false);
         await SetStick(SwitchStick.RIGHT, 0, 0, 0, token).ConfigureAwait(false);
         while (BitConverter.ToUInt16(await SwitchConnection.ReadBytesMainAsync(ScreenOff, 2, token), 0) == menuscreen || BitConverter.ToUInt16(await SwitchConnection.ReadBytesMainAsync(ScreenOff, 4, token), 0) == waitingtotradescreen)
@@ -254,21 +256,19 @@ public class PokeTradeBotLGPE(PokeTradeHub<PB7> Hub, PokeBotState Config) : Poke
 
                 }
                 await Click(X, 2000, token).ConfigureAwait(false);
-                Log("Opening Menu......");
+                Log("Opening Menu...");
                 while (BitConverter.ToUInt16(await SwitchConnection.ReadBytesMainAsync(ScreenOff, 4, token), 0) != menuscreen)
                 {
                     await Click(B, 2000, token);
                     await Click(X, 2000, token);
                 }
-                Log("Selecting Communicate......");
+                Log("Selecting Communicate...");
                 await SetStick(SwitchStick.RIGHT, 30000, 0, 0, token).ConfigureAwait(false);
                 await SetStick(SwitchStick.RIGHT, 0, 0, 0, token).ConfigureAwait(false);
             }
-
-
         }
-        await Task.Delay(2000);
-        Log("Selecting Faraway Connection......");
+        await Task.Delay(2000, token).ConfigureAwait(false);
+        Log("Selecting Faraway Connection...");
 
         await SetStick(SwitchStick.RIGHT, 0, -30000, 0, token).ConfigureAwait(false);
         await SetStick(SwitchStick.RIGHT, 0, 0, 0, token).ConfigureAwait(false);
@@ -278,13 +278,13 @@ public class PokeTradeBotLGPE(PokeTradeHub<PB7> Hub, PokeBotState Config) : Poke
         await EnterLinkCodeLG(poke, token);
         poke.TradeSearching(this);
         Log($"Searching for user {poke.Trainer.TrainerName}");
-        await Task.Delay(3000);
+        await Task.Delay(3000, token).ConfigureAwait(false);
         var btimeout = new Stopwatch();
         btimeout.Restart();
 
         while (await LGIsinwaitingScreen(token))
         {
-            await Task.Delay(100);
+            await Task.Delay(100, token);
             if (btimeout.ElapsedMilliseconds >= 45_000)
             {
                 poke.TradeCanceled(this, PokeTradeResult.NoTrainerFound);
@@ -297,7 +297,7 @@ public class PokeTradeBotLGPE(PokeTradeHub<PB7> Hub, PokeBotState Config) : Poke
             }
         }
         Log($"{poke.Trainer.TrainerName} Found");
-        await Task.Delay(10000);
+        await Task.Delay(10000, token).ConfigureAwait(false);
         var tradepartnersav = new SAV7b();
         var tradepartnersav2 = new SAV7b();
         var tpsarray = await SwitchConnection.ReadBytesAsync(TradePartnerData, 0x168, token);
@@ -305,26 +305,28 @@ public class PokeTradeBotLGPE(PokeTradeHub<PB7> Hub, PokeBotState Config) : Poke
         var tpsarray2 = await SwitchConnection.ReadBytesAsync(TradePartnerData2, 0x168, token);
         tpsarray2.CopyTo(tradepartnersav2.Blocks.Status.Data);
 
+        var tradeCodeStorage = new TradeCodeStorage();
+
         if (tradepartnersav.OT != sav.OT)
         {
-            Log($"Found Link Trade Partner: {tradepartnersav.OT}, TID: {tradepartnersav.TID16}, SID: {tradepartnersav.SID16}, Game: {(GameVersion)tradepartnersav.Version}");
-            var modifiedPokemon = SetPkmWithTradePartnerDetails(toSend, tradepartnersav, token);
-            if (modifiedPokemon != null)
-            {
-                poke.TradeData = modifiedPokemon; // Update the Pokémon to be traded with the modified version
-                poke.SendNotification(this, $"Found Link Trade Partner: {tradepartnersav.OT}, TID: {tradepartnersav.TID16}, SID: {tradepartnersav.SID16}, Game: {(GameVersion)tradepartnersav.Version}");
-            }
+            uint displaySID = BinaryPrimitives.ReadUInt32LittleEndian(tradepartnersav.Blocks.Status.Data[0..4]) / 1_000_000;
+            uint displayTID = BinaryPrimitives.ReadUInt32LittleEndian(tradepartnersav.Blocks.Status.Data[0..4]) % 1_000_000;
+            string tid7 = displayTID.ToString("D6");
+            string sid7 = displaySID.ToString("D4");
+            Log($"Found Link Trade Partner: {tradepartnersav.OT}, TID7: {tid7}, SID7: {sid7}, Game: {tradepartnersav.Version}");
+            // Save the OT, TID7, and SID7 information in the TradeCodeStorage for tradepartnersav
+            tradeCodeStorage.UpdateTradeDetails(poke.Trainer.ID, tradepartnersav.OT, int.Parse(tid7), int.Parse(sid7));
         }
 
         if (tradepartnersav2.OT != sav.OT)
         {
-            Log($"Found Link Trade Partner: {tradepartnersav2.OT}, TID: {tradepartnersav2.TID16}, SID: {tradepartnersav2.SID16}");
-            var modifiedPokemon = SetPkmWithTradePartnerDetails(toSend, tradepartnersav2, token);
-            if (modifiedPokemon != null)
-            {
-                poke.TradeData = modifiedPokemon; // Update the Pokémon to be traded with the modified version
-                poke.SendNotification(this, $"Found Link Trade Partner: {tradepartnersav2.OT}, TID: {tradepartnersav2.TID16}, SID: {tradepartnersav2.SID16}, Game: {(GameVersion)tradepartnersav.Version}");
-            }
+            uint displaySID = BinaryPrimitives.ReadUInt32LittleEndian(tradepartnersav2.Blocks.Status.Data[0..4]) / 1_000_000;
+            uint displayTID = BinaryPrimitives.ReadUInt32LittleEndian(tradepartnersav2.Blocks.Status.Data[0..4]) % 1_000_000;
+            string tid7 = displayTID.ToString("D6");
+            string sid7 = displaySID.ToString("D4");
+            Log($"Found Link Trade Partner: {tradepartnersav2.OT}, TID7: {tid7}, SID7: {sid7}");
+            // Save the OT, TID7, and SID7 information in the TradeCodeStorage for tradepartnersav2
+            tradeCodeStorage.UpdateTradeDetails(poke.Trainer.ID, tradepartnersav2.OT, int.Parse(tid7), int.Parse(sid7));
         }
 
         if (poke.Type == PokeTradeType.Dump)
@@ -713,30 +715,5 @@ public class PokeTradeBotLGPE(PokeTradeHub<PB7> Hub, PokeBotState Config) : Poke
             ctr -= 3_000;
         }
     }
-
-    private PB7? SetPkmWithTradePartnerDetails(PB7 toSend, SAV7b tradePartnerSav, CancellationToken token)
-    {
-        var cln = (PB7)toSend.Clone();
-
-        cln.OriginalTrainerName = tradePartnerSav.OT;
-        cln.TID16 = tradePartnerSav.TID16;
-        cln.SID16 = tradePartnerSav.SID16;
-        cln.Language = tradePartnerSav.Language;
-        cln.ClearNickname();
-        cln.RefreshChecksum();
-
-        var tradelgpe = new LegalityAnalysis(cln);
-        if (tradelgpe.Valid)
-        {
-            Log("Pokemon is valid, applying AutoOT.");
-            return cln; // Return the modified clone for use in the trade
-        }
-        else
-        {
-            Log("Pokemon not valid, not applying AutoOT.");
-            return null;
-        }
-    }
-
 }
 

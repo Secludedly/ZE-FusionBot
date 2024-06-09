@@ -402,10 +402,6 @@ public class PokeTradeBotBS(PokeTradeHub<PB8> Hub, PokeBotState Config) : PokeRo
                 return PokeTradeResult.TrainerTooSlow;
             }
             //lastOffered = await SwitchConnection.ReadBytesAbsoluteAsync(LinkTradePokemonOffset, 8, token).ConfigureAwait(false);
-            if (Hub.Config.Legality.UseTradePartnerInfo && !poke.IgnoreAutoOT)
-            {
-                await SetBoxPkmWithSwappedIDDetailsBDSP(toSend, offered, sav, tradePartner.TrainerName, token);
-            }
             PokeTradeResult update;
             var trainer = new PartnerDataHolder(0, tradePartner.TrainerName, tradePartner.TID7);
             (toSend, update) = await GetEntityToSend(sav, poke, offered, toSend, trainer, token).ConfigureAwait(false);
@@ -817,61 +813,6 @@ public class PokeTradeBotBS(PokeTradeHub<PB8> Hub, PokeBotState Config) : PokeRo
         }
 
         return (toSend, PokeTradeResult.Success);
-    }
-
-    private async Task<bool> SetBoxPkmWithSwappedIDDetailsBDSP(PB8 toSend, PB8 offered, SAV8BS sav, string tradePartner, CancellationToken token)
-    {
-        var cln = toSend.Clone();
-        UpdateTrainerDetails(cln, offered, tradePartner);
-
-        if (!toSend.IsNicknamed)
-            cln.ClearNickname();
-
-        if (toSend.IsShiny)
-            cln.SetShiny();
-
-        cln.RefreshChecksum();
-
-        var tradela = new LegalityAnalysis(cln);
-        if (tradela.Valid)
-        {
-            Log($"Pokemon is valid with the user's trainer info applied. Now implementing the swap.");
-
-            await SetBoxPokemonAbsolute(BoxStartOffset, cln, token, sav).ConfigureAwait(false);
-        }
-        else
-        {
-            Log($"Pokemon is invalid with the user's trainer info applied. Keeping the original object.");
-            await SetBoxPokemonAbsolute(BoxStartOffset, cln, token, sav).ConfigureAwait(false);
-        }
-        return tradela.Valid;
-    }
-
-    private static void UpdateTrainerDetails(PB8 pokemon, PB8 offered, string tradePartner)
-    {
-        pokemon.OriginalTrainerGender = offered.OriginalTrainerGender;
-        pokemon.TrainerTID7 = offered.TrainerTID7;
-        pokemon.TrainerSID7 = offered.TrainerSID7;
-        pokemon.Language = offered.Language;
-
-        Span<byte> trash = pokemon.OriginalTrainerTrash;
-        trash.Clear();
-
-        int maxLength = trash.Length / 2;
-        int actualLength = Math.Min(tradePartner.Length, maxLength);
-
-        for (int i = 0; i < actualLength; i++)
-        {
-            char value = tradePartner[i];
-            trash[i * 2] = (byte)value;
-            trash[i * 2 + 1] = (byte)(value >> 8);
-        }
-
-        if (actualLength < maxLength)
-        {
-            trash[actualLength * 2] = 0x00;
-            trash[actualLength * 2 + 1] = 0x00;
-        }
     }
 
     private void WaitAtBarrierIfApplicable(CancellationToken token)

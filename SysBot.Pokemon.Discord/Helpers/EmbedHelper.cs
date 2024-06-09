@@ -83,7 +83,7 @@ public static class EmbedHelper
         await user.SendMessageAsync(embed: embed).ConfigureAwait(false);
     }
 
-    public static async Task SendTradeFinishedEmbedAsync<T>(IUser user, string message, T pk)
+    public static async Task SendTradeFinishedEmbedAsync<T>(IUser user, string message, T pk, bool isMysteryEgg)
         where T : PKM, new()
     {
         string speciesImageUrl = AbstractTrade<T>.PokeImg(pk, false, true, null);

@@ -275,6 +275,14 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             _ = ReplyAndDeleteAsync("You already have an existing trade in the queue. Please wait until it is processed.", 2);
             return;
         }
+        bool ignoreAutoOT = content.Contains("OT:") || content.Contains("TID:") || content.Contains("SID:");
+        bool useTradePartnerInfo = SysCord<T>.Runner.Config.Legality.UseTradePartnerInfo;
+        bool storeTradeCodes = SysCord<T>.Runner.Config.Trade.TradeConfiguration.StoreTradeCodes;
+
+        if (useTradePartnerInfo && storeTradeCodes)
+        {
+            content = TrainerInfoHelper.AddTrainerDetails(content, userID, ignoreAutoOT);
+        }
 
         content = ReusableActions.StripCodeBlock(content);
         var set = new ShowdownSet(content);
@@ -340,9 +348,16 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             _ = Context.Message.DeleteAsync();
             return;
         }
+        bool ignoreAutoOT = content.Contains("OT:") || content.Contains("TID:") || content.Contains("SID:");
+        bool useTradePartnerInfo = SysCord<T>.Runner.Config.Legality.UseTradePartnerInfo;
+        bool storeTradeCodes = SysCord<T>.Runner.Config.Trade.TradeConfiguration.StoreTradeCodes;
+
+        if (useTradePartnerInfo && storeTradeCodes)
+        {
+            content = TrainerInfoHelper.AddTrainerDetails(content, userID, ignoreAutoOT);
+        }
 
         content = ReusableActions.StripCodeBlock(content);
-        var ignoreAutoOT = content.Contains("OT:") || content.Contains("TID:") || content.Contains("SID:");
         var set = new ShowdownSet(content);
         var template = AutoLegalityWrapper.GetTemplate(set);
         int formArgument = ExtractFormArgument(content);
@@ -518,8 +533,14 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             _ = ReplyAndDeleteAsync("You already have an existing trade in the queue. Please wait until it is processed.", 2, null);
             return;
         }
-
-        var ignoreAutoOT = content.Contains("OT:") || content.Contains("TID:") || content.Contains("SID:");
+        bool ignoreAutoOT = content.Contains("OT:") || content.Contains("TID:") || content.Contains("SID:");
+        bool useTradePartnerInfo = SysCord<T>.Runner.Config.Legality.UseTradePartnerInfo;
+        bool storeTradeCodes = SysCord<T>.Runner.Config.Trade.TradeConfiguration.StoreTradeCodes;
+        if (useTradePartnerInfo && storeTradeCodes)
+        {
+            content = TrainerInfoHelper.AddTrainerDetails(content, userID, ignoreAutoOT);
+        }
+        content = ReusableActions.StripCodeBlock(content);
         var set = new ShowdownSet(content);
         var template = AutoLegalityWrapper.GetTemplate(set);
         int formArgument = ExtractFormArgument(content);
@@ -695,7 +716,15 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             _ = ReplyAndDeleteAsync("You already have an existing trade in the queue. Please wait until it is processed.", 2);
             return;
         }
+        bool ignoreAutoOT = content.Contains("OT:") || content.Contains("TID:") || content.Contains("SID:");
+        bool useTradePartnerInfo = SysCord<T>.Runner.Config.Legality.UseTradePartnerInfo;
+        bool storeTradeCodes = SysCord<T>.Runner.Config.Trade.TradeConfiguration.StoreTradeCodes;
 
+        if (useTradePartnerInfo && storeTradeCodes)
+        {
+            content = TrainerInfoHelper.AddTrainerDetails(content, userID, ignoreAutoOT);
+        }
+        content = ReusableActions.StripCodeBlock(content);
         var trades = TradeModule<T>.ParseBatchTradeContent(content);
         var maxTradesAllowed = SysCord<T>.Runner.Config.Trade.TradeConfiguration.MaxPkmsPerTrade;
 

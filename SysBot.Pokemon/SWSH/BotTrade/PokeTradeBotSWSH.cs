@@ -374,11 +374,6 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState Config) : Poke
             return PokeTradeResult.RecoverOpenBox;
         }
 
-        if (hub.Config.Legality.UseTradePartnerInfo && !poke.IgnoreAutoOT)
-        {
-            await SetPkmWithSwappedIDDetails(toSend, trainerName, sav, token);
-        }
-
         // Confirm Box 1 Slot 1
         if (poke.Type == PokeTradeType.Specific)
         {
@@ -1136,59 +1131,5 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState Config) : Poke
 
         return (clone, PokeTradeResult.Success);
     }
-
-    private async Task<bool> SetPkmWithSwappedIDDetails(PK8 toSend, string trainerName, SAV8SWSH sav, CancellationToken token)
-    {
-        var data = await Connection.ReadBytesAsync(LinkTradePartnerNameOffset - 0x8, 8, token).ConfigureAwait(false);
-        var tidsid = BitConverter.ToUInt32(data, 0);
-        var cln = (PK8)toSend.Clone();
-        UpdateTrainerDetails(cln, data, trainerName, tidsid);
-
-        if (!toSend.IsNicknamed)
-            cln.ClearNickname();
-
-        if (toSend.IsShiny)
-            cln.SetShiny();
-
-        cln.RefreshChecksum();
-
-        var tradeswsh = new LegalityAnalysis(cln);
-        if (tradeswsh.Valid)
-        {
-            Log($"Pokemon is valid with the user's trainer info applied. Now implementing the swap.");
-            await SetBoxPokemon(cln, 0, 0, token, sav).ConfigureAwait(false);
-        }
-        else
-        {
-            Log($"Pokemon is invalid with the user's trainer info applied. Keeping the original object.");
-        }
-
-        return tradeswsh.Valid;
-    }
-    private static void UpdateTrainerDetails(PK8 pokemon, byte[] data, string trainerName, uint tidsid)
-    {
-        pokemon.OriginalTrainerGender = data[6];
-        pokemon.TrainerTID7 = tidsid % 1_000_000;
-        pokemon.TrainerSID7 = tidsid / 1_000_000;
-        pokemon.Language = data[5];
-
-        Span<byte> trash = pokemon.OriginalTrainerTrash;
-        trash.Clear();
-
-        int maxLength = trash.Length / 2;
-        int actualLength = Math.Min(trainerName.Length, maxLength);
-
-        for (int i = 0; i < actualLength; i++)
-        {
-            char value = trainerName[i];
-            trash[i * 2] = (byte)value;
-            trash[i * 2 + 1] = (byte)(value >> 8);
-        }
-
-        if (actualLength < maxLength)
-        {
-            trash[actualLength * 2] = 0x00;
-            trash[actualLength * 2 + 1] = 0x00;
-        }
-    }
 }
+
