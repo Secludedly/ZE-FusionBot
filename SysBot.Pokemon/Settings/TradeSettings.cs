@@ -296,6 +296,7 @@ public class TradeSettings : IBotStateSettings, ICountSettings
         new(MoveType.Normal),
         new(MoveType.Poison),
         new(MoveType.Fairy),
+        new(MoveType.Stellar)
     };
 
         [Category(EmbedSettings), Description("The full string for the male gender emoji."), DisplayName("Male Emoji")]
@@ -340,6 +341,7 @@ public class TradeSettings : IBotStateSettings, ICountSettings
         new(MoveType.Normal),
         new(MoveType.Poison),
         new(MoveType.Fairy),
+        new(MoveType.Stellar)
     };
 
         [Category(EmbedSettings), Description("Will show Level in trade embed (Discord only)."), DisplayName("Show Level")]
@@ -555,19 +557,43 @@ public class TradeSettings : IBotStateSettings, ICountSettings
         Size128x128
     }
 
+    public enum MoveType
+    {
+        Normal,
+        Fighting,
+        Flying,
+        Poison,
+        Ground,
+        Rock,
+        Bug,
+        Ghost,
+        Steel,
+        Fire,
+        Water,
+        Grass,
+        Electric,
+        Psychic,
+        Ice,
+        Dragon,
+        Dark,
+        Fairy,
+        Stellar
+    }
+
     public class MoveTypeEmojiInfo
     {
         [Description("The type of move.")]
         public MoveType MoveType { get; set; }
 
         [Description("The Discord emoji string for this move type.")]
-        public string? EmojiCode { get; set; }
+        public string? EmojiCode { get; set; } = string.Empty;
 
         public MoveTypeEmojiInfo() { }
 
         public MoveTypeEmojiInfo(MoveType moveType)
         {
             MoveType = moveType;
+            EmojiCode = string.Empty;
         }
 
         public override string ToString()

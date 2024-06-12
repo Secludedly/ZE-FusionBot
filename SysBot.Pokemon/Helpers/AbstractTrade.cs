@@ -684,8 +684,8 @@ namespace SysBot.Pokemon.Helpers
             if (pkm is PK9 pk9)
             {
                 pk9.ObedienceLevel = pk9.MetLevel;
-                pk9.TeraTypeOriginal = MoveType.Normal;
-                pk9.TeraTypeOverride = (MoveType)19;
+                pk9.TeraTypeOriginal = PKHeX.Core.MoveType.Normal;
+                pk9.TeraTypeOverride = (PKHeX.Core.MoveType)19;
             }
 
             pkm.Ball = 21;
@@ -779,7 +779,7 @@ namespace SysBot.Pokemon.Helpers
                 pk9.ObedienceLevel = 1;
                 pk9.Version = 0;
                 pk9.BattleVersion = 0;
-                pk9.TeraTypeOverride = (MoveType)19;
+                pk9.TeraTypeOverride = (PKHeX.Core.MoveType)19;
             }
 
             var la = new LegalityAnalysis(pk);

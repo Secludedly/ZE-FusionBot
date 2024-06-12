@@ -1017,8 +1017,7 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState config) : Poke
         var data = await Connection.ReadBytesAsync(ofs, 8, token).ConfigureAwait(false);
 
         var tidsid = BitConverter.ToUInt32(data, 0);
-        var tid7 = $"{tidsid % 1_000_000:000000}";
-        return tid7;
+        return $"{tidsid % 1_000_000:000000}";
     }
 
     private async Task<string> GetTradePartnerSID7(TradeMethod tradeMethod, CancellationToken token)
@@ -1027,8 +1026,7 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState config) : Poke
         var data = await Connection.ReadBytesAsync(ofs, 8, token).ConfigureAwait(false);
 
         var tidsid = BitConverter.ToUInt32(data, 0);
-        var sid7 = $"{tidsid / 1_000_000:0000}";
-        return sid7;
+        return $"{tidsid / 1_000_000:0000}";
     }
 
     public async Task<ulong> GetTradePartnerNID(CancellationToken token)
@@ -1153,6 +1151,13 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState config) : Poke
             Log("Trade is a Mystery Gift with specific TID/SID. Skipping AutoOT.");
             return false;
         }
+
+        // Current handler cannot be past gen OT
+        if (toSend.Generation != toSend.Format)
+        {
+            Log("Can not apply Partner details: Current handler cannot be different gen OT.");
+            return false;
+        }
         var data = await Connection.ReadBytesAsync(LinkTradePartnerNameOffset - 0x8, 8, token).ConfigureAwait(false);
         var tidsid = BitConverter.ToUInt32(data, 0);
         var cln = toSend.Clone();
@@ -1166,9 +1171,10 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState config) : Poke
             cln.ClearNickname();
 
         if (toSend.IsShiny)
-            cln.SetShiny();
+            cln.PID = (uint)((cln.TID16 ^ cln.SID16 ^ (cln.PID & 0xFFFF) ^ toSend.ShinyXor) << 16) | (cln.PID & 0xFFFF);
 
-        cln.RefreshChecksum();
+        if (!toSend.ChecksumValid)
+            cln.RefreshChecksum();
 
         var tradeswsh = new LegalityAnalysis(cln);
         if (tradeswsh.Valid)
