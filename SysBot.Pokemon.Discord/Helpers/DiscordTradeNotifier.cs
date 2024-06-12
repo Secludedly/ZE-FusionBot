@@ -54,7 +54,7 @@ public class DiscordTradeNotifier<T> : IPokeTradeNotifier<T>
                 message += "\n**Please stay in the trade until all batch trades are completed.**";
             }
 
-            EmbedHelper.SendTradeInitializingEmbedAsync(Trader, speciesName, Code, IsMysteryEgg, message).ConfigureAwait(false);
+            EmbedHelper.SendTradeInitializingEmbedAsync(Trader, speciesName, Code, message).ConfigureAwait(false);
         }
         else if (Data is PB7)
         {
@@ -63,7 +63,7 @@ public class DiscordTradeNotifier<T> : IPokeTradeNotifier<T>
         }
         else
         {
-            EmbedHelper.SendTradeInitializingEmbedAsync(Trader, speciesName, Code, IsMysteryEgg).ConfigureAwait(false);
+            EmbedHelper.SendTradeInitializingEmbedAsync(Trader, speciesName, Code).ConfigureAwait(false);
         }
     }
 
