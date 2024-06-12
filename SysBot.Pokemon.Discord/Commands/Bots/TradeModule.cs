@@ -275,15 +275,6 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             _ = ReplyAndDeleteAsync("You already have an existing trade in the queue. Please wait until it is processed.", 2);
             return;
         }
-        bool ignoreAutoOT = content.Contains("OT:") || content.Contains("TID:") || content.Contains("SID:");
-        bool useTradePartnerInfo = SysCord<T>.Runner.Config.Legality.UseTradePartnerInfo;
-        bool storeTradeCodes = SysCord<T>.Runner.Config.Trade.TradeConfiguration.StoreTradeCodes;
-
-        if (useTradePartnerInfo && storeTradeCodes)
-        {
-            content = TrainerInfoHelper.AddTrainerDetails(content, userID, ignoreAutoOT);
-        }
-
         content = ReusableActions.StripCodeBlock(content);
         var set = new ShowdownSet(content);
         var template = AutoLegalityWrapper.GetTemplate(set);
@@ -345,18 +336,9 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         if (Info.IsUserInQueue(userID))
         {
             _ = ReplyAndDeleteAsync("You already have an existing trade in the queue. Please wait until it is processed.", 2);
-            _ = Context.Message.DeleteAsync();
             return;
         }
-        bool ignoreAutoOT = content.Contains("OT:") || content.Contains("TID:") || content.Contains("SID:");
-        bool useTradePartnerInfo = SysCord<T>.Runner.Config.Legality.UseTradePartnerInfo;
-        bool storeTradeCodes = SysCord<T>.Runner.Config.Trade.TradeConfiguration.StoreTradeCodes;
-
-        if (useTradePartnerInfo && storeTradeCodes)
-        {
-            content = TrainerInfoHelper.AddTrainerDetails(content, userID, ignoreAutoOT);
-        }
-
+        var ignoreAutoOT = content.Contains("OT:") || content.Contains("TID:") || content.Contains("SID:");
         content = ReusableActions.StripCodeBlock(content);
         var set = new ShowdownSet(content);
         var template = AutoLegalityWrapper.GetTemplate(set);
@@ -366,7 +348,6 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         {
             var msg = $"Unable to parse Showdown Set:\n{string.Join("\n", set.InvalidLines)}";
             _ = ReplyAndDeleteAsync(msg, 2, Context.Message);
-            _ = Context.Message.DeleteAsync();
             return;
         }
 
@@ -384,12 +365,15 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
                     case PK9 pk9:
                         pk9.SetRecordFlagsAll();
                         break;
+
                     case PK8 pk8:
                         pk8.SetRecordFlagsAll();
                         break;
+
                     case PB8 pb8:
                         pb8.SetRecordFlagsAll();
                         break;
+
                     case PB7 pb7:
                     case PA8 pa8:
                         break;
@@ -409,7 +393,6 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
                 if (pkm.Species == (int)Species.Mew && pkm.IsShiny)
                 {
                     await ReplyAsync("Mew can **not** be Shiny in LGPE. PoGo Mew does not transfer and Pokeball Plus Mew is shiny locked.");
-                    _ = Context.Message.DeleteAsync();
                     return;
                 }
             }
@@ -456,8 +439,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
                     string userMention = Context.User.Mention;
                     string messageContent = $"{userMention}, here's the report for your request:";
                     var message = await Context.Channel.SendMessageAsync(text: messageContent, embed: embedBuilder.Build()).ConfigureAwait(false);
-                    _ = DeleteMessagesAfterDelayAsync(message, Context.Message, 10);
-                    _ = Context.Message.DeleteAsync();
+                    _ = DeleteMessagesAfterDelayAsync(message, Context.Message, 30);
                     return;
                 }
                 pk = correctedPk;
@@ -470,10 +452,13 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         catch (Exception ex)
         {
             LogUtil.LogSafe(ex, nameof(TradeModule<T>));
-            var msg = $"An unexpected problem happened with this Showdown Set:\n```{string.Join("\n", set.GetSetLines())}```";
+            var msg = $"Oops! An unexpected problem happened with this Showdown Set:\n```{string.Join("\n", set.GetSetLines())}```";
 
             _ = ReplyAndDeleteAsync(msg, 2, Context.Message);
-            _ = Context.Message.DeleteAsync();
+        }
+        if (Context.Message is IUserMessage userMessage)
+        {
+            _ = DeleteMessagesAfterDelayAsync(userMessage, null, 0);
         }
     }
 
@@ -533,13 +518,8 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             _ = ReplyAndDeleteAsync("You already have an existing trade in the queue. Please wait until it is processed.", 2, null);
             return;
         }
-        bool ignoreAutoOT = content.Contains("OT:") || content.Contains("TID:") || content.Contains("SID:");
-        bool useTradePartnerInfo = SysCord<T>.Runner.Config.Legality.UseTradePartnerInfo;
-        bool storeTradeCodes = SysCord<T>.Runner.Config.Trade.TradeConfiguration.StoreTradeCodes;
-        if (useTradePartnerInfo && storeTradeCodes)
-        {
-            content = TrainerInfoHelper.AddTrainerDetails(content, userID, ignoreAutoOT);
-        }
+
+        var ignoreAutoOT = content.Contains("OT:") || content.Contains("TID:") || content.Contains("SID:");
         content = ReusableActions.StripCodeBlock(content);
         var set = new ShowdownSet(content);
         var template = AutoLegalityWrapper.GetTemplate(set);
@@ -550,7 +530,6 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             _ = ReplyAndDeleteAsync(msg, 2, Context.Message);
             return;
         }
-
         try
         {
             var sav = AutoLegalityWrapper.GetTrainerInfo<T>();
@@ -564,12 +543,15 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
                     case PK9 pk9:
                         pk9.SetRecordFlagsAll();
                         break;
+
                     case PK8 pk8:
                         pk8.SetRecordFlagsAll();
                         break;
+
                     case PB8 pb8:
                         pb8.SetRecordFlagsAll();
                         break;
+
                     case PB7 pb7:
                     case PA8 pa8:
                         break;
@@ -648,7 +630,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         catch (Exception ex)
         {
             LogUtil.LogSafe(ex, nameof(TradeModule<T>));
-            var msg = $"An unexpected problem happened with this Showdown Set:\n```{string.Join("\n", set.GetSetLines())}```";
+            var msg = $"Oops! An unexpected problem happened with this Showdown Set:\n```{string.Join("\n", set.GetSetLines())}```";
 
             _ = ReplyAndDeleteAsync(msg, 2, null);
         }
@@ -716,14 +698,6 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             _ = ReplyAndDeleteAsync("You already have an existing trade in the queue. Please wait until it is processed.", 2);
             return;
         }
-        bool ignoreAutoOT = content.Contains("OT:") || content.Contains("TID:") || content.Contains("SID:");
-        bool useTradePartnerInfo = SysCord<T>.Runner.Config.Legality.UseTradePartnerInfo;
-        bool storeTradeCodes = SysCord<T>.Runner.Config.Trade.TradeConfiguration.StoreTradeCodes;
-
-        if (useTradePartnerInfo && storeTradeCodes)
-        {
-            content = TrainerInfoHelper.AddTrainerDetails(content, userID, ignoreAutoOT);
-        }
         content = ReusableActions.StripCodeBlock(content);
         var trades = TradeModule<T>.ParseBatchTradeContent(content);
         var maxTradesAllowed = SysCord<T>.Runner.Config.Trade.TradeConfiguration.MaxPkmsPerTrade;
@@ -761,10 +735,9 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
     private static List<string> ParseBatchTradeContent(string content)
     {
         var delimiters = new[] { "---", "—-" }; // Includes both three hyphens and an em dash followed by a hyphen
-        var trades = content.Split(delimiters, StringSplitOptions.RemoveEmptyEntries)
+        return content.Split(delimiters, StringSplitOptions.RemoveEmptyEntries)
                             .Select(trade => trade.Trim())
                             .ToList();
-        return trades;
     }
 
     [Command("batchtradezip")]
