@@ -21,8 +21,14 @@ public static class EmbedHelper
         await user.SendMessageAsync(embed: embed).ConfigureAwait(false);
     }
 
-    public static async Task SendTradeInitializingEmbedAsync(IUser user, string speciesName, int code, string? message = null)
+    public static async Task SendTradeInitializingEmbedAsync(IUser user, string speciesName, int code, bool isMysteryEgg, string? message = null)
     {
+        if (isMysteryEgg)
+        {
+            speciesName = "**Mystery Egg**";
+        }
+
+
         var embed = new EmbedBuilder()
             .WithTitle("Loading Trade Menu...")
             .WithDescription($"**Trade Code**: {code:0000 0000}")

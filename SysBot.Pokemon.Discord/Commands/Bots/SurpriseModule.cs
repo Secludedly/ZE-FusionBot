@@ -48,7 +48,7 @@ namespace SysBot.Pokemon.Discord
 
             try
             {
-                T? pk = null;  // loop logic until legal set found
+                T? pk = null;  // Loop logic until legal set found
                 bool isValid = false;
 
                 while (!isValid)
@@ -103,11 +103,13 @@ namespace SysBot.Pokemon.Discord
             await message.DeleteAsync().ConfigureAwait(false);
         }
 
+
+
         /////////////////////////////////////////////////////////////////
-        //////////////////// RANDOMIZE POKEMON STATS ////////////////////
+        //////////////////// RANDOMIZE POKEMON INFO /////////////////////
         /////////////////////////////////////////////////////////////////
 
-        private static void RandomizePokemon(PKM pk, GameVersion gameVersion)
+        private static void RandomizePokemon(PKM pk, GameVersion gameVersion) // Method to call and set other randomizations below
         {
             var random = new Random();
 
@@ -216,17 +218,12 @@ namespace SysBot.Pokemon.Discord
                 }
 
                 //--------------- Ability --------------//
-                var randomAbility = new Random(); // Register sending a random ability
-                int abilityIndex = randomAbility.Next(0, 3); // Generate a random number between 0, 1, or 2
-                byte abilityNumber = (byte)(abilityIndex * 2); // How the ability index assigns itself an ability number (0, 2, or 4)
-                if (abilityIndex == 2) // If the ability index is 2...
-                {
-                    abilityNumber = 4; // ...Then set the ability number to 4
-                }
-                pk.AbilityNumber = abilityNumber; // Send the random ability number to the Pokemon
+                var randomAbility = new Random(); // Initialize random number generator
+                byte[] validAbilityNumbers = { 1, 2, 4 }; // Valid ability numbers
+                byte abilityNumber = validAbilityNumbers[randomAbility.Next(validAbilityNumbers.Length)]; // Select a random valid ability number from above
+                pk.AbilityNumber = abilityNumber; // Assign the selected ability number to the Pokemon
 
-
-            }
+            }  
         }
 
         private static GameVersion GetGameVersion()

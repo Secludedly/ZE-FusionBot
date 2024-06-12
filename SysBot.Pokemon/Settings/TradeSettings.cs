@@ -533,6 +533,7 @@ public class TradeSettings : IBotStateSettings, ICountSettings
         get => CountStatsSettings.EmitCountsOnStatusCheck;
         set => CountStatsSettings.EmitCountsOnStatusCheck = value;
     }
+    public static object MoveType { get; set; }
 
     public IEnumerable<string> GetNonZeroCounts()
     {

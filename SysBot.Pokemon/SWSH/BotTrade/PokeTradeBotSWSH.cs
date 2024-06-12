@@ -13,12 +13,12 @@ using static SysBot.Pokemon.PokeDataOffsetsSWSH;
 
 namespace SysBot.Pokemon;
 
-public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState Config) : PokeRoutineExecutor8SWSH(Config), ICountBot, ITradeBot
+public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState config) : PokeRoutineExecutor8SWSH(config), ICountBot, ITradeBot
 {
     public static ISeedSearchHandler<PK8> SeedChecker { get; set; } = new NoSeedSearchHandler<PK8>();
 
     private readonly TradeSettings TradeSettings = hub.Config.Trade;
-    private readonly PokeTradeHub<PK8>? Hub;
+    private readonly PokeTradeHub<PK8> Hub = hub ?? throw new ArgumentNullException(nameof(hub));
     private readonly TradeAbuseSettings AbuseSettings = hub.Config.TradeAbuse;
     public event EventHandler<Exception>? ConnectionError;
     public event EventHandler? ConnectionSuccess;
@@ -373,6 +373,12 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState Config) : Poke
             await ExitTrade(true, token).ConfigureAwait(false);
             return PokeTradeResult.RecoverOpenBox;
         }
+
+        if (hub.Config.Legality.UseTradePartnerInfo && !poke.IgnoreAutoOT)
+        {
+            await ApplyAutoOT(toSend, trainerName, sav, token);
+        }
+
 
         // Confirm Box 1 Slot 1
         if (poke.Type == PokeTradeType.Specific)
@@ -1131,5 +1137,71 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState Config) : Poke
 
         return (clone, PokeTradeResult.Success);
     }
+
+
+    private async Task<bool> ApplyAutoOT(PK8 toSend, string trainerName, SAV8SWSH sav, CancellationToken token)
+    {
+        if (toSend is IHomeTrack pk && pk.HasTracker)
+        {
+            Log("HOME tracker detected. Can't apply AutoOT.");
+            return false;
+        }
+        if (toSend is IFatefulEncounterReadOnly fe && fe.FatefulEncounter &&
+           (toSend.TID16 != 0 || toSend.SID16 != 0) &&
+           (toSend.TID16 != 12345 || toSend.SID16 != 54321))
+        {
+            Log("Trade is a Mystery Gift with specific TID/SID. Skipping AutoOT.");
+            return false;
+        }
+        var data = await Connection.ReadBytesAsync(LinkTradePartnerNameOffset - 0x8, 8, token).ConfigureAwait(false);
+        var tidsid = BitConverter.ToUInt32(data, 0);
+        var cln = toSend.Clone();
+        cln.OriginalTrainerGender = data[6];
+        cln.TrainerTID7 = tidsid % 1_000_000;
+        cln.TrainerSID7 = tidsid / 1_000_000;
+        cln.Language = data[5];
+        cln.OriginalTrainerName = trainerName;
+        ClearOTTrash(cln, trainerName);
+        if (!toSend.IsNicknamed)
+            cln.ClearNickname();
+
+        if (toSend.IsShiny)
+            cln.SetShiny();
+
+        cln.RefreshChecksum();
+
+        var tradeswsh = new LegalityAnalysis(cln);
+        if (tradeswsh.Valid)
+        {
+            Log($"Pokemon is valid with Trade Partner Info applied. Swapping details.");
+            await SetBoxPokemon(cln, 0, 0, token, sav).ConfigureAwait(false);
+        }
+        else
+        {
+            Log($"Pokemon not valid after using Trade Partner Info.");
+        }
+
+        return tradeswsh.Valid;
+    }
+
+    private static void ClearOTTrash(PK8 pokemon, string trainerName)
+    {
+        Span<byte> trash = pokemon.OriginalTrainerTrash;
+        trash.Clear();
+        int maxLength = trash.Length / 2;
+        int actualLength = Math.Min(trainerName.Length, maxLength);
+        for (int i = 0; i < actualLength; i++)
+        {
+            char value = trainerName[i];
+            trash[i * 2] = (byte)value;
+            trash[(i * 2) + 1] = (byte)(value >> 8);
+        }
+        if (actualLength < maxLength)
+        {
+            trash[actualLength * 2] = 0x00;
+            trash[(actualLength * 2) + 1] = 0x00;
+        }
+    }
+
 }
 
