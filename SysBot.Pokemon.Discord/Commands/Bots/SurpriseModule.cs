@@ -115,12 +115,71 @@ namespace SysBot.Pokemon.Discord
 
             //--------------- Held Items --------------//
             List<int> heldItems = new List<int>
-    {
-        1, 236, 244, 286, 81, 217, 221, 248, 228, 230, 233, 281, 541, 234,
-        265, 158, 241, 155, 269, 157, 287, 210, 645, 1606, 275, 223, 297,
-        220, 270, 268, 1128, 50, 82, 84, 85, 1120, 109, 80, 83, 107, 108, 109,
-        110, 112, 218
-    };
+            {
+                  0, // Nothing
+                  1, // Master Ball
+                236, // Light Ball
+                244, // Sharp Beak
+               1120, // Heavy-Duty Boots
+                218, // Soothe Bell
+                286, // Grip Claw
+                217, // Quick Claw
+                328, // Razor Claw
+                221, // King’s Rock
+                248, // Twisted Spoon
+                255, // Shell Bell
+                228, // Smoke Ball
+                229, // Everstone
+                230, // Focus Band
+                275, // Focus Sash
+                233, // Metal Coat
+                281, // Black Sludge
+                541, // Air Balloon
+                234, // Leftovers
+                265, // Wide Lens
+                269, // Light Clay
+                245, // Mystic Water
+                538, // Eviolite
+                645, // Ability Capsule
+               1606, // Ability Patch
+                223, // Amulet Coin
+                287, // Choice Scarf
+                297, // Choice Specs
+                220, // Choice Band
+                270, // Life Orb
+                290, // Sticky Barb
+                294, // Power Band
+                241, // Black Belt
+                268, // Expert Belt
+               1128, // Exp. Candy XL
+                 50, // Rare Candy
+                 55, // PP Max
+                 47, // HP Up
+                 48, // Protein
+                 49, // Iron
+                 50, // Carbos
+                 51, // Calcium
+                 54, // Zinc
+                158, // Sitrus Berry
+                210, // Custap Berry
+                155, // Oran Berry
+                157, // Lum Berry
+                619, // Dark Stone
+                620, // Light Stone
+                 82, // Fire Stone
+                 84, // Thunder Stone
+                 85, // Water Stone
+                109, // Dawn Stone
+                 81, // Moon Stone
+                 80, // Sun Stone
+                851, // Ice Stone
+                 83, // Thunder Stone
+                107, // Shiny Stone
+                108, // Dusk Stone
+                109, // Dawn Stone
+                110  // Oval Stone
+            };
+
             if (gameVersion != GameVersion.PLA)
             {
                 pk.HeldItem = heldItems[random.Next(heldItems.Count)];
