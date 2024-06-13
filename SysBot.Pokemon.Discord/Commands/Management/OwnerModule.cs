@@ -580,41 +580,44 @@ public class OwnerModule<T> : SudoModule<T> where T : PKM, new()
             });
         }
 
-        [Command("startcontroller")]
-        [Alias("controllerstart", "startcontrol", "controlstart", "startremote", "remotestart")]
-        [Summary("Makes the bot open Switch Remote for PC - a GUI game controller for your Switch.")]
-        [RequireOwner]
-        public async Task StartSysRemote()
+    [Command("startcontroller")]
+    [Alias("controllerstart", "startcontrol", "controlstart", "startremote", "remotestart")]
+    [Summary("Makes the bot open Switch Remote for PC - a GUI game controller for your Switch.")]
+    [RequireOwner]
+    public async Task StartSysRemote()
+    {
+        try
         {
-            try
+            var sysBotRemotePath = SysCord<T>.Runner.Config.SysBotRemoteFolder;
+
+            if (Directory.Exists(sysBotRemotePath))
             {
-                var sysBotRemotePath = SysCord<T>.Runner.Config.SysBotRemoteFolder;
+                string executablePath = Path.Combine(sysBotRemotePath, "SwitchRemoteForPC.exe");
 
-                if (Directory.Exists(sysBotRemotePath))
+                if (File.Exists(executablePath))
                 {
-                    string executablePath = Path.Combine(sysBotRemotePath, "Switch.Remote.for.PC");
-
-                    if (File.Exists(executablePath))
+                    ProcessStartInfo startInfo = new ProcessStartInfo(executablePath)
                     {
-                        ProcessStartInfo startInfo = new ProcessStartInfo(executablePath);
-                        startInfo.WorkingDirectory = sysBotRemotePath;
-                        Process.Start(startInfo);
+                        WorkingDirectory = sysBotRemotePath
+                    };
+                    Process.Start(startInfo);
 
-                        await ReplyAsync("Switch Remote for PC has been initiated. You can now control your Switch!");
-                    }
-                    else
-                    {
-                        await ReplyAsync("**Switch.Remote.for.PC.exe** cannot be found in the specified folder.");
-                    }
+                    await ReplyAsync("Switch Remote for PC has been initiated. You can now control your Switch!");
                 }
                 else
                 {
-                    await ReplyAsync("The Switch Remote for PC folder does not exist.");
+                    await ReplyAsync("**SwitchRemoteForPC.exe** cannot be found in the specified folder.");
                 }
             }
-            catch (Exception ex)
+            else
             {
-                await ReplyAsync($"**Switch Remote for PC Error:** {ex.Message}");
+                await ReplyAsync("**SwitchRemoteForPC** folder does not exist.");
             }
         }
+        catch (Exception ex)
+        {
+            await ReplyAsync($"**SwitchRemoteForPC Error:** {ex.Message}");
+        }
     }
+}
+
