@@ -404,7 +404,7 @@ public class PokeTradeBotBS(PokeTradeHub<PB8> Hub, PokeBotState Config) : PokeRo
             //lastOffered = await SwitchConnection.ReadBytesAbsoluteAsync(LinkTradePokemonOffset, 8, token).ConfigureAwait(false);
             if (Hub.Config.Legality.UseTradePartnerInfo && !poke.IgnoreAutoOT)
             {
-                await ApplyAutoOT(toSend, offered, sav, tradePartner.TrainerName, token);
+                toSend = await ApplyAutoOT(toSend, offered, sav, tradePartner.TrainerName, token);
             }
             PokeTradeResult update;
             var trainer = new PartnerDataHolder(0, tradePartner.TrainerName, tradePartner.TID7);
@@ -818,19 +818,19 @@ public class PokeTradeBotBS(PokeTradeHub<PB8> Hub, PokeBotState Config) : PokeRo
 
         return (toSend, PokeTradeResult.Success);
     }
-    private async Task<bool> ApplyAutoOT(PB8 toSend, PB8 offered, SAV8BS sav, string tradePartner, CancellationToken token)
+    private async Task<PB8> ApplyAutoOT(PB8 toSend, PB8 offered, SAV8BS sav, string tradePartner, CancellationToken token)
     {
         if (toSend is IHomeTrack pk && pk.HasTracker)
         {
             Log("HOME tracker detected. Can't apply AutoOT.");
-            return false;
+            return toSend;
         }
 
         // Current handler cannot be past gen OT
         if (toSend.Generation != toSend.Format)
         {
             Log("Can not apply Partner details: Current handler cannot be different gen OT.");
-            return false;
+            return toSend;
         }
         var cln = toSend.Clone();
         cln.OriginalTrainerGender = offered.OriginalTrainerGender;
@@ -855,13 +855,14 @@ public class PokeTradeBotBS(PokeTradeHub<PB8> Hub, PokeBotState Config) : PokeRo
             Log($"Pokemon is valid with Trade Partner Info applied. Swapping details.");
 
             await SetBoxPokemonAbsolute(BoxStartOffset, cln, token, sav).ConfigureAwait(false);
+            return cln;
         }
         else
         {
             Log($"Pokemon not valid after using Trade Partner Info.");
             await SetBoxPokemonAbsolute(BoxStartOffset, cln, token, sav).ConfigureAwait(false);
+            return toSend;
         }
-        return tradeBS.Valid;
     }
 
     private static void ClearOTTrash(PB8 pokemon, string trainerName)
