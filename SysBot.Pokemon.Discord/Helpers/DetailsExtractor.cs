@@ -112,9 +112,11 @@ public class DetailsExtractor<T> where T : PKM, new()
 
     private static string GetTeraTypeString(PK9 pk9)
     {
+        var isStellar = pk9.TeraTypeOverride == (MoveType)TeraTypeUtil.Stellar || (int)pk9.TeraType == 99;
+        var teraType = isStellar ? TradeSettings.MoveType.Stellar : (TradeSettings.MoveType)pk9.TeraType;
+
         if (SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.UseTeraEmojis)
-        {
-            var teraType = pk9.TeraTypeOverride == (PKHeX.Core.MoveType)TeraTypeUtil.Stellar || (int)pk9.TeraType == 99 ? TradeSettings.MoveType.Stellar : (TradeSettings.MoveType)pk9.TeraType;
+        { 
             var emojiInfo = SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.TeraTypeEmojis.Find(e => e.MoveType == teraType);
             if (emojiInfo != null && !string.IsNullOrEmpty(emojiInfo.EmojiCode))
             {
@@ -122,7 +124,7 @@ public class DetailsExtractor<T> where T : PKM, new()
             }
         }
 
-        return pk9.TeraType.ToString();
+        return teraType.ToString();
     }
 
     private static string GetLanguageText(int languageValue)
