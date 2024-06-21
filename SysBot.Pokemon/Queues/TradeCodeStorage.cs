@@ -1,3 +1,5 @@
+using SysBot.Base;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using Newtonsoft.Json;
@@ -84,8 +86,23 @@ namespace SysBot.Pokemon
 
         private void SaveToFile()
         {
-            string json = JsonConvert.SerializeObject(_tradeCodeDetails, Formatting.Indented);
+            try
+            {
+                string json = JsonConvert.SerializeObject(_tradeCodeDetails, Formatting.Indented);
             File.WriteAllText(FileName, json);
+            }
+            catch (IOException ex)
+            {
+                LogUtil.LogInfo("TradeCodeStorage", $"Error saving trade codes to file: {ex.Message}");
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                LogUtil.LogInfo("TradeCodeStorage", $"Access denied while saving trade codes to file: {ex.Message}");
+            }
+            catch (Exception ex)
+            {
+                LogUtil.LogInfo("TradeCodeStorage", $"An error occurred while saving trade codes to file: {ex.Message}");
+            }
         }
 
         public bool DeleteTradeCode(ulong trainerID)
