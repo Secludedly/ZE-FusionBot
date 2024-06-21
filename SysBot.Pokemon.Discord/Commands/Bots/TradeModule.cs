@@ -419,7 +419,8 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
                             .AddField("Corrected Showdown Set:", $"```{finalShowdownSet}```")
                             .Build();
 
-                        await ReplyAsync($"{userName}, here are the corrections we made to your Showdown set:", embed: changesEmbed).ConfigureAwait(false);
+                        var correctionMessage = await ReplyAsync($"{userName}, here are the corrections we made to your Showdown set:", embed: changesEmbed).ConfigureAwait(false);
+                        _ = DeleteMessagesAfterDelayAsync(correctionMessage, Context.Message, 30);
                     }
                 }
 
@@ -600,7 +601,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
                     la = new LegalityAnalysis(pkm);
                     setEdited = true;
 
-                    if (correctionMessages.Count > 0)
+                    if (correctionMessages.Count > 0 && la.Valid)
                     {
                         var userName = Context.User.Mention;
                         var changesEmbed = new EmbedBuilder()
@@ -905,7 +906,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
                     setEdited = true;
 
 
-                    if (correctionMessages.Count > 0)
+                    if (correctionMessages.Count > 0 && la.Valid)
                     {
                         var userName = Context.User.Mention;
                         var changesEmbed = new EmbedBuilder()
@@ -915,7 +916,8 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
                             .AddField("Corrected Showdown Set:", $"```{finalShowdownSet}```")
                             .Build();
 
-                        await ReplyAsync($"{userName}, here are the corrections we made to your Showdown set:", embed: changesEmbed).ConfigureAwait(false);
+                        var correctionMessage = await ReplyAsync($"{userName}, here are the corrections we made to your Showdown set:", embed: changesEmbed).ConfigureAwait(false);
+                        _ = DeleteMessagesAfterDelayAsync(correctionMessage, Context.Message, 30);
                     }
                 }
 
