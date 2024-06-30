@@ -458,6 +458,8 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
                 }
                 pk = correctedPk;
             }
+            if (pk.WasEgg)
+                pk.EggMetDate = pk.MetDate;
             pk.ResetPartyStats();
 
             var sig = Context.User.GetFavor();
@@ -649,6 +651,8 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
                 }
                 pk = correctedPk;
             }
+            if (pk.WasEgg)
+                pk.EggMetDate = pk.MetDate;
             pk.ResetPartyStats();
 
             var sig = Context.User.GetFavor();
@@ -1001,6 +1005,8 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
                     }
                 }
             }
+            if (pkm.WasEgg)
+                pkm.EggMetDate = pkm.MetDate;
             pk.ResetPartyStats();
 
             var userID = Context.User.Id;
