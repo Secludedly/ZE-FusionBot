@@ -66,11 +66,10 @@ public class LegalitySettings
     [Category(Generate), Description("Prevents trading Pokémon that already have a HOME Tracker."), DisplayName("Disallow Home Tracked Pokémon")]
     public bool DisallowTracked { get; set; } = false;
 
-    [Browsable(false)]
     [Category(Generate), Description("The order in which Pokémon encounter types are attempted.")]
     public List<EncounterTypeGroup> PrioritizeEncounters { get; set; } =
     [
-        EncounterTypeGroup.Egg, EncounterTypeGroup.Slot,
+        EncounterTypeGroup.Slot, EncounterTypeGroup.Egg,
         EncounterTypeGroup.Static, EncounterTypeGroup.Mystery,
         EncounterTypeGroup.Trade,
     ];
