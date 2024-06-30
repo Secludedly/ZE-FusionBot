@@ -76,8 +76,9 @@ public static class QueueHelper<T> where T : PKM, new()
         var trade = new TradeEntry<T>(detail, userID, PokeRoutineType.LinkTrade, name, uniqueTradeID);
         var hub = SysCord<T>.Runner.Hub;
         var Info = hub.Queues.Info;
-        var canAddMultiple = isBatchTrade || sig == RequestSignificance.None;
-        var added = Info.AddToTradeQueue(trade, userID, canAddMultiple);
+        var allowMultiple = isBatchTrade;
+        var isSudo = sig == RequestSignificance.Owner;
+        var added = Info.AddToTradeQueue(trade, userID, allowMultiple, isSudo);
 
         int totalTradeCount = 0;
         TradeCodeStorage.TradeCodeDetails? tradeDetails = null;
