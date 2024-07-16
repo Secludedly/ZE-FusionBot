@@ -329,8 +329,12 @@ public class PokeTradeBotLGPE(PokeTradeHub<PB7> Hub, PokeBotState Config) : Poke
             string tid7 = displayTID.ToString("D6");
             string sid7 = displaySID.ToString("D4");
             Log($"Found Link Trade Partner: {tradepartnersav.OT}, TID7: {tid7}, SID7: {sid7}, Game: {tradepartnersav.Version}");
+
             // Save the OT, TID7, and SID7 information in the TradeCodeStorage for tradepartnersav
             tradeCodeStorage.UpdateTradeDetails(poke.Trainer.ID, tradepartnersav.OT, int.Parse(tid7), int.Parse(sid7));
+
+            // Send notification with trainer details
+            poke.SendNotification(this, $"Found Partner - OT: {tradepartnersav2.OT}, TID: {tid7}, SID: {sid7}");
         }
 
         if (tradepartnersav2.OT != sav.OT)
@@ -340,8 +344,12 @@ public class PokeTradeBotLGPE(PokeTradeHub<PB7> Hub, PokeBotState Config) : Poke
             string tid7 = displayTID.ToString("D6");
             string sid7 = displaySID.ToString("D4");
             Log($"Found Link Trade Partner: {tradepartnersav2.OT}, TID7: {tid7}, SID7: {sid7}");
+
             // Save the OT, TID7, and SID7 information in the TradeCodeStorage for tradepartnersav2
             tradeCodeStorage.UpdateTradeDetails(poke.Trainer.ID, tradepartnersav2.OT, int.Parse(tid7), int.Parse(sid7));
+
+            // Send notification with trainer details
+            poke.SendNotification(this, $"Found Partner - OT: {tradepartnersav.OT}, TID: {tid7}, SID: {sid7}");
         }
 
         if (poke.Type == PokeTradeType.Dump)
@@ -738,13 +746,17 @@ public class PokeTradeBotLGPE(PokeTradeHub<PB7> Hub, PokeBotState Config) : Poke
         {
             var cln = toSend.Clone();
             cln.OriginalTrainerName = tradeDetails.OT;
-            ClearOTTrash(cln, tradeDetails);
             cln.SetDisplayTID((uint)tradeDetails.TID);
             cln.SetDisplaySID((uint)tradeDetails.SID);
             cln.Language = (int)LanguageID.English; // Set the appropriate language ID
+            ClearOTTrash(cln, tradeDetails);
             if (!toSend.IsNicknamed)
-                cln.ClearNickname();
-            cln.RefreshChecksum();
+            cln.ClearNickname();
+            if (toSend.IsShiny)
+            cln.PID = (uint)((cln.TID16 ^ cln.SID16 ^ (cln.PID & 0xFFFF) ^ toSend.ShinyXor) << 16) | (cln.PID & 0xFFFF);
+
+            if (!toSend.ChecksumValid)
+                cln.RefreshChecksum();
             var tradelgpe = new LegalityAnalysis(cln);
             if (tradelgpe.Valid)
             {
