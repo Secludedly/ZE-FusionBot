@@ -281,6 +281,8 @@ public class PokeTradeBotBS(PokeTradeHub<PB8> Hub, PokeBotState Config) : PokeRo
 
             if (--waitPartner <= 0)
             {
+                // Ensure we exit the union room when no trainer is found.
+                await EnsureOutsideOfUnionRoom(token).ConfigureAwait(false);
                 return PokeTradeResult.NoTrainerFound;
             }
         }
@@ -297,6 +299,8 @@ public class PokeTradeBotBS(PokeTradeHub<PB8> Hub, PokeBotState Config) : PokeRo
                 break;
             if (--waitPartner <= 0)
             {
+                // Ensure we exit the union room if the partner is too slow.
+                await EnsureOutsideOfUnionRoom(token).ConfigureAwait(false);
                 return PokeTradeResult.TrainerTooSlow;
             }
         }
@@ -308,6 +312,8 @@ public class PokeTradeBotBS(PokeTradeHub<PB8> Hub, PokeBotState Config) : PokeRo
         // Can happen if they quit out of talking to us.
         if (!await IsPartnerParamLoaded(token).ConfigureAwait(false))
         {
+            // Ensure we exit the union room if the partner is too slow.
+            await EnsureOutsideOfUnionRoom(token).ConfigureAwait(false);
             return PokeTradeResult.TrainerTooSlow;
         }
 
