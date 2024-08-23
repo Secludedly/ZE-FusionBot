@@ -1,4 +1,5 @@
 using Discord;
+using Discord.Net;
 using Discord.Commands;
 using PKHeX.Core;
 using System.Threading.Tasks;
@@ -16,13 +17,9 @@ public class DumpModule<T> : ModuleBase<SocketCommandContext> where T : PKM, new
     [RequireQueueRole(nameof(DiscordManager.RolesDump))]
     public async Task DumpAsync(int code)
     {
-        // Check if the user is already in the queue
-        var userID = Context.User.Id;
-        if (Info.IsUserInQueue(userID))
-        {
-            await ReplyAsync("You already have an existing trade in the queue. Please wait until it is processed.").ConfigureAwait(false);
+        if (await CheckUserInQueueAsync())
             return;
-        }
+
         var sig = Context.User.GetFavor();
         var lgcode = Info.GetRandomLGTradeCode();
         await QueueHelper<T>.AddToQueueAsync(
@@ -40,9 +37,7 @@ public class DumpModule<T> : ModuleBase<SocketCommandContext> where T : PKM, new
             isMysteryEgg: false,
             lgcode: lgcode);
 
-        // Delete the command message after 2 seconds
-        await Task.Delay(2000);
-        await Context.Message.DeleteAsync();
+        _ = DeleteMessageAsync(Context.Message, 2000);
     }
 
     [Command("dump")]
@@ -51,16 +46,12 @@ public class DumpModule<T> : ModuleBase<SocketCommandContext> where T : PKM, new
     [RequireQueueRole(nameof(DiscordManager.RolesDump))]
     public async Task DumpAsync([Summary("Trade Code")][Remainder] string code)
     {
-        // Check if the user is already in the queue
-        var userID = Context.User.Id;
-        if (Info.IsUserInQueue(userID))
-        {
-            await ReplyAsync("You already have an existing trade in the queue. Please wait until it is processed.").ConfigureAwait(false);
+        if (await CheckUserInQueueAsync())
             return;
-        }
+
         int tradeCode = Util.ToInt32(code);
         var sig = Context.User.GetFavor();
-        await QueueHelper<T>.AddToQueueAsync(Context, tradeCode == 0 ? Info.GetRandomTradeCode(userID) : tradeCode, Context.User.Username, sig, new T(), PokeRoutineType.Dump, PokeTradeType.Dump);
+        await QueueHelper<T>.AddToQueueAsync(Context, tradeCode == 0 ? Info.GetRandomTradeCode(Context.User.Id) : tradeCode, Context.User.Username, sig, new T(), PokeRoutineType.Dump, PokeTradeType.Dump);
     }
 
     [Command("dump")]
@@ -69,14 +60,10 @@ public class DumpModule<T> : ModuleBase<SocketCommandContext> where T : PKM, new
     [RequireQueueRole(nameof(DiscordManager.RolesDump))]
     public async Task DumpAsync()
     {
-        // Check if the user is already in the queue
-        var userID = Context.User.Id;
-        if (Info.IsUserInQueue(userID))
-        {
-            await ReplyAsync("You already have an existing trade in the queue. Please wait until it is processed.").ConfigureAwait(false);
+        if (await CheckUserInQueueAsync())
             return;
-        }
-        var code = Info.GetRandomTradeCode(userID);
+
+        var code = Info.GetRandomTradeCode(Context.User.Id);
         await DumpAsync(code);
     }
 
@@ -95,5 +82,29 @@ public class DumpModule<T> : ModuleBase<SocketCommandContext> where T : PKM, new
             x.IsInline = false;
         });
         await ReplyAsync("These are the users who are currently waiting:", embed: embed.Build()).ConfigureAwait(false);
+    }
+
+    private async Task<bool> CheckUserInQueueAsync()
+    {
+        var userID = Context.User.Id;
+        if (Info.IsUserInQueue(userID))
+        {
+            await ReplyAsync("You already have an existing trade in the queue. Please wait until it is processed.").ConfigureAwait(false);
+            return true;
+        }
+        return false;
+    }
+
+    private static async Task DeleteMessageAsync(IMessage message, int delay)
+    {
+        await Task.Delay(delay);
+        try
+        {
+            await message.DeleteAsync();
+        }
+        catch (HttpException)
+        {
+            // Ignore exceptions if the message was already deleted or we don't have permission
+        }
     }
 }

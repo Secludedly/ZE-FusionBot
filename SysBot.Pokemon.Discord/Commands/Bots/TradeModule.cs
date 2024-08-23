@@ -341,7 +341,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         var ignoreAutoOT = content.Contains("OT:") || content.Contains("TID:") || content.Contains("SID:");
         content = ReusableActions.StripCodeBlock(content);
         // Check if the showdown set contains "Egg"
-        bool isEgg = content.Contains("Egg", StringComparison.OrdinalIgnoreCase);
+        bool isEgg = AbstractTrade<T>.IsEggCheck(content);
         var set = new ShowdownSet(content);
         var template = AutoLegalityWrapper.GetTemplate(set);
         int formArgument = ExtractFormArgument(content);
@@ -552,7 +552,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         content = ReusableActions.StripCodeBlock(content);
 
         // Check if the showdown set contains "Egg"
-        bool isEgg = content.Contains("Egg", StringComparison.OrdinalIgnoreCase);
+        bool isEgg = AbstractTrade<T>.IsEggCheck(content);
         var set = new ShowdownSet(content);
         var template = AutoLegalityWrapper.GetTemplate(set);
         int formArgument = ExtractFormArgument(content);

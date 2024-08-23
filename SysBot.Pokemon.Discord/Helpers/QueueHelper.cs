@@ -99,7 +99,7 @@ public static class QueueHelper<T> where T : PKM, new()
         try
         {
             (string embedImageUrl, DiscordColor embedColor) = await PrepareEmbedDetails(pk);
-            embedData.EmbedImageUrl = isMysteryEgg ? "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/mysteryegg1.png?raw=true&width=200&height=200" :
+            embedData.EmbedImageUrl = isMysteryEgg ? "https://raw.githubusercontent.com/bdawg1989/sprites/main/mysteryegg3.png?raw=true&width=200&height=200" :
             type == PokeRoutineType.Dump ? "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/dumpball.png?raw=true&width=200&height=200" :
             type == PokeRoutineType.Clone ? "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/cloneball.png?raw=true&width=200&height=200" :
             type == PokeRoutineType.SeedCheck ? "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/seedball.png?raw=true&width=200&height=200" :
