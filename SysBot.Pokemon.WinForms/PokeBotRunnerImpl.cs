@@ -29,7 +29,7 @@ public class PokeBotRunnerImpl<T> : PokeBotRunner<T> where T : PKM, new()
         if (string.IsNullOrWhiteSpace(apiToken))
             return;
 
-        var bot = new SysCord<T>(this);
+        var bot = new SysCord<T>(this, _config);
         Task.Run(() => bot.MainAsync(apiToken, CancellationToken.None));
     }
 
