@@ -874,6 +874,96 @@ namespace SysBot.Pokemon.Helpers
             pk.SetSuggestedHyperTrainingData();
             pk.SetSuggestedRibbons(template, enc, true);
         }
+        // Correct Met Dates for 7 Star Raids w/ Mightiest Mark
+        private static readonly Dictionary<int, List<(DateOnly Start, DateOnly End)>> UnrivaledDateRanges = new()
+        {
+            // Generation 1
+            [(int)Species.Charizard] = [(new(2022, 12, 02), new(2022, 12, 04)), (new(2022, 12, 16), new(2022, 12, 18)), (new(2024, 03, 13), new(2024, 03, 17))], // Charizard
+            [(int)Species.Venusaur] = [(new(2024, 02, 28), new(2024, 03, 05))], // Venusaur
+            [(int)Species.Blastoise] = [(new(2024, 03, 06), new(2024, 03, 12))], // Blastoise
 
+            // Generation 2
+            [(int)Species.Meganium] = [(new(2024, 04, 05), new(2024, 04, 07)), (new(2024, 04, 12), new(2024, 04, 14))], // Meganium
+            [(int)Species.Typhlosion] = [(new(2023, 04, 14), new(2023, 04, 16)), (new(2023, 04, 21), new(2023, 04, 23))], // Typhlosion
+
+            // Generation 3
+            [(int)Species.Sceptile] = [(new(2024, 06, 28), new(2024, 06, 30)), (new(2024, 07, 05), new(2024, 07, 07))], // Sceptile
+            [(int)Species.Blaziken] = [(new(2024, 01, 12), new(2024, 01, 14)), (new(2024, 01, 19), new(2024, 01, 21))], // Blaziken
+            [(int)Species.Swampert] = [(new(2024, 05, 31), new(2024, 06, 02)), (new(2024, 06, 07), new(2024, 06, 09))], // Swampert
+
+            // Generation 4
+            [(int)Species.Empoleon] = [(new(2024, 02, 02), new(2024, 02, 04)), (new(2024, 02, 09), new(2024, 02, 11))], // Empoleon
+
+            // Generation 5
+            [(int)Species.Emboar] = [(new(2024, 06, 14), new(2024, 06, 16)), (new(2024, 06, 21), new(2024, 06, 23))], // Emboar
+            [(int)Species.Serperior] = [(new(2024, 09, 20), new(2024, 09, 22)), (new(2024, 09, 27), new(2024, 09, 29))], // Serperior
+
+            // Generation 6
+            [(int)Species.Chesnaught] = [(new(2023, 05, 12), new(2023, 05, 14)), (new(2023, 06, 16), new(2023, 06, 18))], // Chesnaught
+            [(int)Species.Delphox] = [(new(2023, 07, 07), new(2023, 07, 09)), (new(2023, 07, 14), new(2023, 07, 16))], // Delphox
+
+            // Generation 7
+            [(int)Species.Decidueye] = [(new(2023, 03, 17), new(2023, 03, 19)), (new(2023, 03, 24), new(2023, 03, 26))], // Decidueye
+            [(int)Species.Primarina] = [(new(2024, 05, 10), new(2024, 05, 12)), (new(2024, 05, 17), new(2024, 05, 19))], // Primarina
+            [(int)Species.Incineroar] = [(new(2024, 09, 06), new(2024, 09, 08)), (new(2024, 09, 13), new(2024, 09, 15))], // Incineroar
+
+            // Generation 8
+            [(int)Species.Rillaboom] = [(new(2023, 07, 28), new(2023, 07, 30)), (new(2023, 08, 04), new(2023, 08, 06))], // Rillaboom
+            [(int)Species.Cinderace] = [(new(2022, 12, 30), new(2023, 01, 01)), (new(2023, 01, 13), new(2023, 01, 15))], // Cinderace
+            [(int)Species.Inteleon] = [(new(2023, 04, 28), new(2023, 04, 30)), (new(2023, 05, 05), new(2023, 05, 07))], // Inteleon
+
+            // Others
+            [(int)Species.Pikachu] = [(new(2023, 02, 24), new(2023, 02, 27)), (new(2024, 07, 12), new(2024, 07, 25))], // Pikachu
+            [(int)Species.Eevee] = [(new(2023, 11, 17), new(2023, 11, 20))], // Eevee
+            [(int)Species.Mewtwo] = [(new(2023, 09, 01), new(2023, 09, 17))], // Mewtwo
+            [(int)Species.Greninja] = [(new(2023, 01, 27), new(2023, 01, 29)), (new(2023, 02, 10), new(2023, 02, 12))], // Greninja
+            [(int)Species.Samurott] = [(new(2023, 03, 31), new(2023, 04, 02)), (new(2023, 04, 07), new(2023, 04, 09))], // Samurott
+            [(int)Species.IronBundle] = [(new(2023, 12, 22), new(2023, 12, 24))], // Iron Bundle
+            [(int)Species.Dondozo] = [(new(2024, 07, 26), new(2024, 08, 08))], // Dondozo
+            [(int)Species.Dragonite] = [(new(2024, 08, 23), new(2024, 09, 01))], // Dragonite
+        };
+
+        public static void CheckAndSetUnrivaledDate(PKM pk)
+        {
+            if (pk is not IRibbonSetMark9 ribbonSetMark || !ribbonSetMark.RibbonMarkMightiest)
+                return;
+
+            List<(DateOnly Start, DateOnly End)> dateRanges;
+
+            if (UnrivaledDateRanges.TryGetValue(pk.Species, out var ranges))
+            {
+                dateRanges = ranges;
+            }
+            else if (pk.Species is (int)Species.Decidueye or (int)Species.Typhlosion or (int)Species.Samurott && pk.Form == 1)
+            {
+                // Special handling for Hisuian forms
+                dateRanges = pk.Species switch
+                {
+                    (int)Species.Decidueye => [(new(2023, 10, 06), new(2023, 10, 08)), (new(2023, 10, 13), new(2023, 10, 15))],
+                    (int)Species.Typhlosion => [(new(2023, 11, 03), new(2023, 11, 05)), (new(2023, 11, 10), new(2023, 11, 12))],
+                    (int)Species.Samurott => [(new(2023, 11, 24), new(2023, 11, 26)), (new(2023, 12, 01), new(2023, 12, 03))],
+                    _ => []
+                };
+            }
+            else
+            {
+                return;
+            }
+
+            if (!pk.MetDate.HasValue || !IsDateInRanges(pk.MetDate.Value, dateRanges))
+            {
+                SetRandomDateFromRanges(pk, dateRanges);
+            }
+        }
+
+        private static bool IsDateInRanges(DateOnly date, List<(DateOnly Start, DateOnly End)> ranges)
+            => ranges.Any(range => date >= range.Start && date <= range.End);
+
+        private static void SetRandomDateFromRanges(PKM pk, List<(DateOnly Start, DateOnly End)> ranges)
+        {
+            var (Start, End) = ranges[Random.Shared.Next(ranges.Count)];
+            int rangeDays = End.DayNumber - Start.DayNumber + 1;
+            pk.MetDate = Start.AddDays(Random.Shared.Next(rangeDays));
+        }
     }
 }
