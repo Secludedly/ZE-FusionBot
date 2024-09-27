@@ -247,7 +247,7 @@ namespace SysBot.Pokemon.Discord
                 await userMessage.DeleteAsync().ConfigureAwait(false);
         }
 
-        private static PKM? ConvertEventToPKM(MysteryGift selectedEvent)
+        public static T? ConvertEventToPKM(MysteryGift selectedEvent)
         {
             var download = new Download<PKM>
             {
@@ -261,23 +261,33 @@ namespace SysBot.Pokemon.Discord
             var pk = GetRequest(download);
             if (pk is null)
                 return null;
+
             if (selectedEvent is IEncounterServerDate)
             {
                 var (start, end) = GetEncounterDateRange(selectedEvent);
-                if (start.HasValue && end.HasValue)
+                if (start.HasValue)
                 {
-                    pk.MetDate = GenerateRandomDateInRange(start.Value, end.Value);
+                    // If end date is null ("Never"), set the MetDate to the start date
+                    if (end is null)
+                    {
+                        pk.MetDate = start.Value;  // Set to the start date only
+                    }
+                    else
+                    {
+                        // Generate a random date between start and end if both are available
+                        pk.MetDate = GenerateRandomDateInRange(start.Value, end.Value);
+                    }
                 }
                 else
                 {
-                    // Date not found, using current date
-                    pk.MetDate = DateOnly.FromDateTime(DateTime.Now);
+                    // Start date not found, using current date
+                    pk.MetDate = DateOnly.FromDateTime(DateTime.UtcNow);
                 }
             }
             else
             {
-                // Date not found, using current date
-                pk.MetDate = DateOnly.FromDateTime(DateTime.Now);
+                // Not an IEncounterServerDate, using current date
+                pk.MetDate = DateOnly.FromDateTime(DateTime.UtcNow);
             }
 
             return pk;
@@ -288,24 +298,24 @@ namespace SysBot.Pokemon.Discord
             if (selectedEvent is WC8 wc8)
             {
                 if (EncounterServerDate.WC8Gifts.TryGetValue(wc8.CardID, out var wc8Range))
-                    return wc8Range;
+                    return (wc8Range.Start, wc8Range.End);
                 else if (EncounterServerDate.WC8GiftsChk.TryGetValue(wc8.Checksum, out var wc8ChkRange))
-                    return wc8ChkRange;
+                    return (wc8ChkRange.Start, wc8ChkRange.End);
             }
             else if (selectedEvent is WA8 wa8 && EncounterServerDate.WA8Gifts.TryGetValue(wa8.CardID, out var wa8Range))
             {
-                return wa8Range;
+                return (wa8Range.Start, wa8Range.End);
             }
             else if (selectedEvent is WB8 wb8 && EncounterServerDate.WB8Gifts.TryGetValue(wb8.CardID, out var wb8Range))
             {
-                return wb8Range;
+                return (wb8Range.Start, wb8Range.End);
             }
             else if (selectedEvent is WC9 wc9)
             {
                 if (EncounterServerDate.WC9Gifts.TryGetValue(wc9.CardID, out var wc9Range))
-                    return wc9Range;
+                    return (wc9Range.Start, wc9Range.End);
                 else if (EncounterServerDate.WC9GiftsChk.TryGetValue(wc9.Checksum, out var wc9ChkRange))
-                    return wc9ChkRange;
+                    return (wc9ChkRange.Start, wc9ChkRange.End);
             }
 
             return (null, null);
@@ -315,8 +325,61 @@ namespace SysBot.Pokemon.Discord
         {
             var random = new Random();
             var totalDays = (endDate.DayNumber - startDate.DayNumber) + 1;
+            if (totalDays <= 0)
+                return startDate;
             var randomDays = random.Next(totalDays);
             return startDate.AddDays(randomDays);
+        }
+
+        [Command("geteventpokemon")]
+        [Alias("gep")]
+        [Summary("Downloads the requested event as a pk file and sends it to the user.")]
+        public async Task GetEventPokemonAsync(string generationOrGame, [Remainder] string args = "")
+        {
+            if (!int.TryParse(args, out int index))
+            {
+                await ReplyAsync("Invalid event index. Please provide a valid event number.").ConfigureAwait(false);
+                return;
+            }
+            try
+            {
+                var eventData = GetEventData(generationOrGame);
+                if (eventData == null)
+                {
+                    await ReplyAsync($"Invalid generation or game: {generationOrGame}").ConfigureAwait(false);
+                    return;
+                }
+                var entityEvents = eventData.Where(gift => gift.IsEntity && !gift.IsItem).ToArray();
+                if (index < 1 || index > entityEvents.Length)
+                {
+                    await ReplyAsync($"Invalid event index. Please use a valid event number from the `{SysCord<T>.Runner.Config.Discord.CommandPrefix}srp {generationOrGame}` command.").ConfigureAwait(false);
+                    return;
+                }
+                var selectedEvent = entityEvents[index - 1];
+                var pk = ConvertEventToPKM(selectedEvent);
+                if (pk == null)
+                {
+                    await ReplyAsync("Wondercard data provided is not compatible with this module!").ConfigureAwait(false);
+                    return;
+                }
+                try
+                {
+                    await Context.User.SendPKMAsync(pk);
+                    await ReplyAsync($"{Context.User.Mention}, I've sent you the PK file via DM.");
+                }
+                catch (HttpException ex) when (ex.HttpCode == HttpStatusCode.Forbidden)
+                {
+                    await ReplyAsync($"{Context.User.Mention}, I'm unable to send you a DM. Please check your **Server Privacy Settings**.");
+                }
+            }
+            catch (Exception ex)
+            {
+                await ReplyAsync($"An error occurred: {ex.Message}").ConfigureAwait(false);
+            }
+            finally
+            {
+                await CleanupUserMessageAsync().ConfigureAwait(false);
+            }
         }
 
         private async Task AddTradeToQueueAsync(int code, string trainerName, T? pk, RequestSignificance sig, SocketUser usr, bool isBatchTrade = false, int batchTradeNumber = 1, int totalBatchTrades = 1, bool isMysteryEgg = false, List<Pictocodes>? lgcode = null, PokeTradeType tradeType = PokeTradeType.Specific, bool ignoreAutoOT = false, bool isHiddenTrade = false)
