@@ -174,8 +174,9 @@ public abstract class PokeRoutineExecutor8LA : PokeRoutineExecutor<PA8>
     public async Task StartGame(PokeTradeHubConfig config, CancellationToken token)
     {
         var timing = config.Timings;
-        // Open game.
-        await Click(A, 1_000 + timing.ExtraTimeLoadProfile, token).ConfigureAwait(false);
+        var loadPro = timing.ProfileSelectionRequired ? timing.ExtraTimeLoadProfile : 0;
+
+        await Click(A, 1_000 + loadPro, token).ConfigureAwait(false); // Initial "A" Press to start the Game + a delay if needed for profiles to load
 
         // Menus here can go in the order: Update Prompt -> Profile -> DLC check -> Unable to use DLC.
         //  The user can optionally turn on the setting if they know of a breaking system update incoming.
@@ -185,11 +186,17 @@ public abstract class PokeRoutineExecutor8LA : PokeRoutineExecutor<PA8>
             await Click(A, 1_000 + timing.ExtraTimeLoadProfile, token).ConfigureAwait(false);
         }
 
-        await Click(A, 1_000 + timing.ExtraTimeCheckDLC, token).ConfigureAwait(false);
-        // If they have DLC on the system and can't use it, requires pressing UP + A to start the game.
-        // Should be harmless otherwise since they'll be in loading screen.
-        await Click(DUP, 0_600, token).ConfigureAwait(false);
-        await Click(A, 0_600, token).ConfigureAwait(false);
+        // Only send extra Presses if we need to
+        if (timing.ProfileSelectionRequired)
+        {
+            await Click(A, 1_000, token).ConfigureAwait(false); // Now we are on the Profile Screen
+            await Click(A, 1_000, token).ConfigureAwait(false); // Select the profile
+        }
+        // Digital game copies take longer to load
+        if (timing.CheckGameDelay)
+        {
+            await Task.Delay(2_000 + timing.ExtraTimeCheckGame, token).ConfigureAwait(false);
+        }
 
         Log("Restarting the game!");
 
