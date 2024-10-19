@@ -8,11 +8,11 @@ namespace SysBot.Pokemon;
 public abstract class PokeRoutineExecutorBase(IConsoleBotManaged<IConsoleConnection, IConsoleConnectionAsync> Config)
     : SwitchRoutineExecutor<PokeBotState>(Config)
 {
-    public const decimal BotbaseVersion = 2.3m;
+    public const decimal BotbaseVersion = 2.4m;
 
     public LanguageID GameLang { get; private set; }
     public GameVersion Version { get; private set; }
-    public string InGameName { get; private set; } = "Shinypkm.com";
+    public string InGameName { get; private set; } = "FreeMons.Org";
 
     public static readonly TrackedUserLog PreviousUsers = new();
     public static readonly TrackedUserLog PreviousUsersDistribution = new();
