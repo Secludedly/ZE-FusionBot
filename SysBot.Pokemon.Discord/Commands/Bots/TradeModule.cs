@@ -164,6 +164,12 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
 
         pk.ResetPartyStats();
 
+        // Set correct MetDate for Mightiest Mark
+        AbstractTrade<T>.CheckAndSetUnrivaledDate(pk);
+        if (pk.WasEgg)
+            pk.EggMetDate = pk.MetDate;
+        pk.ResetPartyStats();
+
         // Ad Name Check
         if (Info.Hub.Config.Trade.TradeConfiguration.EnableSpamCheck)
         {
@@ -490,6 +496,13 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
                     pk.EggMetDate = pk.MetDate;
                 pk.ResetPartyStats();
 
+                // Set correct MetDate for Mightiest Mark
+                AbstractTrade<T>.CheckAndSetUnrivaledDate(pk);
+                if (pk.WasEgg)
+                    pk.EggMetDate = pk.MetDate;
+                pk.ResetPartyStats();
+
+
                 // Ad Name Check
                 if (Info.Hub.Config.Trade.TradeConfiguration.EnableSpamCheck)
                 {
@@ -706,6 +719,12 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
                     }
                     pk = correctedPk;
                 }
+                if (pk.WasEgg)
+                    pk.EggMetDate = pk.MetDate;
+                pk.ResetPartyStats();
+
+                // Set correct MetDate for Mightiest Mark
+                AbstractTrade<T>.CheckAndSetUnrivaledDate(pk);
                 if (pk.WasEgg)
                     pk.EggMetDate = pk.MetDate;
                 pk.ResetPartyStats();
@@ -928,6 +947,12 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             var code = Info.GetRandomTradeCode(userID);
             var lgcode = Info.GetRandomLGTradeCode();
 
+            // Set correct MetDate for Mightiest Mark
+            AbstractTrade<T>.CheckAndSetUnrivaledDate(pk);
+            if (pk.WasEgg)
+                pk.EggMetDate = pk.MetDate;
+            pk.ResetPartyStats();
+
             // Ad Name Check
             if (Info.Hub.Config.Trade.TradeConfiguration.EnableSpamCheck)
             {
@@ -1088,6 +1113,12 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             {
                 lgcode = TradeModule<T>.GenerateRandomPictocodes(3);
             }
+
+            // Set correct MetDate for Mightiest Mark
+            AbstractTrade<T>.CheckAndSetUnrivaledDate(pk);
+            if (pk.WasEgg)
+                pk.EggMetDate = pk.MetDate;
+            pk.ResetPartyStats();
 
             // Ad Name Check
             if (Info.Hub.Config.Trade.TradeConfiguration.EnableSpamCheck)

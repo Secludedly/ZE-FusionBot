@@ -200,12 +200,17 @@ namespace SysBot.Pokemon.Helpers
             {
                 return false;
             }
+
+            // Remove any text after '@' if present
             var atIndex = firstLine.IndexOf('@');
             if (atIndex > 0)
             {
-                return firstLine[..atIndex].Contains("Egg", StringComparison.OrdinalIgnoreCase);
+                firstLine = firstLine[..atIndex].Trim();
             }
-            return firstLine.Contains("Egg", StringComparison.OrdinalIgnoreCase);
+            // Split the remaining text into words
+            var words = firstLine.Split(new[] { ' ', '(' }, StringSplitOptions.RemoveEmptyEntries);
+            // Check if any word is exactly "Egg" (case-insensitive)
+            return words.Any(word => string.Equals(word, "Egg", StringComparison.OrdinalIgnoreCase));
         }
     
 
