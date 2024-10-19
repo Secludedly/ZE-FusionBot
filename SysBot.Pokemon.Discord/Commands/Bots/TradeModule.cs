@@ -163,6 +163,17 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         }
 
         pk.ResetPartyStats();
+
+        // Ad Name Check
+        if (Info.Hub.Config.Trade.TradeConfiguration.EnableSpamCheck)
+        {
+            if (AbstractTrade<T>.HasAdName(pk, out string ad))
+            {
+                await ReplyAndDeleteAsync("Detected Adname in the Pokémon's name or trainer name, which is not allowed.", 5);
+                return;
+            }
+        }
+
         var sig = Context.User.GetFavor();
         await QueueHelper<T>.AddToQueueAsync(Context, code, Context.User.Username, sig, pk, PokeRoutineType.LinkTrade, PokeTradeType.Specific).ConfigureAwait(false);
         if (Context.Message is IUserMessage userMessage)
@@ -479,6 +490,16 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
                     pk.EggMetDate = pk.MetDate;
                 pk.ResetPartyStats();
 
+                // Ad Name Check
+                if (Info.Hub.Config.Trade.TradeConfiguration.EnableSpamCheck)
+                {
+                    if (AbstractTrade<T>.HasAdName(pk, out string ad))
+                    {
+                        await ReplyAndDeleteAsync("Detected Admon URL in the Pokémon's nickname or OT, which is not allowed.", 5);
+                        return;
+                    }
+                }
+
                 var sig = Context.User.GetFavor();
                 await AddTradeToQueueAsync(code, Context.User.Username, pk, sig, Context.User, isBatchTrade: false, batchTradeNumber: 1, totalBatchTrades: 1, true, false, lgcode: lgcode, ignoreAutoOT: ignoreAutoOT, setEdited: setEdited).ConfigureAwait(false);
             }
@@ -689,6 +710,16 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
                     pk.EggMetDate = pk.MetDate;
                 pk.ResetPartyStats();
 
+                // Ad Name Check
+                if (Info.Hub.Config.Trade.TradeConfiguration.EnableSpamCheck)
+                {
+                    if (AbstractTrade<T>.HasAdName(pk, out string ad))
+                    {
+                        await ReplyAndDeleteAsync("Detected Admon URL in the Pokémon's nickname or OT, which is not allowed.", 5);
+                        return;
+                    }
+                }
+
                 var sig = Context.User.GetFavor();
                 await AddTradeToQueueAsync(code, Context.User.Username, pk, sig, Context.User, isBatchTrade: false, batchTradeNumber: 1, totalBatchTrades: 1, lgcode: lgcode, ignoreAutoOT: ignoreAutoOT, setEdited: setEdited).ConfigureAwait(false);
             }
@@ -897,6 +928,16 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             var code = Info.GetRandomTradeCode(userID);
             var lgcode = Info.GetRandomLGTradeCode();
 
+            // Ad Name Check
+            if (Info.Hub.Config.Trade.TradeConfiguration.EnableSpamCheck)
+            {
+                if (AbstractTrade<T>.HasAdName(pk, out string ad))
+                {
+                    await ReplyAndDeleteAsync("Detected Admon URL in the Pokémon's nickname or OT, which is not allowed.", 5);
+                    return;
+                }
+            }
+
             // Add the trade to the queue
             var sig = Context.User.GetFavor();
             await AddTradeToQueueAsync(batchTradeCode, Context.User.Username, pk, sig, Context.User, isBatchTrade, batchTradeNumber, totalBatchTrades, lgcode: lgcode, tradeType: PokeTradeType.Batch).ConfigureAwait(false);
@@ -1031,7 +1072,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
                 {
                     if (pkm.IsShiny)
                     {
-                        await ReplyAsync("Mew can **not** be Shiny in LGPE. PoGo Mew does not transfer and Pokeball Plus Mew is shiny locked.");
+                        await ReplyAsync("Mew **cannot** be shiny in LGPE. POGO Mew does not transfer. Poké Ball Plus Mew is shiny-locked.");
                         return;
                     }
                 }
@@ -1047,6 +1088,17 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             {
                 lgcode = TradeModule<T>.GenerateRandomPictocodes(3);
             }
+
+            // Ad Name Check
+            if (Info.Hub.Config.Trade.TradeConfiguration.EnableSpamCheck)
+            {
+                if (AbstractTrade<T>.HasAdName(pk, out string ad))
+                {
+                    await ReplyAndDeleteAsync("Detected Admon URL in the Pokémon's nickname or OT, which is not allowed.", 5);
+                    return;
+                }
+            }
+
             var sig = Context.User.GetFavor();
             await AddTradeToQueueAsync(batchTradeCode, Context.User.Username, pk, sig, Context.User, isBatchTrade, batchTradeNumber, totalBatchTrades, lgcode: lgcode, tradeType: PokeTradeType.Batch, ignoreAutoOT: ignoreAutoOT, setEdited: setEdited).ConfigureAwait(false);
         }

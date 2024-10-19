@@ -93,6 +93,7 @@ public class TradeSettings : IBotStateSettings, ICountSettings
 
         [Category(TradeConfig), Description("Dump Trade: If enabled, Dumping routine will output legality check information to the user."), DisplayName("Dump Trade Legality Check")]
         public bool DumpTradeLegalityCheck { get; set; } = true;
+        public bool EnableSpamCheck { get; set; }
 
         [Category(TradeConfig), Description("LGPE Setting.")]
         public int TradeAnimationMaxDelaySeconds = 25;
