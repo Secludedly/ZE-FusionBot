@@ -2,6 +2,7 @@ using Discord;
 using Discord.WebSocket;
 using PKHeX.Core;
 using SysBot.Base;
+using SysBot.Pokemon.Helpers;
 using System;
 using System.Threading.Tasks;
 
@@ -21,6 +22,13 @@ public static class AutoLegalityExtensionsDiscord
         {
             var template = AutoLegalityWrapper.GetTemplate(set);
             var pkm = sav.GetLegal(template, out var result);
+            if (pkm is PK8 && pkm.Nickname.ToLower() == "egg" && Breeding.CanHatchAsEgg(pkm.Species))
+                AbstractTrade<PK8>.EggTrade(pkm, template);
+            else if (pkm is PB8 && pkm.Nickname.ToLower() == "egg" && Breeding.CanHatchAsEgg(pkm.Species))
+                AbstractTrade<PB8>.EggTrade(pkm, template);
+            else if (pkm is PK9 && pkm.Nickname.ToLower() == "egg" && Breeding.CanHatchAsEgg(pkm.Species))
+                AbstractTrade<PK9>.EggTrade(pkm, template);
+
             var la = new LegalityAnalysis(pkm);
             var spec = GameInfo.Strings.Species[template.Species];
             if (!la.Valid)
@@ -70,34 +78,22 @@ public static class AutoLegalityExtensionsDiscord
         }
 
         var pkm = download.Data!;
-        var embed = new EmbedBuilder();
-        embed.Title = $"Legalization Report for {download.SanitizedFileName}";
-        embed.Description = $"{download.SanitizedFileName} analysis and legalization attempt.";
-
         if (new LegalityAnalysis(pkm).Valid)
         {
-            embed.Color = Color.Green;
-            embed.AddField("Status", "Already legal.");
-        }
-        else
-        {
-            var legal = pkm.LegalizePokemon();
-            if (!new LegalityAnalysis(legal).Valid)
-            {
-                embed.Color = Color.Red;
-                embed.AddField("Status", "Unable to legalize.");
-            }
-            else
-            {
-                legal.RefreshChecksum();
-                embed.Color = Color.Green;
-                var msg = $"Here's your legalized PKM for {download.SanitizedFileName}!\n{ReusableActions.GetFormattedShowdownText(legal)}";
-                embed.AddField("Status", "Successfully legalized.");
-                embed.AddField("Details", msg);
-                await channel.SendPKMAsync(legal).ConfigureAwait(false);
-            }
+            await channel.SendMessageAsync($"{download.SanitizedFileName}: Already legal.").ConfigureAwait(false);
+            return;
         }
 
-        await channel.SendMessageAsync(embed: embed.Build()).ConfigureAwait(false);
+        var legal = pkm.LegalizePokemon();
+        if (!new LegalityAnalysis(legal).Valid)
+        {
+            await channel.SendMessageAsync($"{download.SanitizedFileName}: Unable to legalize.").ConfigureAwait(false);
+            return;
+        }
+
+        legal.RefreshChecksum();
+
+        var msg = $"Here's your legalized PKM for {download.SanitizedFileName}!\n{ReusableActions.GetFormattedShowdownText(legal)}";
+        await channel.SendPKMAsync(legal, msg).ConfigureAwait(false);
     }
 }
