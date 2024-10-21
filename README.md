@@ -254,11 +254,11 @@ Showdown Template
 — Thank the bots, and they may reply back to you with a message. The bots love attention.
 
 # OTHER PROJECTS
-— **<a href="https://github.com/Secludedly/Switch-Remote-For-PC">SWITCH REMOTE FOR PC</a>** // Remote control your Switch from PC. <br /><br />
+— **<a href="https://github.com/Secludedly/Switch-Remote-For-PC">SWITCH REMOTE FOR PC</a>** // Remote control your Switch from PC. <br />
 *Originally created by <a href="https://github.com/CodeHedge">Hedge</a>.*
 
-— **<a href="https://github.com/Secludedly/PKHeX-ALM-Releases/releases">PKHeX ALM RELEASES</a>** // Unofficial PKHeX releases with AutoLegalityMod, along with preconfigured almconfig.json and cfg.json. <br /><br />
-*PKHeX originally created by <a href="https://github.com/kwsch">Kurt</a>.* <br /><br />
+— **<a href="https://github.com/Secludedly/PKHeX-ALM-Releases/releases">PKHeX ALM RELEASES</a>** // Unofficial PKHeX releases with AutoLegalityMod, along with preconfigured almconfig.json and cfg.json. <br />
+*PKHeX originally created by <a href="https://github.com/kwsch">Kurt</a>.* <br />
 *ALM currently updated by <a href="https://github.com/santacrab2">SantaCrab</a> & created by <a href="https://github.com/architdate">archidate</a>.* <br />
 
 ## SUPPORTED PROJECTS
