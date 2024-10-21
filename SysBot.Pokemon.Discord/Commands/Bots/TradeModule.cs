@@ -48,7 +48,24 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         var lgcode = Info.GetRandomLGTradeCode();
         var sig = Context.User.GetFavor();
 
-        await QueueHelper<T>.AddToQueueAsync(Context, code, trainerName, sig, new T(), PokeRoutineType.FixOT, PokeTradeType.FixOT, Context.User, false, 1, 1, false, false, lgcode).ConfigureAwait(false);
+        await QueueHelper<T>.AddToQueueAsync(
+            Context,
+            code,
+            trainerName,
+            sig,
+            new T(),
+            PokeRoutineType.FixOT,
+            PokeTradeType.FixOT,
+            Context.User,
+            false,
+            1,
+            1,
+            false,
+            false,
+            lgcode,     // Assuming this is a valid List<Pictocodes>
+            false       // Boolean as expected in the 15th argument
+        ).ConfigureAwait(false);
+
         if (Context.Message is IUserMessage userMessage)
         {
             _ = DeleteMessagesAfterDelayAsync(userMessage, null, 2);
@@ -74,7 +91,24 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         var sig = Context.User.GetFavor();
         var lgcode = Info.GetRandomLGTradeCode();
 
-        await QueueHelper<T>.AddToQueueAsync(Context, code, trainerName, sig, new T(), PokeRoutineType.FixOT, PokeTradeType.FixOT, Context.User, false, 1, 1, false, false, lgcode).ConfigureAwait(false);
+        await QueueHelper<T>.AddToQueueAsync(
+            Context,
+            code,
+            trainerName,
+            sig,
+            new T(),
+            PokeRoutineType.FixOT,
+            PokeTradeType.FixOT,
+            Context.User,
+            false,
+            1,
+            1,
+            false,
+            false,
+            lgcode,     // Assuming this is a valid List<Pictocodes>
+            false       // Boolean as expected in the 15th argument
+        ).ConfigureAwait(false);
+
         if (Context.Message is IUserMessage userMessage)
         {
             _ = DeleteMessagesAfterDelayAsync(userMessage, null, 2);
@@ -164,18 +198,12 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
 
         pk.ResetPartyStats();
 
-        // Set correct MetDate for Mightiest Mark
-        AbstractTrade<T>.CheckAndSetUnrivaledDate(pk);
-        if (pk.WasEgg)
-            pk.EggMetDate = pk.MetDate;
-        pk.ResetPartyStats();
-
         // Ad Name Check
         if (Info.Hub.Config.Trade.TradeConfiguration.EnableSpamCheck)
         {
             if (AbstractTrade<T>.HasAdName(pk, out string ad))
             {
-                await ReplyAndDeleteAsync("Detected Adname in the Pokémon's name or trainer name, which is not allowed.", 5);
+                await ReplyAndDeleteAsync("Detected Admon URL in the Pokémon's nickname or OT, which is not allowed. You also suck for trying.", 5);
                 return;
             }
         }
@@ -360,6 +388,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         }
         var ignoreAutoOT = content.Contains("OT:") || content.Contains("TID:") || content.Contains("SID:");
         content = ReusableActions.StripCodeBlock(content);
+        content = TradeModule<T>.ConvertMasterBall(content); // Temp fix for Ball: Master being unrecognized by the bot
 
         // Check if the showdown set contains "Egg"
         bool isEgg = AbstractTrade<T>.IsEggCheck(content);
@@ -491,24 +520,18 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
                     }
                     pk = correctedPk;
                 }
-
-                if (pk.WasEgg)
-                    pk.EggMetDate = pk.MetDate;
-                pk.ResetPartyStats();
-
                 // Set correct MetDate for Mightiest Mark
                 AbstractTrade<T>.CheckAndSetUnrivaledDate(pk);
                 if (pk.WasEgg)
                     pk.EggMetDate = pk.MetDate;
                 pk.ResetPartyStats();
 
-
                 // Ad Name Check
                 if (Info.Hub.Config.Trade.TradeConfiguration.EnableSpamCheck)
                 {
                     if (AbstractTrade<T>.HasAdName(pk, out string ad))
                     {
-                        await ReplyAndDeleteAsync("Detected Admon URL in the Pokémon's nickname or OT, which is not allowed.", 5);
+                        await ReplyAndDeleteAsync("Detected Admon URL in the Pokémon's nickname or OT, which is not allowed. You also suck for trying.", 5);
                         return;
                     }
                 }
@@ -590,6 +613,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
 
         var ignoreAutoOT = content.Contains("OT:") || content.Contains("TID:") || content.Contains("SID:");
         content = ReusableActions.StripCodeBlock(content);
+        content = TradeModule<T>.ConvertMasterBall(content); // Temp fix for Ball: Master not being recognized by the bot
 
         // Check if the showdown set contains "Egg"
         bool isEgg = AbstractTrade<T>.IsEggCheck(content);
@@ -719,10 +743,6 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
                     }
                     pk = correctedPk;
                 }
-                if (pk.WasEgg)
-                    pk.EggMetDate = pk.MetDate;
-                pk.ResetPartyStats();
-
                 // Set correct MetDate for Mightiest Mark
                 AbstractTrade<T>.CheckAndSetUnrivaledDate(pk);
                 if (pk.WasEgg)
@@ -734,7 +754,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
                 {
                     if (AbstractTrade<T>.HasAdName(pk, out string ad))
                     {
-                        await ReplyAndDeleteAsync("Detected Admon URL in the Pokémon's nickname or OT, which is not allowed.", 5);
+                        await ReplyAndDeleteAsync("Detected Admon URL in the Pokémon's nickname or OT, which is not allowed. You also suck for trying.", 5);
                         return;
                     }
                 }
@@ -887,11 +907,11 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         }
 
         var zipBytes = await new HttpClient().GetByteArrayAsync(attachment.Url);
-        using var zipStream = new MemoryStream(zipBytes);
+        await using var zipStream = new MemoryStream(zipBytes);
         using var archive = new ZipArchive(zipStream, ZipArchiveMode.Read);
         var entries = archive.Entries.ToList();
 
-        var maxTradesAllowed = 6; // for full team in the zip created
+        const int maxTradesAllowed = 6; // for full team in the zip created
 
         // Check if batch mode is allowed and if the number of trades exceeds the limit
         if (maxTradesAllowed < 1 || entries.Count > maxTradesAllowed)
@@ -905,7 +925,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
 
         foreach (var entry in entries)
         {
-            using var entryStream = entry.Open();
+            await using var entryStream = entry.Open();
             var pkBytes = await TradeModule<T>.ReadAllBytesAsync(entryStream).ConfigureAwait(false);
             var pk = EntityFormat.GetFromBytes(pkBytes);
 
@@ -923,54 +943,55 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
 
     private static async Task<byte[]> ReadAllBytesAsync(Stream stream)
     {
-        using var memoryStream = new MemoryStream();
+        await using var memoryStream = new MemoryStream();
         await stream.CopyToAsync(memoryStream).ConfigureAwait(false);
         return memoryStream.ToArray();
     }
 
     private async Task ProcessSingleTradeAsync(T pk, int batchTradeCode, bool isBatchTrade, int batchTradeNumber, int totalBatchTrades)
     {
-        try
+        _ = Task.Run(async () =>
         {
-            var la = new LegalityAnalysis(pk);
-            var spec = GameInfo.Strings.Species[pk.Species];
-
-            if (!la.Valid)
+            try
             {
-                await ReplyAsync($"The {spec} in the provided file is not legal.").ConfigureAwait(false);
-                return;
-            }
+                var la = new LegalityAnalysis(pk);
+                var spec = GameInfo.Strings.Species[pk.Species];
 
-            pk.ResetPartyStats();
-
-            var userID = Context.User.Id;
-            var code = Info.GetRandomTradeCode(userID);
-            var lgcode = Info.GetRandomLGTradeCode();
-
-            // Set correct MetDate for Mightiest Mark
-            AbstractTrade<T>.CheckAndSetUnrivaledDate(pk);
-            if (pk.WasEgg)
-                pk.EggMetDate = pk.MetDate;
-            pk.ResetPartyStats();
-
-            // Ad Name Check
-            if (Info.Hub.Config.Trade.TradeConfiguration.EnableSpamCheck)
-            {
-                if (AbstractTrade<T>.HasAdName(pk, out string ad))
+                if (!la.Valid)
                 {
-                    await ReplyAndDeleteAsync("Detected Admon URL in the Pokémon's nickname or OT, which is not allowed.", 5);
+                    await ReplyAsync($"The {spec} in the provided file is not legal.").ConfigureAwait(false);
                     return;
                 }
-            }
+                // Set correct MetDate for Mightiest Mark
+                AbstractTrade<T>.CheckAndSetUnrivaledDate(pk);
+                pk.ResetPartyStats();
 
-            // Add the trade to the queue
-            var sig = Context.User.GetFavor();
-            await AddTradeToQueueAsync(batchTradeCode, Context.User.Username, pk, sig, Context.User, isBatchTrade, batchTradeNumber, totalBatchTrades, lgcode: lgcode, tradeType: PokeTradeType.Batch).ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            LogUtil.LogSafe(ex, nameof(TradeModule<T>));
-        }
+                var userID = Context.User.Id;
+                var code = Info.GetRandomTradeCode(userID);
+                var lgcode = Info.GetRandomLGTradeCode();
+
+                // Ad Name Check
+                if (Info.Hub.Config.Trade.TradeConfiguration.EnableSpamCheck)
+                {
+                    if (AbstractTrade<T>.HasAdName(pk, out string ad))
+                    {
+                        await ReplyAndDeleteAsync("Detected Admon URL in the Pokémon's nickname or OT, which is not allowed. You also suck for trying.", 5);
+                        return;
+                    }
+                }
+
+                // Add the trade to the queue
+                var sig = Context.User.GetFavor();
+                await AddTradeToQueueAsync(batchTradeCode, Context.User.Username, pk, sig, Context.User, isBatchTrade, batchTradeNumber, totalBatchTrades, lgcode: lgcode, tradeType: PokeTradeType.Batch).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                LogUtil.LogSafe(ex, nameof(TradeModule<T>));
+            }
+        });
+
+        // Return immediately to avoid blocking
+        await Task.CompletedTask;
     }
 
     private async Task ProcessSingleTradeAsync(string tradeContent, int batchTradeCode, bool isBatchTrade, int batchTradeNumber, int totalBatchTrades)
@@ -986,157 +1007,156 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             await ReplyAsync(msg).ConfigureAwait(false);
             return;
         }
-
-        try
+        _ = Task.Run(async () =>
         {
-            var sav = AutoLegalityWrapper.GetTrainerInfo<T>();
-            var pkm = sav.GetLegal(template, out var result);
-            var la = new LegalityAnalysis(pkm);
-            var spec = GameInfo.Strings.Species[template.Species];
-            bool setEdited = false;
-            if (pkm is not T pk || !la.Valid || !string.IsNullOrEmpty(set.Form.ToString()))
+            try
             {
-                // Perform auto correct if it's on and send that shit through again
-                if (SysCord<T>.Runner.Config.Trade.AutoCorrectConfig.EnableAutoCorrect && !la.Valid)
+                var sav = AutoLegalityWrapper.GetTrainerInfo<T>();
+                var pkm = sav.GetLegal(template, out var result);
+                var la = new LegalityAnalysis(pkm);
+                var spec = GameInfo.Strings.Species[template.Species];
+                bool setEdited = false;
+                if (pkm is not T pk || !la.Valid || !string.IsNullOrEmpty(set.Form.ToString()))
                 {
-                    var (finalShowdownSet, correctionMessages) = await AutoCorrectShowdown<T>.PerformAutoCorrect(tradeContent, pkm, la);
-                    set = new ShowdownSet(finalShowdownSet);
-                    template = AutoLegalityWrapper.GetTemplate(set);
-                    pkm = sav.GetLegal(template, out result);
-                    la = new LegalityAnalysis(pkm);
-                    setEdited = true;
-
-
-                    if (correctionMessages.Count > 0 && la.Valid)
+                    // Perform auto correct if it's on and send that shit through again
+                    if (SysCord<T>.Runner.Config.Trade.AutoCorrectConfig.EnableAutoCorrect && !la.Valid)
                     {
-                        var userName = Context.User.Mention;
-                        var changesEmbed = new EmbedBuilder()
-                            .WithTitle("Showdown Set Corrections")
-                            .WithColor(Color.Orange)
-                            .WithDescription(string.Join("\n", correctionMessages))
-                            .AddField("Corrected Showdown Set:", $"```{finalShowdownSet}```")
-                            .Build();
-
-                        var correctionMessage = await ReplyAsync($"{userName}, here are the corrections we made to your Showdown set:", embed: changesEmbed).ConfigureAwait(false);
-                        _ = DeleteMessagesAfterDelayAsync(correctionMessage, Context.Message, 30);
-                    }
-                }
-
-                if (pkm is not T correctedPk || !la.Valid)
-                {
-                    var reason = result == "Timeout" ? $"That {spec} set took too long to generate." :
-                                 result == "VersionMismatch" ? "Request refused: PKHeX and Auto-Legality Mod version mismatch." :
-                                 $"I wasn't able to create a {spec} from that set.";
-
-                    var embedBuilder = new EmbedBuilder()
-                        .WithTitle("Trade Creation Failed.")
-                        .WithColor(Color.Red)
-                        .AddField("Status", $"Failed to create {spec}.")
-                        .AddField("Reason", reason);
-
-                    if (result == "Failed")
-                    {
-                        var legalizationHint = AutoLegalityWrapper.GetLegalizationHint(template, sav, pkm);
-                        if (legalizationHint.Contains("Requested shiny value (ShinyType."))
+                        var (finalShowdownSet, correctionMessages) = await AutoCorrectShowdown<T>.PerformAutoCorrect(tradeContent, pkm, la);
+                        set = new ShowdownSet(finalShowdownSet);
+                        template = AutoLegalityWrapper.GetTemplate(set);
+                        pkm = sav.GetLegal(template, out result);
+                        la = new LegalityAnalysis(pkm);
+                        setEdited = true;
+                        if (correctionMessages.Count > 0 && la.Valid)
                         {
-                            legalizationHint = $"{spec} **cannot** be shiny. Please try again.";
-                        }
-
-                        if (!string.IsNullOrEmpty(legalizationHint))
-                        {
-                            embedBuilder.AddField("Hint", legalizationHint);
+                            var userName = Context.User.Mention;
+                            var changesEmbed = new EmbedBuilder()
+                                .WithTitle("Showdown Set Corrections")
+                                .WithColor(Color.Orange)
+                                .WithThumbnailUrl("https://raw.githubusercontent.com/bdawg1989/sprites/main/profoak.png")
+                                .WithDescription(string.Join("\n", correctionMessages))
+                                .AddField("Corrected Showdown Set:", $"```{finalShowdownSet}```")
+                                .Build();
+                            var correctionMessage = await ReplyAsync($"{userName}, here are the corrections we made to your Showdown set:", embed: changesEmbed).ConfigureAwait(false);
+                            _ = DeleteMessagesAfterDelayAsync(correctionMessage, Context.Message, 30);
                         }
                     }
 
-                    string userMention = Context.User.Mention;
-                    string messageContent = $"{userMention}, here's the report for your request:";
-                    var message = await Context.Channel.SendMessageAsync(text: messageContent, embed: embedBuilder.Build()).ConfigureAwait(false);
-                    _ = DeleteMessagesAfterDelayAsync(message, Context.Message, 30);
-                    return;
-                }
-
-                pk = correctedPk;
-            }
-
-            if (SysCord<T>.Runner.Config.Trade.TradeConfiguration.SuggestRelearnMoves)
-            {
-                if (pkm is PK9 pk9)
-                {
-                    pk9.SetRecordFlagsAll();
-                }
-                else if (pkm is PK8 pk8)
-                {
-                    pk8.SetRecordFlagsAll();
-                }
-                else if (pkm is PB8 pb8)
-                {
-                    pb8.SetRecordFlagsAll();
-                }
-                else if (pkm is PB7 pb7)
-                {
-                    // not applicable for PB7 (LGPE)
-                }
-                else if (pkm is PA8 pa8)
-                {
-                    // not applicable for PA8 (Legends: Arceus)
-                }
-            }
-
-            if (pkm is PA8)
-            {
-                pkm.HeldItem = (int)HeldItem.None; // Set to None for "Legends: Arceus" Pokémon
-            }
-            else if (pkm.HeldItem == 0 && !pkm.IsEgg)
-            {
-                pkm.HeldItem = (int)SysCord<T>.Runner.Config.Trade.TradeConfiguration.DefaultHeldItem;
-            }
-
-            if (pkm is PB7)
-            {
-                if (pkm.Species == (int)Species.Mew)
-                {
-                    if (pkm.IsShiny)
+                    if (pkm is not T correctedPk || !la.Valid)
                     {
-                        await ReplyAsync("Mew **cannot** be shiny in LGPE. POGO Mew does not transfer. Poké Ball Plus Mew is shiny-locked.");
+                        var reason = result == "Timeout" ? $"That {spec} set took too long to generate." :
+                                     result == "VersionMismatch" ? "Request refused: PKHeX and Auto-Legality Mod version mismatch." :
+                                     $"I wasn't able to create a {spec} from that set.";
+
+                        var embedBuilder = new EmbedBuilder()
+                            .WithTitle("Trade Creation Failed.")
+                            .WithColor(Color.Red)
+                            .AddField("Status", $"Failed to create {spec}.")
+                            .AddField("Reason", reason);
+
+                        if (result == "Failed")
+                        {
+                            var legalizationHint = AutoLegalityWrapper.GetLegalizationHint(template, sav, pkm);
+                            if (legalizationHint.Contains("Requested shiny value (ShinyType."))
+                            {
+                                legalizationHint = $"{spec} **cannot** be shiny. Please try again.";
+                            }
+
+                            if (!string.IsNullOrEmpty(legalizationHint))
+                            {
+                                embedBuilder.AddField("Hint", legalizationHint);
+                            }
+                        }
+
+                        string userMention = Context.User.Mention;
+                        string messageContent = $"{userMention}, here's the report for your request:";
+                        var message = await Context.Channel.SendMessageAsync(text: messageContent, embed: embedBuilder.Build()).ConfigureAwait(false);
+                        _ = DeleteMessagesAfterDelayAsync(message, Context.Message, 30);
+                        return;
+                    }
+
+                    pk = correctedPk;
+                }
+
+                if (SysCord<T>.Runner.Config.Trade.TradeConfiguration.SuggestRelearnMoves)
+                {
+                    if (pkm is PK9 pk9)
+                    {
+                        pk9.SetRecordFlagsAll();
+                    }
+                    else if (pkm is PK8 pk8)
+                    {
+                        pk8.SetRecordFlagsAll();
+                    }
+                    else if (pkm is PB8 pb8)
+                    {
+                        pb8.SetRecordFlagsAll();
+                    }
+                    else if (pkm is PB7 pb7)
+                    {
+                        // not applicable for PB7 (LGPE)
+                    }
+                    else if (pkm is PA8 pa8)
+                    {
+                        // not applicable for PA8 (Legends: Arceus)
+                    }
+                }
+
+                if (pkm is PA8)
+                {
+                    pkm.HeldItem = (int)HeldItem.None; // Set to None for "Legends: Arceus" Pokémon
+                }
+                else if (pkm.HeldItem == 0 && !pkm.IsEgg)
+                {
+                    pkm.HeldItem = (int)SysCord<T>.Runner.Config.Trade.TradeConfiguration.DefaultHeldItem;
+                }
+
+                if (pkm is PB7)
+                {
+                    if (pkm.Species == (int)Species.Mew)
+                    {
+                        if (pkm.IsShiny)
+                        {
+                            await ReplyAsync("Mew cannot be Shiny in LGPE. POGO Mew does not transfer. Poké Ball Plus Mew is shiny-locked.");
+                            return;
+                        }
+                    }
+                }
+                // Set correct MetDate for Mightiest Mark
+                AbstractTrade<T>.CheckAndSetUnrivaledDate(pkm);
+                if (pkm.WasEgg)
+                    pkm.EggMetDate = pkm.MetDate;
+                pkm.ResetPartyStats();
+
+                var userID = Context.User.Id;
+                var code = Info.GetRandomTradeCode(userID);
+                var lgcode = Info.GetRandomLGTradeCode();
+                if (pkm is PB7)
+                {
+                    lgcode = TradeModule<T>.GenerateRandomPictocodes(3);
+                }
+
+                // Ad Name Check
+                if (Info.Hub.Config.Trade.TradeConfiguration.EnableSpamCheck)
+                {
+                    if (AbstractTrade<T>.HasAdName(pk, out string ad))
+                    {
+                        await ReplyAndDeleteAsync("Detected Admon URL in the Pokémon's nickname or OT, which is not allowed. You also suck for trying.", 5);
                         return;
                     }
                 }
-            }
-            if (pkm.WasEgg)
-                pkm.EggMetDate = pkm.MetDate;
-            pk.ResetPartyStats();
 
-            var userID = Context.User.Id;
-            var code = Info.GetRandomTradeCode(userID);
-            var lgcode = Info.GetRandomLGTradeCode();
-            if (pkm is PB7)
+                var sig = Context.User.GetFavor();
+                await AddTradeToQueueAsync(batchTradeCode, Context.User.Username, pk, sig, Context.User, isBatchTrade, batchTradeNumber, totalBatchTrades, lgcode: lgcode, tradeType: PokeTradeType.Batch, ignoreAutoOT: ignoreAutoOT, setEdited: setEdited).ConfigureAwait(false);
+            }
+            catch (Exception ex)
             {
-                lgcode = TradeModule<T>.GenerateRandomPictocodes(3);
+                LogUtil.LogSafe(ex, nameof(TradeModule<T>));
             }
+        });
 
-            // Set correct MetDate for Mightiest Mark
-            AbstractTrade<T>.CheckAndSetUnrivaledDate(pk);
-            if (pk.WasEgg)
-                pk.EggMetDate = pk.MetDate;
-            pk.ResetPartyStats();
-
-            // Ad Name Check
-            if (Info.Hub.Config.Trade.TradeConfiguration.EnableSpamCheck)
-            {
-                if (AbstractTrade<T>.HasAdName(pk, out string ad))
-                {
-                    await ReplyAndDeleteAsync("Detected Admon URL in the Pokémon's nickname or OT, which is not allowed.", 5);
-                    return;
-                }
-            }
-
-            var sig = Context.User.GetFavor();
-            await AddTradeToQueueAsync(batchTradeCode, Context.User.Username, pk, sig, Context.User, isBatchTrade, batchTradeNumber, totalBatchTrades, lgcode: lgcode, tradeType: PokeTradeType.Batch, ignoreAutoOT: ignoreAutoOT, setEdited: setEdited).ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            LogUtil.LogSafe(ex, nameof(TradeModule<T>));
-        }
+        // Return immediately to avoid blocking
+        await Task.CompletedTask;
     }
 
     [Command("listevents")]
@@ -1179,9 +1199,11 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
                                      .OrderBy(file => file)
                                      .ToList();
 
+#pragma warning disable CS8602 // Dereference of a possibly null reference.
         var filteredEventFiles = allEventFiles
                                  .Where(file => string.IsNullOrWhiteSpace(filter) || file.Contains(filter, StringComparison.OrdinalIgnoreCase))
                                  .ToList();
+#pragma warning restore CS8602 // Dereference of a possibly null reference.
 
         IUserMessage replyMessage;
 
@@ -1269,7 +1291,9 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             }
 
             var selectedFile = eventFiles[index - 1]; // Adjust for zero-based indexing
+#pragma warning disable CS8604 // Possible null reference argument.
             var fileData = await File.ReadAllBytesAsync(Path.Combine(eventsFolderPath, selectedFile));
+#pragma warning restore CS8604 // Possible null reference argument.
             var download = new Download<PKM>
             {
                 Data = EntityFormat.GetFromBytes(fileData),
@@ -1287,7 +1311,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             var lgcode = Info.GetRandomLGTradeCode();
             var sig = Context.User.GetFavor();
 
-            await ReplyAsync($"Event request added to queue.").ConfigureAwait(false);
+            await ReplyAsync("Event request added to queue.").ConfigureAwait(false);
             await AddTradeToQueueAsync(code, Context.User.Username, pk, sig, Context.User, lgcode: lgcode).ConfigureAwait(false);
         }
         catch (Exception ex)
@@ -1343,9 +1367,11 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
                                            .OrderBy(file => file)
                                            .ToList();
 
+#pragma warning disable CS8602 // Dereference of a possibly null reference.
         var filteredBattleReadyFiles = allBattleReadyFiles
                                        .Where(file => string.IsNullOrWhiteSpace(filter) || file.Contains(filter, StringComparison.OrdinalIgnoreCase))
                                        .ToList();
+#pragma warning restore CS8602 // Dereference of a possibly null reference.
 
         IUserMessage replyMessage;
 
@@ -1433,7 +1459,9 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             }
 
             var selectedFile = battleReadyFiles[index - 1];
+#pragma warning disable CS8604 // Possible null reference argument.
             var fileData = await File.ReadAllBytesAsync(Path.Combine(battleReadyFolderPath, selectedFile));
+#pragma warning restore CS8604 // Possible null reference argument.
             var download = new Download<PKM>
             {
                 Data = EntityFormat.GetFromBytes(fileData),
@@ -1451,7 +1479,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             var lgcode = Info.GetRandomLGTradeCode();
             var sig = Context.User.GetFavor();
 
-            await ReplyAsync($"Battle-ready request added to queue.").ConfigureAwait(false);
+            await ReplyAsync("Battle-ready request added to queue.").ConfigureAwait(false);
             await AddTradeToQueueAsync(code, Context.User.Username, pk, sig, Context.User, lgcode: lgcode).ConfigureAwait(false);
         }
         catch (Exception ex)
@@ -1566,7 +1594,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         return string.Join('\n', lines);
     }
 
-    private async Task AddTradeToQueueAsync(int code, string trainerName, T? pk, RequestSignificance sig, SocketUser usr, bool isBatchTrade = false, int batchTradeNumber = 1, int totalBatchTrades = 1, bool isHiddenTrade = false, bool isMysteryEgg = false, List<Pictocodes>? lgcode = null, PokeTradeType tradeType = PokeTradeType.Specific, bool ignoreAutoOT = false, bool setEdited = false)
+    private async Task AddTradeToQueueAsync(int code, string trainerName, T? pk, RequestSignificance sig, SocketUser usr, bool isBatchTrade = false, int batchTradeNumber = 1, int totalBatchTrades = 1, bool isHiddenTrade = false, bool isMysteryMon = false, bool isMysteryEgg = false, List<Pictocodes>? lgcode = null, PokeTradeType tradeType = PokeTradeType.Specific, bool ignoreAutoOT = false, bool setEdited = false)
     {
         lgcode ??= TradeModule<T>.GenerateRandomPictocodes(3);
         if (pk is not null && !pk.CanBeTraded())
@@ -1604,7 +1632,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         {
             // Allow the owner to prevent trading entities that require a HOME Tracker even if the file has one already.
             string speciesName = SpeciesName.GetSpeciesName(pk!.Species, (int)LanguageID.English);
-            await ReplyAsync($"This **{speciesName}** is not native to this game, and cannot be traded! Trade with the correct bot, then trade to HOME.").ConfigureAwait(false);
+            await ReplyAsync($"This **{speciesName}** is not native to this game, and cannot be traded!  Trade with the correct bot, then trade to HOME.").ConfigureAwait(false);
             return;
         }
         if (Info.Hub.Config.Legality.DisallowTracked && pk is IHomeTrack { HasTracker: true })
@@ -1612,27 +1640,40 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             // Allow the owner to prevent trading entities that already have a HOME Tracker.
             string speciesName = SpeciesName.GetSpeciesName(pk.Species, (int)LanguageID.English);
             await ReplyAsync($"This {speciesName} file is tracked by HOME, and cannot be traded!").ConfigureAwait(false);
+            return;
         }
         // handle past gen file requests
         // thanks manu https://github.com/Manu098vm/SysBot.NET/commit/d8c4b65b94f0300096704390cce998940413cc0d
         if (!la.Valid && la.Results.Any(m => m.Identifier is CheckIdentifier.Memory))
         {
             var clone = (T)pk!.Clone();
-
             clone.HandlingTrainerName = pk.OriginalTrainerName;
             clone.HandlingTrainerGender = pk.OriginalTrainerGender;
-
             if (clone is PK8 or PA8 or PB8 or PK9)
                 ((dynamic)clone).HandlingTrainerLanguage = (byte)pk.Language;
-
             clone.CurrentHandler = 1;
-
             la = new LegalityAnalysis(clone);
-
             if (la.Valid) pk = clone;
         }
-
-        await QueueHelper<T>.AddToQueueAsync(Context, code, trainerName, sig, pk!, PokeRoutineType.LinkTrade, tradeType, usr, isBatchTrade, batchTradeNumber, totalBatchTrades, isHiddenTrade, isMysteryEgg, lgcode, ignoreAutoOT: ignoreAutoOT, setEdited: setEdited, isNonNative: isNonNative).ConfigureAwait(false);
+        await QueueHelper<T>.AddToQueueAsync(
+            Context,
+            code,
+            trainerName,
+            sig,
+            pk!,
+            PokeRoutineType.LinkTrade,
+            tradeType,
+            usr,
+            isBatchTrade: isBatchTrade,
+            batchTradeNumber: batchTradeNumber,
+            totalBatchTrades: totalBatchTrades,
+            isHiddenTrade: isHiddenTrade,
+            isMysteryEgg: isMysteryEgg,
+            lgcode: lgcode,
+            ignoreAutoOT: ignoreAutoOT,
+            setEdited: setEdited,
+            isNonNative: isNonNative
+        ).ConfigureAwait(false);
     }
 
     public static List<Pictocodes> GenerateRandomPictocodes(int count)
@@ -1643,7 +1684,9 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
 
         for (int i = 0; i < count; i++)
         {
+#pragma warning disable CS8605 // Unboxing a possibly null value.
             Pictocodes randomPictocode = (Pictocodes)pictocodeValues.GetValue(rnd.Next(pictocodeValues.Length));
+#pragma warning restore CS8605 // Unboxing a possibly null value.
             randomPictocodes.Add(randomPictocode);
         }
 
@@ -1663,14 +1706,35 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         }
     }
 
-    private async Task DeleteMessagesAfterDelayAsync(IMessage sentMessage, IMessage? messageToDelete, int delaySeconds)
+    private async Task DeleteMessagesAfterDelayAsync(IMessage? sentMessage, IMessage? messageToDelete, int delaySeconds)
     {
         try
         {
             await Task.Delay(delaySeconds * 1000);
-            await sentMessage.DeleteAsync();
+
+            if (sentMessage != null)
+            {
+                try
+                {
+                    await sentMessage.DeleteAsync();
+                }
+                catch (HttpException ex) when (ex.DiscordCode == DiscordErrorCode.UnknownMessage)
+                {
+                    // Ignore Unknown Message exception
+                }
+            }
+
             if (messageToDelete != null)
-                await messageToDelete.DeleteAsync();
+            {
+                try
+                {
+                    await messageToDelete.DeleteAsync();
+                }
+                catch (HttpException ex) when (ex.DiscordCode == DiscordErrorCode.UnknownMessage)
+                {
+                    // Ignore Unknown Message exception
+                }
+            }
         }
         catch (Exception ex)
         {
