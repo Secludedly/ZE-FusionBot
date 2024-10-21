@@ -29,9 +29,15 @@ public class PokeBotRunnerImpl<T> : PokeBotRunner<T> where T : PKM, new()
         if (string.IsNullOrWhiteSpace(token))
             return;
 
-        var bot = new SysCord<T>(this);
+        var programConfig = new ProgramConfig
+        {
+            Discord = config
+        };
+
+        var bot = new SysCord<T>(this, programConfig);  // Pass ProgramConfig here
         Task.Run(() => bot.MainAsync(token, CancellationToken.None), CancellationToken.None);
     }
+
 
     private void AddBilibiliBot(BilibiliSettings config)
     {
