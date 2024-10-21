@@ -57,7 +57,7 @@ This bot unites the forks of various other developers - some new, some old, some
 - *Surprise trade module, which trades a Pokemon randomly, with random stats.*
 - *Mystery Egg module to generate an egg for all games with complete randomness.*
 - *Auto-Correct, which corrects misspellings and illegal formats to automatically become legal.*
-- *Custom UI themes, with more to soon be added.*
+- *17 Custom UI themes.*
 - *Drop-down menu to select which game mode you want to use.*
 - *Bot Start & Stop embed that keeps bot channels active while displaying the bot's online status.*
 - *Announcement module, to send messages to multiple channels and servers at once.*
