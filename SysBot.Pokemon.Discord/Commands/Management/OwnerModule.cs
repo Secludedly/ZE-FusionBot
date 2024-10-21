@@ -581,7 +581,7 @@ public class OwnerModule<T> : SudoModule<T> where T : PKM, new()
         }
 
     [Command("startcontroller")]
-    [Alias("controllerstart", "startcontrol", "controlstart", "startremote", "remotestart")]
+    [Alias("controllerstart", "startcontrol", "controlstart", "startremote", "remotestart", "sbr")]
     [Summary("Makes the bot open Switch Remote for PC - a GUI game controller for your Switch.")]
     [RequireOwner]
     public async Task StartSysRemote()
