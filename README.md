@@ -170,7 +170,7 @@ Showdown Template
 `qs` // Checks position in the queue. <br />
 
 ## ENHANCED TRADE FEATURES
-`st` // Get a surprise Pokémon! 50% shiny chance, 6IV, with random ability, ball, and level. <br />
+`mm` // Get a surprise Pokémon! 50% shiny chance, 6IV, with random ability, ball, and level. <br />
 `me` // Get a mystery egg! All shiny, 6IV, and have their Hidden Ability. <br />
 `brl <species name> <page number>` // List all pre-made Battle-Ready Pokemon for trade. <br />
 `le <species name> <page number>` // List all Event Pokemon for trade. <br />
@@ -219,8 +219,8 @@ Showdown Template
 ## SWITCH MANAGEMENT
 `screenon` // Turns your Switch screen on. <br />
 `screenoff` // Turns your Switch screen off. <br />
-`sysdvr` // Opens SysDVR to view live video of your Switch, with setup instructions. <br />
-`sbr` // Opens SysBotRemote, a GUI that emulates buttons presses on the Switch, with instructions. <br />
+`sysdvr` // Opens <a href="https://github.com/exelix11/SysDVR">SysDVR</a> to view live video of your Switch, with setup instructions. <br />
+`sbr` // Opens <a href="https://github.com/Secludedly/Switch-Remote-For-PC">Switch Remote For PC</a>, a GUI that emulates buttons presses on the Switch, with instructions. <br />
 `video` // Shows a video gif of your current Switch screen. <br />
 `peek` // Shows an image of your current Switch screen. <br />
 `setStick <IP> <Coordinates>` // Sets the stick to the specified position. <br />
@@ -242,13 +242,24 @@ Showdown Template
 `setavatar` // Sets the bot's avatar to an animated GIF. <br />
 `hi` // Say hi to the bot and it'll respond with something the bot owner's can customize. <br />
 `joke` // Tells a random joke. It's pointless and silly. Probably not even funny. <br />
-`say` // Sends a message as the bot to a channel. <br />
-`dm` // Sends a message as the bot to a user's DM. <br />
+`say <msg> <channel>` // Sends a message as the bot to a channel. <br />
+`dm <mention user> <msg>` // Sends a message as the bot to a user's DM. <br />
 `ping` // Makes the bot respond, indicating that it is running. <br />
 
 ## NON-COMMAND FEATURES
-— Apply custom trade codes for each distribution (SV Only). To use this, add a 8 digit code to the file name of your distribution file. fOR EXAMPLE, `Great Tusk-Tera(Steel)-03760382.pk9`.
+— Apply custom trade codes for each distribution (SV Only). To use this, add a 8 digit code to the file name of your distribution file. FOR EXAMPLE, `Great Tusk-Tera(Steel)-03760382.pk9`.
 
 — Paste a PKM file in any bot channel without a command to get detailed Showdown Format info with Batch Commands. Gives you nearly all VITAL information about the Pokemon in the file, and the formats it returns can be traded.
 
 — Thank the bots, and they may reply back to you with a message. The bots love attention.
+
+# OTHER PROJECTS
+— **<a href="https://github.com/Secludedly/Switch-Remote-For-PC">SWITCH REMOTE FOR PC</a>** // Remote control your Switch from PC. 
+*Originally created by <a href="https://github.com/CodeHedge">Hedge</a>.*
+
+— **<a href="https://github.com/Secludedly/PKHeX-ALM-Releases/releases">PKHeX ALM RELEASES</a>** // Unofficial PKHeX releases with AutoLegalityMod, along with preconfigured almconfig.json and cfg.json. <br />
+*PKHeX originally created by <a href="https://github.com/kwsch">Kurt</a>.*
+*ALM currently updated by <a href="https://github.com/santacrab2">SantaCrab</a> & created by <a href="https://github.com/architdate">archidate</a>.*
+
+## SUPPORTED PROJECTS
+— **<a href="https://GenPKM.com">GenPKM</a>** // An alternative to Pokémon Showdown's Teambuilder for making Showdown Formats for bots.
