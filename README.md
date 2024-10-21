@@ -247,19 +247,19 @@ Showdown Template
 `ping` // Makes the bot respond, indicating that it is running. <br />
 
 ## NON-COMMAND FEATURES
-— Apply custom trade codes for each distribution (SV Only). To use this, add a 8 digit code to the file name of your distribution file. FOR EXAMPLE, `Great Tusk-Tera(Steel)-03760382.pk9`.
+— Apply custom trade codes for each distribution (SV Only). To use this, add a 8 digit code to the file name of your distribution file. **FOR EXAMPLE:** `Great Tusk-Tera(Steel)-03760382.pk9`.
 
 — Paste a PKM file in any bot channel without a command to get detailed Showdown Format info with Batch Commands. Gives you nearly all VITAL information about the Pokemon in the file, and the formats it returns can be traded.
 
 — Thank the bots, and they may reply back to you with a message. The bots love attention.
 
 # OTHER PROJECTS
-— **<a href="https://github.com/Secludedly/Switch-Remote-For-PC">SWITCH REMOTE FOR PC</a>** // Remote control your Switch from PC. 
+— **<a href="https://github.com/Secludedly/Switch-Remote-For-PC">SWITCH REMOTE FOR PC</a>** // Remote control your Switch from PC. <br /><br />
 *Originally created by <a href="https://github.com/CodeHedge">Hedge</a>.*
 
-— **<a href="https://github.com/Secludedly/PKHeX-ALM-Releases/releases">PKHeX ALM RELEASES</a>** // Unofficial PKHeX releases with AutoLegalityMod, along with preconfigured almconfig.json and cfg.json. <br />
-*PKHeX originally created by <a href="https://github.com/kwsch">Kurt</a>.*
-*ALM currently updated by <a href="https://github.com/santacrab2">SantaCrab</a> & created by <a href="https://github.com/architdate">archidate</a>.*
+— **<a href="https://github.com/Secludedly/PKHeX-ALM-Releases/releases">PKHeX ALM RELEASES</a>** // Unofficial PKHeX releases with AutoLegalityMod, along with preconfigured almconfig.json and cfg.json. <br /><br />
+*PKHeX originally created by <a href="https://github.com/kwsch">Kurt</a>.* <br /><br />
+*ALM currently updated by <a href="https://github.com/santacrab2">SantaCrab</a> & created by <a href="https://github.com/architdate">archidate</a>.* <br />
 
 ## SUPPORTED PROJECTS
 — **<a href="https://GenPKM.com">GenPKM</a>** // An alternative to Pokémon Showdown's Teambuilder for making Showdown Formats for bots.
