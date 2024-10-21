@@ -15,9 +15,9 @@ namespace SysBot.Pokemon.Discord
     {
         private static TradeQueueInfo<T> Info => SysCord<T>.Runner.Hub.Queues.Info;
 
-        [Command("surprise")]
-        [Alias("random", "st", "randomize", "randomtrade", "rt")]
-        [Summary("Trades a random Pokémon with perfect stats and shiny appearance.")]
+        [Command("mysterymon")]
+        [Alias("mm", "mystery", "surprise")]
+        [Summary("Trades a random Pokémon with completely random attributes and stats.")]
         public async Task TradeRandomPokemonAsync()
         {
             var userID = Context.User.Id;
@@ -33,9 +33,9 @@ namespace SysBot.Pokemon.Discord
             }).ConfigureAwait(false);
         }
 
-        [Command("surprise")]
-        [Alias("random", "st", "randomize", "randomtrade", "rt")]
-        [Summary("Trades a random Pokémon with perfect stats and shiny appearance.")]
+        [Command("mysterymon")]
+        [Alias("mm", "mystery", "surprise")]
+        [Summary("Trades a random Pokémon with completely random attributes and stats.")]
         [RequireQueueRole(nameof(DiscordManager.RolesTrade))]
         public async Task TradeRandomPokemonAsync([Summary("Trade Code")] int code)
         {
@@ -219,12 +219,12 @@ namespace SysBot.Pokemon.Discord
                     if (isPerfectIVs)
                     {
                         // Set all IVs to 31
-                        pk.IV_HP = 31;
-                        pk.IV_ATK = 31;
-                        pk.IV_DEF = 31;
-                        pk.IV_SPA = 31;
-                        pk.IV_SPD = 31;
-                        pk.IV_SPE = 31;
+                        pk.IV_HP = 31;  // HP
+                        pk.IV_ATK = 31; // Attack
+                        pk.IV_DEF = 31; // Defense
+                        pk.IV_SPA = 31; // Special Attack
+                        pk.IV_SPD = 31; // Special Defense
+                        pk.IV_SPE = 31; // Speed
                     }
                     else
                     {
@@ -247,7 +247,7 @@ namespace SysBot.Pokemon.Discord
                     {
                         ev = 510 - totalEVs; // Keep EVs within the 510 limit
                     }
-                    // Do not let EVs exceed 252
+                    // Do not let EVs exceed 252 for each individual entry
                     if (ev > 252)
                     {
                         ev = 252;
@@ -274,7 +274,7 @@ namespace SysBot.Pokemon.Discord
                             pk.EV_SPE = (byte)ev;
                             break;
                     }
-                    totalEVs += ev; // Update the total EVs
+                    totalEVs += ev; // Update the total EVs into final set
                 }
 
                 //--------------- Ability --------------//
