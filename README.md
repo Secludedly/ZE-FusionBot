@@ -261,5 +261,5 @@ Showdown Template
 *PKHeX originally created by <a href="https://github.com/kwsch">Kurt</a>.* <br />
 *ALM currently updated by <a href="https://github.com/santacrab2">SantaCrab</a> & created by <a href="https://github.com/architdate">archidate</a>.* <br />
 
-## SUPPORTED PROJECTS
+# SUPPORTED PROJECTS
 — **<a href="https://GenPKM.com">GenPKM</a>** // An alternative to Pokémon Showdown's Teambuilder for making Showdown Formats for bots.
