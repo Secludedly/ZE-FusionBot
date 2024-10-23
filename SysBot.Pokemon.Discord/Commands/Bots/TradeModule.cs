@@ -1742,42 +1742,6 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         }
     }
 
-
-    [Command("homereadydownload")]
-    [Alias("hrd")]
-    [Summary("Allows the user to download the selected legal HOME-ready file from the homeready folder.")]
-    private async Task HomeReadyDownloadAsync(int index)
-    {
-        var homeReadyFolderPath = SysCord<T>.Runner.Config.Trade.RequestFolderSettings.HOMEReadyPKMFolder;
-
-        // Check if the homeready folder exists
-        if (!Directory.Exists(homeReadyFolderPath))
-        {
-            await ReplyAsync("The homeready folder does not exist.");
-            return;
-        }
-
-        var files = Directory.GetFiles(homeReadyFolderPath);
-
-        if (index < 1 || index > files.Length)
-        {
-            await ReplyAsync("Your selection was invalid. Please use a valid file number.");
-            return;
-        }
-
-        var selectedFile = files[index - 1]; // Adjust for zero-based indexing
-
-        try
-        {
-            var fileStream = File.OpenRead(selectedFile);
-            await Context.Channel.SendFileAsync(fileStream, Path.GetFileName(selectedFile), "Sure thing! Here's the file!");
-        }
-        catch (Exception ex)
-        {
-            await ReplyAsync($"**Failed to send file:** {ex.Message}");
-        }
-    }
-
     [Command("homeready")]
     [Alias("hr")]
     [Summary("Displays instructions on how to use the HOME-Ready module.")]
@@ -1814,14 +1778,6 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
 
         embed3.WithImageUrl("https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/homereadybreak.png");
         var message3 = await ReplyAsync(embed: embed3.Build());
-
-        var embed4 = new EmbedBuilder()
-            .AddField("DOWNLOADING FILES: `hrd <number>`",
-                      "- This will give you the file of the Pokemon to download.\n" +
-                      "**Example:** `hrd 682`\n");
-
-        embed4.WithImageUrl("https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/homereadybreak.png");
-        var message4 = await ReplyAsync(embed: embed4.Build());
 
         _ = Task.Run(async () =>
         {
@@ -1971,7 +1927,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
 
             {
                 var index = allHOMEReadyFiles.IndexOf(item) + 1; // Get the index from the original list
-                embed.AddField($"{index}. {item}", $"Use `{botPrefix}hrr {index}` to trade this legal HOME-ready file.\nUse `{botPrefix}hrd {index}` to download this legal HOME-ready file.");
+                embed.AddField($"{index}. {item}", $"Use `{botPrefix}hrr {index}` to trade this legal HOME-ready file.");
             }
 
             // Send confirmation message in the same channel
