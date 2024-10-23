@@ -153,6 +153,13 @@ public static class QueueHelper<T> where T : PKM, new()
                 embedBuilder.AddField("**__Notice__:** This Pokemon is Non-Native.", "*Cannot enter HOME & AutoOT not applied.*");
             }
 
+            // If the Pokémon has a HOME tracker, show the HOME Tracker detected message
+            if (pk is IHomeTrack { HasTracker: true })
+            {
+                embedBuilder.Footer.IconUrl = "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/exclamation.gif";
+                embedBuilder.AddField("**__Notice__:** HOME Tracker Detected.", "*Cannot apply trade partner information (AutoOT)*");
+            }
+
 
             DetailsExtractor<T>.AddThumbnails(embedBuilder, type == PokeRoutineType.Clone, type == PokeRoutineType.SeedCheck, embedData.HeldItemUrl);
             if (!isHiddenTrade && SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.UseEmbeds)
