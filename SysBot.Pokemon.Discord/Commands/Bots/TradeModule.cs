@@ -1624,20 +1624,22 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             return;
         }
         bool isNonNative = false;
+        // Check if the Pokémon's context is different or if it's from Pokémon GO (GO Pokémon are non-native)
         if (la.EncounterOriginal.Context != pk?.Context || pk?.GO == true)
         {
             isNonNative = true;
         }
+        // Prevent trade if non-native and bot settings disallow non-native Pokémon
         if (Info.Hub.Config.Legality.DisallowNonNatives && (la.EncounterOriginal.Context != pk?.Context || pk?.GO == true))
         {
             // Allow the owner to prevent trading entities that require a HOME Tracker even if the file has one already.
             string speciesName = SpeciesName.GetSpeciesName(pk!.Species, (int)LanguageID.English);
-            await ReplyAsync($"This **{speciesName}** is not native to this game, and cannot be traded!  Trade with the correct bot, then trade to HOME.").ConfigureAwait(false);
+            await ReplyAsync($"This **{speciesName}** is not native to this game, and cannot be traded! Trade with the correct bot, then trade to HOME.").ConfigureAwait(false);
             return;
         }
+        // Prevent trade if the Pokémon has a HOME tracker and bot settings disallow tracked Pokémon
         if (Info.Hub.Config.Legality.DisallowTracked && pk is IHomeTrack { HasTracker: true })
         {
-            // Allow the owner to prevent trading entities that already have a HOME Tracker.
             string speciesName = SpeciesName.GetSpeciesName(pk.Species, (int)LanguageID.English);
             await ReplyAsync($"This {speciesName} file is tracked by HOME, and cannot be traded!").ConfigureAwait(false);
             return;

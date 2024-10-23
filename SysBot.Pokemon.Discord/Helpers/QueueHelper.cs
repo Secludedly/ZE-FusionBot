@@ -146,12 +146,13 @@ public static class QueueHelper<T> where T : PKM, new()
                 embedBuilder.Footer.IconUrl = "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/setedited.png";
                 embedBuilder.AddField("**__Notice__:** Your request was illegal.", "*Auto-Corrected to closest legal match.*");
             }
-
-            if (isNonNative)
+            // Embed message handling: show "Non-Native" warning if Pokémon is non-native AND doesn't have a HOME tracker
+            if (isNonNative && pk is not IHomeTrack { HasTracker: true })
             {
                 embedBuilder.Footer.IconUrl = "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/exclamation.gif";
                 embedBuilder.AddField("**__Notice__:** This Pokemon is Non-Native.", "*Cannot enter HOME & AutoOT not applied.*");
             }
+
 
             DetailsExtractor<T>.AddThumbnails(embedBuilder, type == PokeRoutineType.Clone, type == PokeRoutineType.SeedCheck, embedData.HeldItemUrl);
             if (!isHiddenTrade && SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.UseEmbeds)
