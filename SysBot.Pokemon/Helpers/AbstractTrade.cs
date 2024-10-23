@@ -279,7 +279,7 @@ namespace SysBot.Pokemon.Helpers
 
         public static bool HasAdName(T pk, out string ad)
         {
-            const string domainPattern = @"(?<=\w)\.(com|org|net|gg|xyz|io|tv|co|me|us|uk|ca|de|fr|jp|au|eu|ch|it|nl|ru|br|in)\b";
+            const string domainPattern = @"(?<=\w)\.(com|org|net|gg|xyz|io|tv|co|me|us|uk|ca|de|fr|jp|au|eu|ch|it|nl|ru|br|in|fun|info|blog|int|gov|edu|app|art|biz|bot|buzz|dev|eco|fan|fans|forum|free|game|help|host|inc|icu|live|lol|market|media|news|ninja|now|one|ong|online|page|porn|pro|red|sale|sex|sexy|shop|site|store|stream|tech|tel|top|tube|uno|vip|website|wiki|work|world|wtf|xxx|zero|youtube|zone|nyc|onion|bit|crypto|meme)\b";
             bool ot = Regex.IsMatch(pk.OriginalTrainerName, domainPattern, RegexOptions.IgnoreCase);
             bool nick = Regex.IsMatch(pk.Nickname, domainPattern, RegexOptions.IgnoreCase);
             ad = ot ? pk.OriginalTrainerName : nick ? pk.Nickname : "";
