@@ -477,7 +477,6 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
                             var changesEmbed = new EmbedBuilder()
                                 .WithTitle("Showdown Set Corrections")
                                 .WithColor(Color.Orange)
-                                .WithThumbnailUrl("https://raw.githubusercontent.com/bdawg1989/sprites/main/profoak.png")
                                 .WithDescription(string.Join("\n", correctionMessages))
                                 .AddField("Corrected Showdown Set:", $"```{finalShowdownSet}```")
                                 .Build();
@@ -700,7 +699,6 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
                             var changesEmbed = new EmbedBuilder()
                                 .WithTitle("Showdown Set Corrections")
                                 .WithColor(Color.Orange)
-                                .WithThumbnailUrl("https://raw.githubusercontent.com/bdawg1989/sprites/main/profoak.png")
                                 .WithDescription(string.Join("\n", correctionMessages))
                                 .AddField("Corrected Showdown Set:", $"```{finalShowdownSet}```")
                                 .Build();
@@ -1041,7 +1039,6 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
                             var changesEmbed = new EmbedBuilder()
                                 .WithTitle("Showdown Set Corrections")
                                 .WithColor(Color.Orange)
-                                .WithThumbnailUrl("https://raw.githubusercontent.com/bdawg1989/sprites/main/profoak.png")
                                 .WithDescription(string.Join("\n", correctionMessages))
                                 .AddField("Corrected Showdown Set:", $"```{finalShowdownSet}```")
                                 .Build();
