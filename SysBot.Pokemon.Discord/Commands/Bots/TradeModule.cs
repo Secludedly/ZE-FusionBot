@@ -830,6 +830,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             _ = ReplyAndDeleteAsync("You already have an existing trade in the queue. Please wait until it is processed.", 2);
             return;
         }
+
         content = ReusableActions.StripCodeBlock(content);
         var trades = TradeModule<T>.ParseBatchTradeContent(content);
         var maxTradesAllowed = SysCord<T>.Runner.Config.Trade.TradeConfiguration.MaxPkmsPerTrade;
@@ -842,27 +843,34 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             return;
         }
 
-        // Check if the number of trades exceeds the limit
-        if (trades.Count > maxTradesAllowed)
-        {
-            _ = ReplyAndDeleteAsync($"You can only process up to {maxTradesAllowed} trades at a time. Please reduce the number of trades in your batch.", 2, Context.Message);
-            _ = DeleteMessagesAfterDelayAsync(null, Context.Message, 2);
-            return;
-        }
-
         var batchTradeCode = Info.GetRandomTradeCode(userID);
-        int batchTradeNumber = 1;
 
-        foreach (var trade in trades)
+        // Execute the trades in order of request, with delay
+        for (int i = 0; i < trades.Count; i++)
         {
-            await ProcessSingleTradeAsync(trade, batchTradeCode, true, batchTradeNumber, trades.Count); // Pass the total number of trades here
-            batchTradeNumber++;
+            var trade = trades[i];
+            int batchTradeNumber = i + 1;
+
+            // Execute
+            await ProcessSingleTradeAsync(trade, batchTradeCode, true, batchTradeNumber, trades.Count);
+
+            // Log to confirm trade order and pause
+            Console.WriteLine($"Completed batch trade #{batchTradeNumber}: {trade}");
+
+            // Add a delay of 3/4 of a second before processing the next batch trade number
+            if (i < trades.Count - 1)
+            {
+                await Task.Delay(750); // 750 milliseconds = 0.75 seconds (Delay to process order)
+            }
         }
+
+        // Final cleanup
         if (Context.Message is IUserMessage userMessage)
         {
             _ = DeleteMessagesAfterDelayAsync(userMessage, null, 2);
         }
     }
+
 
     private static List<string> ParseBatchTradeContent(string content)
     {
