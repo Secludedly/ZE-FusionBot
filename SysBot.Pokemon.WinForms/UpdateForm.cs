@@ -15,20 +15,17 @@ namespace SysBot.Pokemon.WinForms
         private readonly Label labelChangelogTitle = new();
         private TextBox textBoxChangelog;
         private readonly bool isUpdateRequired;
+        private readonly bool isUpdateAvailable;
         private readonly string newVersion;
 
-        public UpdateForm(bool updateRequired, string newVersion)
+        public UpdateForm(bool updateRequired, string newVersion, bool updateAvailable)
         {
             isUpdateRequired = updateRequired;
             this.newVersion = newVersion;
+            isUpdateAvailable = updateAvailable;
             InitializeComponent();
             Load += async (sender, e) => await FetchAndDisplayChangelog();
-            if (isUpdateRequired)
-            {
-                labelUpdateInfo.Text = "A required update is available. You must update to continue using this application.";
-                // Optionally, you can also disable the close button on the form if the update is required
-                ControlBox = false;
-            }
+            UpdateFormText();
         }
 
         private void InitializeComponent()
@@ -37,26 +34,40 @@ namespace SysBot.Pokemon.WinForms
             buttonDownload = new Button();
 
             // Update the size of the form
-            ClientSize = new Size(500, 300); // New width and height
+            ClientSize = new Size(500, 300);
 
             // labelUpdateInfo
             labelUpdateInfo.AutoSize = true;
-            labelUpdateInfo.Location = new Point(12, 20); // Adjust as needed
-            labelUpdateInfo.Size = new Size(460, 60); // Adjust as needed
-            labelUpdateInfo.Text = $"A new version is available. Please download the latest version.";
-
-            // buttonDownload
-            buttonDownload.Size = new Size(130, 26); // Set the button size if not already set
-            int buttonX = (ClientSize.Width - buttonDownload.Size.Width) / 2; // Calculate X position
-            int buttonY = ClientSize.Height - buttonDownload.Size.Height - 20; // Calculate Y position, 20 pixels from the bottom
+            labelUpdateInfo.Location = new Point(12, 20);
+            labelUpdateInfo.Size = new Size(460, 60);
+            if (isUpdateRequired)
+            {
+                labelUpdateInfo.Text = "A required update is available. You must update to continue using this application.";
+                ControlBox = false;
+            }
+            else if (isUpdateAvailable)
+            {
+                labelUpdateInfo.Text = "A new version is available. Please download the latest version.";
+            }
+            else
+            {
+                labelUpdateInfo.Text = "You are on the latest version. You can re-download if needed.";
+                buttonDownload.Text = "Re-Download Latest Version";
+            }
+            buttonDownload.Size = new Size(130, 23);
+            int buttonX = (ClientSize.Width - buttonDownload.Size.Width) / 2;
+            int buttonY = ClientSize.Height - buttonDownload.Size.Height - 20;
             buttonDownload.Location = new Point(buttonX, buttonY);
-            buttonDownload.Text = $"Download Update";
+            if (string.IsNullOrEmpty(buttonDownload.Text))
+            {
+                buttonDownload.Text = "Download Update";
+            }
             buttonDownload.Click += ButtonDownload_Click;
 
             // labelChangelogTitle
             labelChangelogTitle.AutoSize = true;
-            labelChangelogTitle.Location = new Point(10, 60); // Set this Y position above textBoxChangelog
-            labelChangelogTitle.Size = new Size(70, 15); // Set an appropriate size or leave it to AutoSize
+            labelChangelogTitle.Location = new Point(10, 60);
+            labelChangelogTitle.Size = new Size(70, 15);
             labelChangelogTitle.Font = new Font(labelChangelogTitle.Font.FontFamily, 11, FontStyle.Bold);
             labelChangelogTitle.Text = $"Changelog ({newVersion}):";
 
@@ -67,8 +78,8 @@ namespace SysBot.Pokemon.WinForms
                 Multiline = true,
                 ReadOnly = true,
                 ScrollBars = ScrollBars.Vertical,
-                Location = new Point(10, 90), // Adjust as needed
-                Size = new Size(480, 150), // Adjust as needed to fit the new form size
+                Location = new Point(10, 90),
+                Size = new Size(480, 150),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Bottom | AnchorStyles.Right
             };
 
@@ -82,7 +93,18 @@ namespace SysBot.Pokemon.WinForms
             MinimizeBox = false;
             Name = "UpdateForm";
             StartPosition = FormStartPosition.CenterScreen;
-            Text = $"Update Available ({newVersion})";
+            UpdateFormText();
+        }
+        private void UpdateFormText()
+        {
+            if (isUpdateAvailable)
+            {
+                Text = $"Update Available ({newVersion})";
+            }
+            else
+            {
+                Text = "Re-Download Latest Version";
+            }
         }
 
         private async Task FetchAndDisplayChangelog()
@@ -94,43 +116,95 @@ namespace SysBot.Pokemon.WinForms
 
         private async void ButtonDownload_Click(object sender, EventArgs e)
         {
-            string downloadUrl = await UpdateChecker.FetchDownloadUrlAsync();
-            if (!string.IsNullOrWhiteSpace(downloadUrl))
+            buttonDownload.Enabled = false;
+            buttonDownload.Text = "Downloading...";
+            try
             {
-                string downloadedFilePath = await StartDownloadProcessAsync(downloadUrl);
-                if (!string.IsNullOrEmpty(downloadedFilePath))
+                string? downloadUrl = await UpdateChecker.FetchDownloadUrlAsync();
+                if (!string.IsNullOrWhiteSpace(downloadUrl))
                 {
-                    // Close the application
-                    Application.Exit();
-
-                    // Start a new process to replace the executable and restart the application
-                    Process.Start(new ProcessStartInfo
+                    string downloadedFilePath = await StartDownloadProcessAsync(downloadUrl);
+                    if (!string.IsNullOrEmpty(downloadedFilePath))
                     {
-                        FileName = "cmd.exe",
-                        Arguments = $"/C timeout /t 1 & move /y \"{downloadedFilePath}\" \"{Application.ExecutablePath}\" & start \"\" \"{Application.ExecutablePath}\"",
-                        CreateNoWindow = true,
-                        UseShellExecute = false
-                    });
+                        InstallUpdate(downloadedFilePath);
+                    }
+                }
+                else
+                {
+                    MessageBox.Show("Failed to fetch the download URL. Please check your internet connection and try again.",
+                        "Download Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
-            else
+            catch (Exception ex)
             {
-                MessageBox.Show("Failed to fetch the download URL. Please check your internet connection and try again.", "Download Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Update failed: {ex.Message}", "Update Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                buttonDownload.Enabled = true;
+                buttonDownload.Text = isUpdateAvailable ? "Download Update" : "Re-Download Latest Version";
             }
         }
 
         private static async Task<string> StartDownloadProcessAsync(string downloadUrl)
         {
             Main.IsUpdating = true;
-            string downloadedFilePath = Path.Combine(Application.StartupPath, "SysBot.Pokemon.WinForms.exe");
+            string tempPath = Path.Combine(Path.GetTempPath(), $"SysBot.Pokemon.WinForms_{Guid.NewGuid()}.exe");
             using (var client = new HttpClient())
             {
+                client.DefaultRequestHeaders.Add("User-Agent", "ZE-FusionBot");
                 var response = await client.GetAsync(downloadUrl);
                 response.EnsureSuccessStatusCode();
                 var fileBytes = await response.Content.ReadAsByteArrayAsync();
-                await File.WriteAllBytesAsync(downloadedFilePath, fileBytes);
+                await File.WriteAllBytesAsync(tempPath, fileBytes);
             }
-            return downloadedFilePath;
+            return tempPath;
+        }
+        private void InstallUpdate(string downloadedFilePath)
+        {
+            try
+            {
+                string currentExePath = Application.ExecutablePath;
+                string applicationDirectory = Path.GetDirectoryName(currentExePath) ?? "";
+                string executableName = Path.GetFileName(currentExePath);
+                string backupPath = Path.Combine(applicationDirectory, $"{executableName}.backup");
+                // Create batch file for update process
+                string batchPath = Path.Combine(Path.GetTempPath(), "UpdateSysBot.bat");
+                string batchContent = @$"
+                                            @echo off
+                                            timeout /t 2 /nobreak >nul
+                                            echo Updating SysBot...
+                                            rem Backup current version
+                                            if exist ""{currentExePath}"" (
+                                                if exist ""{backupPath}"" (
+                                                    del ""{backupPath}""
+                                                )
+                                                move ""{currentExePath}"" ""{backupPath}""
+                                            )
+                                            rem Install new version
+                                            move ""{downloadedFilePath}"" ""{currentExePath}""
+                                            rem Start new version
+                                            start """" ""{currentExePath}""
+                                            rem Clean up
+                                            del ""%~f0""
+                                            ";
+                File.WriteAllText(batchPath, batchContent);
+                // Start the update batch file
+                ProcessStartInfo startInfo = new ProcessStartInfo
+                {
+                    FileName = batchPath,
+                    CreateNoWindow = true,
+                    UseShellExecute = true,
+                    WindowStyle = ProcessWindowStyle.Hidden
+                };
+                Process.Start(startInfo);
+                // Exit the current instance
+                Application.Exit();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to install update: {ex.Message}", "Update Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
     }
 }
