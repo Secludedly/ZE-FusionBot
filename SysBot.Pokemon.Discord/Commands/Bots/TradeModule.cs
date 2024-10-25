@@ -388,7 +388,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         }
         var ignoreAutoOT = content.Contains("OT:") || content.Contains("TID:") || content.Contains("SID:");
         content = ReusableActions.StripCodeBlock(content);
-        content = TradeModule<T>.ConvertMasterBall(content); // Temp fix for Ball: Master being unrecognized by the bot
+        content = AbstractTrade<T>.ConvertBalls(content);
 
         // Check if the showdown set contains "Egg"
         bool isEgg = AbstractTrade<T>.IsEggCheck(content);
@@ -613,7 +613,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
 
         var ignoreAutoOT = content.Contains("OT:") || content.Contains("TID:") || content.Contains("SID:");
         content = ReusableActions.StripCodeBlock(content);
-        content = TradeModule<T>.ConvertMasterBall(content); // Temp fix for Ball: Master not being recognized by the bot
+        content = AbstractTrade<T>.ConvertBalls(content);
 
         // Check if the showdown set contains "Egg"
         bool isEgg = AbstractTrade<T>.IsEggCheck(content);
@@ -1579,19 +1579,6 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             T pk => pk,
             _ => EntityConverter.ConvertToType(dl.Data, typeof(T), out _) as T,
         };
-    }
-
-    private static string ConvertMasterBall(string content)
-    {
-        var lines = content.Split('\n');
-        for (int i = 0; i < lines.Length; i++)
-        {
-            if (lines[i].StartsWith("Ball:") && lines[i].Contains("Master"))
-            {
-                lines[i] = ".Ball=1";
-            }
-        }
-        return string.Join('\n', lines);
     }
 
     private async Task AddTradeToQueueAsync(int code, string trainerName, T? pk, RequestSignificance sig, SocketUser usr, bool isBatchTrade = false, int batchTradeNumber = 1, int totalBatchTrades = 1, bool isHiddenTrade = false, bool isMysteryMon = false, bool isMysteryEgg = false, List<Pictocodes>? lgcode = null, PokeTradeType tradeType = PokeTradeType.Specific, bool ignoreAutoOT = false, bool setEdited = false)

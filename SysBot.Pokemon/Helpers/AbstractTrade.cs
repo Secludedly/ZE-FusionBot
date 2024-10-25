@@ -620,5 +620,53 @@ namespace SysBot.Pokemon.Helpers
             int rangeDays = End.DayNumber - Start.DayNumber + 1;
             pk.MetDate = Start.AddDays(Random.Shared.Next(rangeDays));
         }
+        private static readonly Dictionary<string, int> BallIdMapping = new Dictionary<string, int>
+        {
+            {"Beast", 26},
+            {"Cherish", 16},
+            {"Dive", 7},
+            {"Dream", 25},
+            {"Dusk", 13},
+            {"Fast", 17},
+            {"Friend", 22},
+            {"Great", 3},
+            {"Heal", 14},
+            {"Heavy", 20},
+            {"Level", 18},
+            {"Love", 21},
+            {"Lure", 19},
+            {"Luxury", 11},
+            {"Master", 1},
+            {"Moon", 23},
+            {"Nest", 8},
+            {"Net", 6},
+            {"Poke", 4},
+            {"Premier", 12},
+            {"Quick", 15},
+            {"Repeat", 9},
+            {"Safari", 5},
+            {"Sport", 24},
+            {"Timer", 10},
+            {"Ultra", 2}
+        };
+        public static string ConvertBalls(string content)
+        {
+            var lines = content.Split('\n');
+            for (int i = 0; i < lines.Length; i++)
+            {
+                if (lines[i].StartsWith("Ball:"))
+                {
+                    foreach (var ballMapping in BallIdMapping)
+                    {
+                        if (lines[i].Contains(ballMapping.Key))
+                        {
+                            lines[i] = $".Ball={ballMapping.Value}";
+                            break;
+                        }
+                    }
+                }
+            }
+            return string.Join('\n', lines);
+        }
     }
 }
