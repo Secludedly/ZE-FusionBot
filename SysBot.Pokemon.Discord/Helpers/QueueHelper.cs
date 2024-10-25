@@ -141,23 +141,41 @@ public static class QueueHelper<T> where T : PKM, new()
             {
                 DetailsExtractor<T>.AddSpecialTradeFields(embedBuilder, isMysteryEgg, type == PokeRoutineType.SeedCheck, type == PokeRoutineType.Clone, type == PokeRoutineType.FixOT, trader.Mention);
             }
+
+            // If Auto-Corrected
             if (setEdited && Info.Hub.Config.Trade.AutoCorrectConfig.AutoCorrectEmbedIndicator)
             {
                 embedBuilder.Footer.IconUrl = "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/setedited.png";
                 embedBuilder.AddField("**__Notice__:** Your request was illegal.", "*Auto-Corrected to closest legal match.*");
             }
-            // Embed message handling: show "Non-Native" warning if Pokémon is non-native AND doesn't have a HOME tracker
-            if (isNonNative && pk is not IHomeTrack { HasTracker: true })
-            {
-                embedBuilder.Footer.IconUrl = "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/exclamation.gif";
-                embedBuilder.AddField("**__Notice__:** This Pokemon is Non-Native.", "*Cannot enter HOME & AutoOT not applied.*");
-            }
 
-            // If the Pokémon has a HOME tracker, show the HOME Tracker detected message
-            if (pk is IHomeTrack { HasTracker: true })
+            // Check if the Pokemon is Non-Native and/or has a Home Tracker
+            if (pk is IHomeTrack homeTrack)
             {
-                embedBuilder.Footer.IconUrl = "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/exclamation.gif";
-                embedBuilder.AddField("**__Notice__:** HOME Tracker Detected.", "*Cannot apply trade partner information (AutoOT)*");
+                if (homeTrack.HasTracker && isNonNative)
+                {
+                    // Both Non-Native and has Home Tracker
+                    embedBuilder.Footer.IconUrl = "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/setedited.png";
+                    embedBuilder.AddField("**__Notice__**: **This Pokemon is Non-Native & Has HOME Tracker.**", "*Cannot enter HOME & AutoOT not applied.*");
+                }
+                else if (homeTrack.HasTracker)
+                {
+                    // Only has Home Tracker
+                    embedBuilder.Footer.IconUrl = "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/setedited.png";
+                    embedBuilder.AddField("**__Notice__**: **Home Tracker Detected.**", "*AutoOT not applied.*");
+                }
+                else if (isNonNative)
+                {
+                    // Only Non-Native
+                    embedBuilder.Footer.IconUrl = "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/setedited.png";
+                    embedBuilder.AddField("**__Notice__**: **This Pokémon is Non-Native.**", "*Cannot enter HOME & AutoOT not applied.*");
+                }
+            }
+            else if (isNonNative)
+            {
+                // Fallback for Non-Native Pokemon that don't implement IHomeTrack
+                embedBuilder.Footer.IconUrl = "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/setedited.png";
+                embedBuilder.AddField("**__Notice__**: **This Pokémon is Non-Native.**", "*Cannot enter HOME & AutoOT not applied.*");
             }
 
 
