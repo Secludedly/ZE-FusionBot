@@ -499,19 +499,24 @@ public static class AutoCorrectShowdown<T> where T : PKM, new()
     private static void VerifyShiny(PKM pk, LegalityAnalysis la, string[] lines, List<string> correctionMessages, string speciesName)
     {
         var enc = la.EncounterMatch;
-        if (!enc.Shiny.IsValid(pk))
+        bool canBeShiny = enc.Shiny.IsValid(pk);  // Check if shiny status is legal for this Pokémon
+
+        // Update shiny line based on legality analysis result
+        for (int i = 0; i < lines.Length; i++)
         {
-            correctionMessages.Add($"{speciesName} cannot be shiny. Setting to **Shiny: No**.");
-            for (int i = 0; i < lines.Length; i++)
+            if (lines[i].StartsWith("Shiny:", StringComparison.OrdinalIgnoreCase))
             {
-                if (lines[i].Contains("Shiny: Yes", StringComparison.OrdinalIgnoreCase))
-                {
-                    lines[i] = "Shiny: No";
-                    break;
-                }
+                lines[i] = canBeShiny ? "Shiny: Yes" : "Shiny: No";
+                break;
             }
         }
+
+        if (!canBeShiny && lines.Any(line => line.Contains("Shiny: Yes", StringComparison.OrdinalIgnoreCase)))
+        {
+            correctionMessages.Add($"{speciesName} cannot be shiny. Setting to **Shiny: No**.");
+        }
     }
+
 
     private static async Task ValidateMovesAsync(string[] lines, PKM pk, LegalityAnalysis la, GameStrings gameStrings, string speciesName, string formName, List<string> correctionMessages)
     {
