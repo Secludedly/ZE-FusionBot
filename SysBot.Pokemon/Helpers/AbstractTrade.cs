@@ -647,7 +647,19 @@ namespace SysBot.Pokemon.Helpers
             {"Safari", 5},
             {"Sport", 24},
             {"Timer", 10},
-            {"Ultra", 2}
+            {"Ultra", 2},
+            // LA Specific Balls
+            {"LAPoke", 28},
+            {"Strange", 27},
+            {"LAGreat", 29},
+            {"LAUltra", 30},
+            {"Feather", 31},
+            {"Wing", 32},
+            {"Jet", 33},
+            {"LAHeavy", 34},
+            {"Leaden", 35},
+            {"Gigaton", 36},
+            {"Origin", 37}
         };
         public static string ConvertBalls(string content)
         {

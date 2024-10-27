@@ -927,10 +927,13 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         }
 
         var batchTradeCode = Info.GetRandomTradeCode(userID);
-        int batchTradeNumber = 1;
 
-        foreach (var entry in entries)
+        for (int i = 0; i < entries.Count; i++)
         {
+            var entry = entries[i];
+            int batchTradeNumber = i + 1;
+
+            // Extract and process the Pokémon from each entry in the zip file
             await using var entryStream = entry.Open();
             var pkBytes = await TradeModule<T>.ReadAllBytesAsync(entryStream).ConfigureAwait(false);
             var pk = EntityFormat.GetFromBytes(pkBytes);
@@ -938,14 +941,25 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             if (pk is T)
             {
                 await ProcessSingleTradeAsync((T)pk, batchTradeCode, true, batchTradeNumber, entries.Count);
-                batchTradeNumber++;
+
+                // Log to confirm trade order, then delay
+                Console.WriteLine($"Completed batch trade #{batchTradeNumber}: {entry.FullName}");
+
+                // Add a delay of 3/4 of a second before processing the next batch trade number
+                if (i < entries.Count - 1)
+                {
+                    await Task.Delay(750); // 750 milliseconds = 0.75 seconds (Delay to process order)
+                }
             }
         }
+
+        // Final cleanup
         if (Context.Message is IUserMessage userMessage)
         {
             _ = DeleteMessagesAfterDelayAsync(userMessage, null, 2);
         }
     }
+
 
     private static async Task<byte[]> ReadAllBytesAsync(Stream stream)
     {

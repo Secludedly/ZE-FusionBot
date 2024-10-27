@@ -156,7 +156,7 @@ public static class QueueHelper<T> where T : PKM, new()
                 {
                     // Both Non-Native and has Home Tracker
                     embedBuilder.Footer.IconUrl = "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/setedited.png";
-                    embedBuilder.AddField("**__Notice__**: **This Pokemon is Non-Native & Has HOME Tracker.**", "*Cannot enter HOME & AutoOT not applied.*");
+                    embedBuilder.AddField("**__Notice__**: **This Pokemon is Non-Native & Has HOME Tracker.**", "*AutoOT not applied.*");
                 }
                 else if (homeTrack.HasTracker)
                 {
