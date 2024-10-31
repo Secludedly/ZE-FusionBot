@@ -101,13 +101,46 @@ public class DiscordTradeNotifier<T> : IPokeTradeNotifier<T>
     {
         OnFinish?.Invoke(routine);
         var tradedToUser = Data.Species;
-        var message = tradedToUser != 0 ? (info.IsMysteryEgg ? "Enjoy your **Mystery Egg**!" : $"Enjoy your **{(Species)tradedToUser}**!") : "Trade finished!";
-        EmbedHelper.SendTradeFinishedEmbedAsync(Trader, message, Data, info.IsMysteryEgg).ConfigureAwait(false);
 
-        if (result.Species != 0 && Hub.Config.Discord.ReturnPKMs)
-            Trader.SendPKMAsync(result, "Here's what you traded me!").ConfigureAwait(false);
+        if (info.TotalBatchTrades > 1)
+        {
+            bool embedSent = false;
+
+            if (!embedSent && info.BatchTradeNumber == 1)
+            {
+                // Send the embed only on the first trade of the batch
+                var message = tradedToUser != 0 ?
+                    (info.IsMysteryEgg ? "Enjoy your **Mystery Eggs**!" : $"Enjoy your **{(Species)tradedToUser}** and other Pokémon!") :
+                    "Batch trades started!";
+                EmbedHelper.SendTradeFinishedEmbedAsync(Trader, message, Data, info.IsMysteryEgg).ConfigureAwait(false);
+
+                embedSent = true;
+            }
+
+            // Send each individual PKM file with custom message for each trade
+            if (Hub.Config.Discord.ReturnPKMs && result.Species != 0)
+            {
+                string tradedSpeciesName = Enum.GetName(typeof(Species), result.Species); // Get name of traded species
+
+                Trader.SendPKMAsync(result, $"Here's the {tradedSpeciesName} you traded me for your {(Species)tradedToUser} request!").ConfigureAwait(false);
+            }
+        }
+        else
+        {
+            // Logic for single trade as before
+            var message = tradedToUser != 0 ?
+                (info.IsMysteryEgg ? "Enjoy your **Mystery Egg**!" : $"Enjoy your **{(Species)tradedToUser}**!") :
+                "Trade finished!";
+            EmbedHelper.SendTradeFinishedEmbedAsync(Trader, message, Data, info.IsMysteryEgg).ConfigureAwait(false);
+
+            if (result.Species != 0 && Hub.Config.Discord.ReturnPKMs)
+            {
+                string tradedSpeciesName = Enum.GetName(typeof(Species), result.Species);
+
+                Trader.SendPKMAsync(result, $"Here's the {tradedSpeciesName} you traded me!").ConfigureAwait(false);
+            }
+        }
     }
-
     public void SendNotification(PokeRoutineExecutor<T> routine, PokeTradeDetail<T> info, string message)
     {
         EmbedHelper.SendNotificationEmbedAsync(Trader, message).ConfigureAwait(false);
