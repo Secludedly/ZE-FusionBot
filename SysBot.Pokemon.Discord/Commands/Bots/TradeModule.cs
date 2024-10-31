@@ -843,22 +843,23 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
 
         var batchTradeCode = Info.GetRandomTradeCode(userID);
 
-        // Execute the trades in order of request, with delay
+        // Execute the trades in strict order of request, with enforced sequential delays
         for (int i = 0; i < trades.Count; i++)
         {
             var trade = trades[i];
             int batchTradeNumber = i + 1;
 
-            // Execute
-            await ProcessSingleTradeAsync(trade, batchTradeCode, true, batchTradeNumber, trades.Count);
+            // Sequential execution of each trade, ensuring the next trade does not start until the previous one completes
+            await ProcessSingleTradeAsync(trade, batchTradeCode, true, batchTradeNumber, trades.Count)
+                .ConfigureAwait(false); // Ensures trade order by awaiting in sequence
 
-            // Log to confirm trade order and pause
+            // Log to confirm trade order and add delay to control pacing
             Console.WriteLine($"Completed batch trade #{batchTradeNumber}: {trade}");
 
             // Add a delay of 3/4 of a second before processing the next batch trade number
             if (i < trades.Count - 1)
             {
-                await Task.Delay(750); // 750 milliseconds = 0.75 seconds (Delay to process order)
+                await Task.Delay(750).ConfigureAwait(false); // 750 milliseconds = 0.75 seconds
             }
         }
 
@@ -868,6 +869,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             _ = DeleteMessagesAfterDelayAsync(userMessage, null, 2);
         }
     }
+
 
 
     private static List<string> ParseBatchTradeContent(string content)
@@ -884,7 +886,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
     [RequireQueueRole(nameof(DiscordManager.RolesTrade))]
     public async Task BatchTradeZipAsync()
     {
-        // First, check if batch trades are allowed
+        // Check if batch trades are allowed
         if (!SysCord<T>.Runner.Config.Trade.TradeConfiguration.AllowBatchTrades)
         {
             _ = ReplyAndDeleteAsync("Batch trades are currently disabled.", 2);
@@ -917,10 +919,10 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         using var archive = new ZipArchive(zipStream, ZipArchiveMode.Read);
         var entries = archive.Entries.ToList();
 
-        const int maxTradesAllowed = 6; // for full team in the zip created
+        const int maxTradesAllowed = 6;
 
-        // Check if batch mode is allowed and if the number of trades exceeds the limit
-        if (maxTradesAllowed < 1 || entries.Count > maxTradesAllowed)
+        // Check trade limit
+        if (entries.Count > maxTradesAllowed)
         {
             _ = ReplyAndDeleteAsync($"You can only process up to {maxTradesAllowed} trades at a time. Please reduce the number of Pokémon in your .zip file.", 5, Context.Message);
             return;
@@ -928,27 +930,30 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
 
         var batchTradeCode = Info.GetRandomTradeCode(userID);
 
+        // Sequentially process each Pokémon entry in the .zip file
         for (int i = 0; i < entries.Count; i++)
         {
             var entry = entries[i];
             int batchTradeNumber = i + 1;
 
-            // Extract and process the Pokémon from each entry in the zip file
+            // Extract and process each Pokémon in strict order
             await using var entryStream = entry.Open();
             var pkBytes = await TradeModule<T>.ReadAllBytesAsync(entryStream).ConfigureAwait(false);
             var pk = EntityFormat.GetFromBytes(pkBytes);
 
             if (pk is T)
             {
-                await ProcessSingleTradeAsync((T)pk, batchTradeCode, true, batchTradeNumber, entries.Count);
+                // Execute the trade and ensure sequential order
+                await ProcessSingleTradeAsync((T)pk, batchTradeCode, true, batchTradeNumber, entries.Count)
+                    .ConfigureAwait(false);
 
-                // Log to confirm trade order, then delay
+                // Log trade completion and apply delay for sequential processing
                 Console.WriteLine($"Completed batch trade #{batchTradeNumber}: {entry.FullName}");
 
-                // Add a delay of 3/4 of a second before processing the next batch trade number
+                // Delay for order control
                 if (i < entries.Count - 1)
                 {
-                    await Task.Delay(750); // 750 milliseconds = 0.75 seconds (Delay to process order)
+                    await Task.Delay(750).ConfigureAwait(false);
                 }
             }
         }
@@ -959,6 +964,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             _ = DeleteMessagesAfterDelayAsync(userMessage, null, 2);
         }
     }
+
 
 
     private static async Task<byte[]> ReadAllBytesAsync(Stream stream)
