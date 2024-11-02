@@ -47,7 +47,7 @@ public static class EmbedHelper
     {
         var embed = new EmbedBuilder()
             .WithTitle($"Now Searching...")
-            .WithDescription($"**Waiting For**: {trainerName}\n**My IGN**: {inGameName}\n*Insert your Trade Code!*")
+            .WithDescription($"**Waiting For**: {trainerName}\n**My IGN**: {inGameName}\n\n**Insert your Trade Code!**")
             .WithTimestamp(DateTimeOffset.Now)
             .WithThumbnailUrl("https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/dm-nowsearching.gif")
             .WithColor(Color.DarkGreen);
