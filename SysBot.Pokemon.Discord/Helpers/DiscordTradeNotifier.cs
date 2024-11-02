@@ -105,7 +105,7 @@ public class DiscordTradeNotifier<T> : IPokeTradeNotifier<T>
 
         if (info.TotalBatchTrades > 1)
         {
-            // Send the embed only on the first trade of the batch
+            // Send an initial embed message for batch trades only on the first trade
             if (info.BatchTradeNumber == 1)
             {
                 var message = tradedToUser != 0 ?
@@ -115,22 +115,28 @@ public class DiscordTradeNotifier<T> : IPokeTradeNotifier<T>
                 EmbedHelper.SendTradeFinishedEmbedAsync(Trader, message, Data, info.IsMysteryEgg).ConfigureAwait(false);
             }
 
-            // send each Pokemon file as they come in
+            // Send each Pokemon file to the user as they are traded
             if (Hub.Config.Discord.ReturnPKMs && result.Species != 0)
+            {
                 Trader.SendPKMAsync(result, $"Here's the {tradedSpeciesName} you traded me!").ConfigureAwait(false);
+            }
         }
         else
         {
-            // Original single trade logic
+            // Original logic for single trades (non-batch trades)
             var message = tradedToUser != 0 ?
                 (info.IsMysteryEgg ? "Enjoy your **Mystery Egg**!" :
                  $"Enjoy your **{(Species)tradedToUser}**!") :
                 "Trade finished!";
             EmbedHelper.SendTradeFinishedEmbedAsync(Trader, message, Data, info.IsMysteryEgg).ConfigureAwait(false);
+
             if (result.Species != 0 && Hub.Config.Discord.ReturnPKMs)
-                Trader.SendPKMAsync(result, $"Here's the {tradedSpeciesName} you traded me!").ConfigureAwait(false);
+            {
+                Trader.SendPKMAsync(result, $"Here's the **{tradedSpeciesName}** you traded me!").ConfigureAwait(false);
+            }
         }
     }
+
     public void SendNotification(PokeRoutineExecutor<T> routine, PokeTradeDetail<T> info, string message)
     {
         EmbedHelper.SendNotificationEmbedAsync(Trader, message).ConfigureAwait(false);
