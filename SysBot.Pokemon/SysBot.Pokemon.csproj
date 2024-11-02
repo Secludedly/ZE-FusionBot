@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <Folder Include="deps\" />
+    <Folder Include="Helpers\ShowdownHelpers\" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="PKHeX.Core.AutoMod">
