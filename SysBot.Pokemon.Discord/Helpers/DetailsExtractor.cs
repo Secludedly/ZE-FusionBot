@@ -221,6 +221,28 @@ public class DetailsExtractor<T> where T : PKM, new()
                $"{username}'s {isPkmShiny}{pokemonDisplayName}";
     }
 
+    private static int CalculateMedals(int tradeCount)
+    {
+        int medals = 0;
+        if (tradeCount >= 1) medals++;
+        if (tradeCount >= 50) medals++;
+        if (tradeCount >= 100) medals++;
+        if (tradeCount >= 150) medals++;
+        if (tradeCount >= 200) medals++;
+        if (tradeCount >= 250) medals++;
+        if (tradeCount >= 300) medals++;
+        if (tradeCount >= 350) medals++;
+        if (tradeCount >= 400) medals++;
+        if (tradeCount >= 450) medals++;
+        if (tradeCount >= 500) medals++;
+        if (tradeCount >= 550) medals++;
+        if (tradeCount >= 600) medals++;
+        if (tradeCount >= 650) medals++;
+        if (tradeCount >= 700) medals++;
+        // Add more milestones if necessary
+        return medals;
+    }
+
     public static string GetUserDetails(int totalTradeCount, TradeCodeStorage.TradeCodeDetails? tradeDetails, string etaMessage, (int Position, int TotalBatchTrades) position)
     {
         // Initialize userDetailsText only if totalTradeCount > 0 and other conditions are met
@@ -240,8 +262,10 @@ public class DetailsExtractor<T> where T : PKM, new()
                 userDetailsText += $"Current Queue Position: {(position.Position == -1 ? 1 : position.Position)}\n";
             }
 
+            // Add Total Medals
+            int totalMedals = CalculateMedals(totalTradeCount);
             // Add Total User Trades
-            userDetailsText += $"Total User Trades: {totalTradeCount}\n";
+            userDetailsText += $"Total User Trades: {totalTradeCount} | Medals: {totalMedals}\n";
 
             List<string> details = new List<string>();
 

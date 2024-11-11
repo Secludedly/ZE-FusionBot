@@ -19,10 +19,18 @@ namespace SysBot.Pokemon
             { 1, "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/001.png" },
             { 50, "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/050.png" },
             { 100, "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/100.png" },
+            { 150, "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/150.png" },
             { 200, "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/200.png" },
+            { 250, "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/250.png" },
             { 300, "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/300.png" },
+            { 350, "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/350.png" },
             { 400, "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/400.png" },
-            { 500, "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/500.png" }
+            { 450, "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/450.png" },
+            { 500, "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/500.png" },
+            { 550, "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/550.png" },
+            { 600, "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/600.png" },
+            { 650, "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/650.png" },
+            { 700, "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/700.png" },
             // Add more milestone images...
         };
 
@@ -100,15 +108,24 @@ namespace SysBot.Pokemon
 
         private async void SendMilestoneEmbed(int tradeCount, ISocketMessageChannel channel, SocketUser user)
         {
-            var embed = new EmbedBuilder()
+            var embedBuilder = new EmbedBuilder()
                 .WithTitle($"🎉 Congratulations, {user.Username}! 🎉")
-                .WithDescription($"You’ve completed {tradeCount} trades!\n*Keep up the great work!*")
                 .WithColor(Color.Gold)
-                .WithImageUrl(_milestoneImages[tradeCount]) // Individual URLs are at the top
-                .Build();
+                .WithImageUrl(_milestoneImages[tradeCount]);
 
+            if (tradeCount == 1)
+            {
+                embedBuilder.WithDescription("Congratulations on your very first trade!\nCollect medals by trading with the bot!\nEvery 50 trades is a new medal!\nHow many can you collect?");
+            }
+            else
+            {
+                embedBuilder.WithDescription($"You’ve completed {tradeCount} trades!\n*Keep up the great work!*");
+            }
+
+            var embed = embedBuilder.Build();
             await channel.SendMessageAsync(embed: embed);
         }
+
 
         private void LoadFromFile()
         {

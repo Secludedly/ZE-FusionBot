@@ -33,6 +33,7 @@ public sealed class SysCord<T> where T : PKM, new()
     private readonly DiscordSocketClient _client;
     private readonly CommandService _commands;
 
+
     private readonly IServiceProvider _services;
 
     private readonly HashSet<string> _validCommands = new HashSet<string>
