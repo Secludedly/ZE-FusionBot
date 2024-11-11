@@ -144,7 +144,7 @@ namespace SysBot.Pokemon.Discord
                     return;
                 }
 
-                var code = Info.GetRandomTradeCode(userID);
+                var code = Info.GetRandomTradeCode(userID, Context.Channel, Context.User);
                 var lgcode = Info.GetRandomLGTradeCode();
                 var sig = Context.User.GetFavor();
 

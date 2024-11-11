@@ -1,3 +1,4 @@
+using Discord.WebSocket;
 using PKHeX.Core;
 using SysBot.Base;
 using System;
@@ -217,11 +218,11 @@ public sealed record TradeQueueInfo<T>(PokeTradeHub<T> Hub)
         }
     }
 
-    public int GetRandomTradeCode(ulong trainerID)
+    public int GetRandomTradeCode(ulong trainerID, ISocketMessageChannel channel, SocketUser user)
     {
         if (Hub.Config.Trade.TradeConfiguration.StoreTradeCodes)
         {
-            return _tradeCodeStorage.GetTradeCode(trainerID);
+            return _tradeCodeStorage.GetTradeCode(trainerID, channel, user);
         }
         else
         {
@@ -245,5 +246,10 @@ public sealed record TradeQueueInfo<T>(PokeTradeHub<T> Hub)
     {
         lock (_sync)
             return UsersInQueue.Count(func);
+    }
+
+    public int GetRandomTradeCode(int v)
+    {
+        throw new NotImplementedException();
     }
 }

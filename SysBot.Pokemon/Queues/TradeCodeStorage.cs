@@ -4,6 +4,9 @@ using System.Collections.Generic;
 using System.IO;
 using Newtonsoft.Json;
 using PKHeX.Core;
+using Discord;
+using System.Threading.Channels;
+using Discord.WebSocket;
 
 namespace SysBot.Pokemon
 {
@@ -11,6 +14,17 @@ namespace SysBot.Pokemon
     {
         private const string FileName = "tradecodes.json";
         private Dictionary<ulong, TradeCodeDetails> _tradeCodeDetails;
+        private readonly Dictionary<int, string> _milestoneImages = new()
+        {
+            { 1, "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/001.png" },
+            { 50, "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/050.png" },
+            { 100, "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/100.png" },
+            { 200, "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/200.png" },
+            { 300, "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/300.png" },
+            { 400, "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/400.png" },
+            { 500, "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/500.png" }
+            // Add more milestone images...
+        };
 
         public TradeCodeStorage()
         {
@@ -47,7 +61,7 @@ namespace SysBot.Pokemon
             return true;
         }
 
-        public int GetTradeCode(ulong trainerID)
+        public int GetTradeCode(ulong trainerID, ISocketMessageChannel channel, SocketUser user)
         {
             LoadFromFile();
 
@@ -55,12 +69,18 @@ namespace SysBot.Pokemon
             {
                 details.TradeCount++;
                 SaveToFile();
+
+                // Check if the new trade count is a milestone
+                CheckTradeMilestone(details.TradeCount, channel, user);
                 return details.Code;
             }
 
             var code = GenerateRandomTradeCode();
             _tradeCodeDetails[trainerID] = new TradeCodeDetails { Code = code, TradeCount = 1 };
             SaveToFile();
+
+            // Check if the new user hits the first milestone
+            CheckTradeMilestone(1, channel, user);
             return code;
         }
 
@@ -68,6 +88,26 @@ namespace SysBot.Pokemon
         {
             var settings = new TradeSettings();
             return settings.GetRandomTradeCode();
+        }
+
+        private void CheckTradeMilestone(int tradeCount, ISocketMessageChannel channel, SocketUser user)
+        {
+            if (_milestoneImages.ContainsKey(tradeCount))
+            {
+                SendMilestoneEmbed(tradeCount, channel, user);
+            }
+        }
+
+        private async void SendMilestoneEmbed(int tradeCount, ISocketMessageChannel channel, SocketUser user)
+        {
+            var embed = new EmbedBuilder()
+                .WithTitle($"🎉 Congratulations, {user.Username}! 🎉")
+                .WithDescription($"You’ve completed {tradeCount} trades!\n*Keep up the great work!*")
+                .WithColor(Color.Gold)
+                .WithImageUrl(_milestoneImages[tradeCount]) // Individual URLs are at the top
+                .Build();
+
+            await channel.SendMessageAsync(embed: embed);
         }
 
         private void LoadFromFile()
@@ -89,7 +129,7 @@ namespace SysBot.Pokemon
             try
             {
                 string json = JsonConvert.SerializeObject(_tradeCodeDetails, Formatting.Indented);
-            File.WriteAllText(FileName, json);
+                File.WriteAllText(FileName, json);
             }
             catch (IOException ex)
             {

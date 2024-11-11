@@ -43,7 +43,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             return;
         }
 
-        var code = Info.GetRandomTradeCode(userID);
+        var code = Info.GetRandomTradeCode(userID, Context.Channel, Context.User);
         var trainerName = Context.User.Username;
         var lgcode = Info.GetRandomLGTradeCode();
         var sig = Context.User.GetFavor();
@@ -146,7 +146,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             return;
         }
 
-        var code = Info.GetRandomTradeCode(userID);
+        var code = Info.GetRandomTradeCode(userID, Context.Channel, Context.User);
         await DittoTrade(code, keyword, language, nature).ConfigureAwait(false);
         if (Context.Message is IUserMessage userMessage)
         {
@@ -228,7 +228,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             await ReplyAsync("You already have an existing trade in the queue. Please wait until it is processed.").ConfigureAwait(false);
             return;
         }
-        var code = Info.GetRandomTradeCode(userID);
+        var code = Info.GetRandomTradeCode(userID, Context.Channel, Context.User);
         await ItemTrade(code, item).ConfigureAwait(false);
     }
 
@@ -301,7 +301,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
     public async Task TradeEgg([Remainder] string egg)
     {
         var userID = Context.User.Id;
-        var code = Info.GetRandomTradeCode(userID);
+        var code = Info.GetRandomTradeCode(userID, Context.Channel, Context.User);
         await TradeEggAsync(code, egg).ConfigureAwait(false);
     }
 
@@ -367,7 +367,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
     public Task HideTradeAsync([Summary("Showdown Set")][Remainder] string content)
     {
         var userID = Context.User.Id;
-        var code = Info.GetRandomTradeCode(userID);
+        var code = Info.GetRandomTradeCode(userID, Context.Channel, Context.User);
         return HideTradeAsync(code, content);
     }
 
@@ -574,7 +574,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
     private async Task HideTradeAsyncAttach([Summary("Ignore AutoOT")] bool ignoreAutoOT = false)
     {
         var userID = Context.User.Id;
-        var code = Info.GetRandomTradeCode(userID);
+        var code = Info.GetRandomTradeCode(userID, Context.Channel, Context.User);
         var sig = Context.User.GetFavor();
         await HideTradeAsyncAttach(code, sig, Context.User, ignoreAutoOT: ignoreAutoOT).ConfigureAwait(false);
         if (Context.Message is IUserMessage userMessage)
@@ -590,7 +590,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
     public Task TradeAsync([Summary("Showdown Set")][Remainder] string content)
     {
         var userID = Context.User.Id;
-        var code = Info.GetRandomTradeCode(userID);
+        var code = Info.GetRandomTradeCode(userID, Context.Channel, Context.User);
         return TradeAsync(code, content);
     }
 
@@ -796,7 +796,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
     public async Task TradeAsyncAttach([Summary("Ignore AutoOT")] bool ignoreAutoOT = false)
     {
         var userID = Context.User.Id;
-        var code = Info.GetRandomTradeCode(userID);
+        var code = Info.GetRandomTradeCode(userID, Context.Channel, Context.User);
         var sig = Context.User.GetFavor();
         await Task.Run(async () =>
         {
@@ -841,7 +841,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             return;
         }
 
-        var batchTradeCode = Info.GetRandomTradeCode(userID);
+        var batchTradeCode = Info.GetRandomTradeCode(userID, Context.Channel, Context.User);
 
         // Execute the trades in strict order of request, with enforced sequential delays
         for (int i = 0; i < trades.Count; i++)
@@ -928,7 +928,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             return;
         }
 
-        var batchTradeCode = Info.GetRandomTradeCode(userID);
+        var batchTradeCode = Info.GetRandomTradeCode(userID, Context.Channel, Context.User);
 
         // Sequentially process each Pokémon entry in the .zip file
         for (int i = 0; i < entries.Count; i++)
@@ -993,7 +993,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
                 pk.ResetPartyStats();
 
                 var userID = Context.User.Id;
-                var code = Info.GetRandomTradeCode(userID);
+                var code = Info.GetRandomTradeCode(userID, Context.Channel, Context.User);
                 var lgcode = Info.GetRandomLGTradeCode();
 
                 // Ad Name Check
@@ -1154,7 +1154,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
                 pkm.ResetPartyStats();
 
                 var userID = Context.User.Id;
-                var code = Info.GetRandomTradeCode(userID);
+                var code = Info.GetRandomTradeCode(userID, Context.Channel, Context.User);
                 var lgcode = Info.GetRandomLGTradeCode();
                 if (pkm is PB7)
                 {
@@ -1332,7 +1332,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
                 return;
             }
 
-            var code = Info.GetRandomTradeCode(userID);
+            var code = Info.GetRandomTradeCode(userID, Context.Channel, Context.User);
             var lgcode = Info.GetRandomLGTradeCode();
             var sig = Context.User.GetFavor();
 
@@ -1500,7 +1500,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
                 return;
             }
 
-            var code = Info.GetRandomTradeCode(userID);
+            var code = Info.GetRandomTradeCode(userID, Context.Channel, Context.User);
             var lgcode = Info.GetRandomLGTradeCode();
             var sig = Context.User.GetFavor();
 
@@ -1553,7 +1553,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
     public Task TradeAsyncAttachUser([Remainder] string _)
     {
         var userID = Context.User.Id;
-        var code = Info.GetRandomTradeCode(userID);
+        var code = Info.GetRandomTradeCode(userID, Context.Channel, Context.User);
         return TradeAsyncAttachUser(code, _);
     }
 
@@ -1853,7 +1853,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
                 return;
             }
 
-            var code = Info.GetRandomTradeCode(userID);
+            var code = Info.GetRandomTradeCode(userID, Context.Channel, Context.User);
             var lgcode = Info.GetRandomLGTradeCode();
             var sig = Context.User.GetFavor();
             var tradeMessage = await Context.Channel.SendMessageAsync($"HOME-Ready request added to queue.");
