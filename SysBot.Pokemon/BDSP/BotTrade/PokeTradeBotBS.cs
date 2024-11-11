@@ -342,26 +342,6 @@ public class PokeTradeBotBS : PokeRoutineExecutor8BS, ICountBot, ITradeBot, IDis
         Log($"Cleaned up batch trades for TrainerID: {detail.Trainer.ID}, UniqueTradeID: {detail.UniqueTradeID}");
     }
 
-    private async Task HandleAbortedBatchTrade(PokeTradeDetail<PB8> detail, PokeRoutineType type, uint priority, PokeTradeResult result, CancellationToken token)
-    {
-        if (detail.TotalBatchTrades > 1)
-        {
-            // Send notification once before cleanup
-            detail.SendNotification(this, $"**Trade {detail.BatchTradeNumber}/{detail.TotalBatchTrades} Failed!**\n**Result**: Canceling remaining batch trades.");
-
-            CleanupAllBatchTradesFromQueue(detail);
-
-            // Mark this specific trade as canceled
-            detail.TradeCanceled(this, result);
-
-            await EnsureOutsideOfUnionRoom(token).ConfigureAwait(false);
-        }
-        else
-        {
-            HandleAbortedTrade(detail, type, priority, result);
-        }
-    }
-
     private async Task DoTrades(SAV8BS sav, CancellationToken token)
     {
         var type = Config.CurrentRoutineType;
@@ -1205,7 +1185,6 @@ public class PokeTradeBotBS : PokeRoutineExecutor8BS, ICountBot, ITradeBot, IDis
 
                 // Finally do cleanup
                 Hub.Queues.CompleteTrade(this, poke);
-                CleanupAllBatchTradesFromQueue(poke);
                 _batchTracker.ClearReceivedPokemon(poke.Trainer.ID);
                 break;
             }
@@ -1249,18 +1228,11 @@ public class PokeTradeBotBS : PokeRoutineExecutor8BS, ICountBot, ITradeBot, IDis
             else
                 result = await PerformLinkCodeTrade(sav, detail, token).ConfigureAwait(false);
 
-            if (result == PokeTradeResult.Success)
-            {
-                PB8? receivedPokemon = await ReadPokemon(BoxStartOffset, BoxFormatSlotSize, token).ConfigureAwait(false);
-                return;
-            }
-
-            // Handle failed trades
-            if (detail.TotalBatchTrades > 1)
+            if (detail.Type == PokeTradeType.Batch)
             {
                 await HandleAbortedBatchTrade(detail, type, priority, result, token).ConfigureAwait(false);
             }
-            else
+            else if (result != PokeTradeResult.Success)
             {
                 HandleAbortedTrade(detail, type, priority, result);
             }
@@ -1269,14 +1241,53 @@ public class PokeTradeBotBS : PokeRoutineExecutor8BS, ICountBot, ITradeBot, IDis
         {
             Log(socket.Message);
             result = PokeTradeResult.ExceptionConnection;
-            await HandleAbortedBatchTrade(detail, type, priority, result, token).ConfigureAwait(false);
+            if (detail.Type == PokeTradeType.Batch)
+                await HandleAbortedBatchTrade(detail, type, priority, result, token).ConfigureAwait(false);
+            else
+                HandleAbortedTrade(detail, type, priority, result);
             throw;
         }
         catch (Exception e)
         {
             Log(e.Message);
             result = PokeTradeResult.ExceptionInternal;
-            await HandleAbortedBatchTrade(detail, type, priority, result, token).ConfigureAwait(false);
+            if (detail.Type == PokeTradeType.Batch)
+                await HandleAbortedBatchTrade(detail, type, priority, result, token).ConfigureAwait(false);
+            else
+                HandleAbortedTrade(detail, type, priority, result);
+        }
+    }
+
+    private async Task HandleAbortedBatchTrade(PokeTradeDetail<PB8> detail, PokeRoutineType type, uint priority, PokeTradeResult result, CancellationToken token)
+    {
+        detail.IsProcessing = false;
+
+        if (detail.TotalBatchTrades > 1)
+        {
+            if (result != PokeTradeResult.Success)
+            {
+                if (result.ShouldAttemptRetry() && detail.Type != PokeTradeType.Random && !detail.IsRetry)
+                {
+                    detail.IsRetry = true;
+                    Hub.Queues.Enqueue(type, detail, Math.Min(priority, PokeTradePriorities.Tier2));
+                    detail.SendNotification(this, $"**ERROR**: Unknown issue during batch trade {detail.BatchTradeNumber}/{detail.TotalBatchTrades}.\n**RESULT**: Requeuing...");
+                }
+                else
+                {
+                    detail.SendNotification(this, $"**ERROR**: Batch Trade {detail.BatchTradeNumber}/{detail.TotalBatchTrades} failed.\n*Canceling remaining batch trades...*\n**RESULT:** {result}");
+                    CleanupAllBatchTradesFromQueue(detail);
+                    detail.TradeCanceled(this, result);
+                    await EnsureOutsideOfUnionRoom(token).ConfigureAwait(false);
+                }
+            }
+            else
+            {
+                CleanupAllBatchTradesFromQueue(detail);
+            }
+        }
+        else
+        {
+            HandleAbortedTrade(detail, type, priority, result);
         }
     }
 
