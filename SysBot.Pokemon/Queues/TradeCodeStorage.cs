@@ -115,7 +115,7 @@ namespace SysBot.Pokemon
 
             if (tradeCount == 1)
             {
-                embedBuilder.WithDescription("Congratulations on your very first trade!\nCollect medals by trading with the bot!\nEvery 50 trades is a new medal!\nHow many can you collect?");
+                embedBuilder.WithDescription("Congratulations on your very first trade!\nCollect medals by trading with the bot!\nEvery 50 trades is a new medal!\nHow many can you collect?\nSee your current medals with **.medals**");
             }
             else
             {
@@ -197,6 +197,27 @@ namespace SysBot.Pokemon
                 details.SID = sid;
                 SaveToFile();
             }
+        }
+
+        public List<string> GetEarnedMedals(ulong trainerID)
+        {
+            LoadFromFile();
+
+            // Check if user exists and retrieve their trade details
+            if (_tradeCodeDetails.TryGetValue(trainerID, out var details))
+            {
+                var earnedMedals = new List<string>();
+                foreach (var milestone in _milestoneImages.Keys)
+                {
+                    if (details.TradeCount >= milestone)
+                    {
+                        earnedMedals.Add(_milestoneImages[milestone]);
+                    }
+                }
+                return earnedMedals;
+            }
+
+            return new List<string>(); // Return empty if no medals are earned or user not found
         }
 
         public class TradeCodeDetails
