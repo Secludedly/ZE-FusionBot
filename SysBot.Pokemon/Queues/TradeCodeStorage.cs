@@ -2,10 +2,8 @@ using SysBot.Base;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Newtonsoft.Json;
-using PKHeX.Core;
+using System.Text.Json;
 using Discord;
-using System.Threading.Channels;
 using Discord.WebSocket;
 
 namespace SysBot.Pokemon
@@ -13,7 +11,15 @@ namespace SysBot.Pokemon
     public class TradeCodeStorage
     {
         private const string FileName = "tradecodes.json";
-        private Dictionary<ulong, TradeCodeDetails> _tradeCodeDetails;
+        private static readonly JsonSerializerOptions SerializerOptions = new()
+        {
+            PropertyNameCaseInsensitive = true,
+            WriteIndented = true
+        };
+
+        private Dictionary<ulong, TradeCodeDetails>? _tradeCodeDetails;
+
+        // Milestone image URLs
         private readonly Dictionary<int, string> _milestoneImages = new()
         {
             { 1, "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/001.png" },
@@ -34,62 +40,74 @@ namespace SysBot.Pokemon
             // Add more milestone images...
         };
 
-        public TradeCodeStorage()
+        public TradeCodeStorage() => LoadFromFile();
+
+        public bool DeleteTradeCode(ulong trainerID)
         {
             LoadFromFile();
-        }
-
-        public bool AddOrUpdateTradeCode(ulong userID, int tradeCode, string? ot, int tid, int sid, GameVersion gameVersion)
-        {
-            LoadFromFile();
-
-            if (_tradeCodeDetails.ContainsKey(userID))
+            if (_tradeCodeDetails!.Remove(trainerID))
             {
-                // Update existing entry
-                var details = _tradeCodeDetails[userID];
-                details.Code = tradeCode;
-                details.OT = ot ?? details.OT;
-                details.TID = tid;
-                details.SID = sid;
+                SaveToFile();
+                return true;
             }
-            else
-            {
-                // Add new entry
-                _tradeCodeDetails[userID] = new TradeCodeDetails
-                {
-                    Code = tradeCode,
-                    OT = ot,
-                    TID = tid,
-                    SID = sid,
-                    TradeCount = 0,
-                };
-            }
-
-            SaveToFile();
-            return true;
+            return false;
         }
 
         public int GetTradeCode(ulong trainerID, ISocketMessageChannel channel, SocketUser user)
         {
             LoadFromFile();
-
-            if (_tradeCodeDetails.TryGetValue(trainerID, out var details))
+            if (_tradeCodeDetails!.TryGetValue(trainerID, out var details))
             {
                 details.TradeCount++;
                 SaveToFile();
 
-                // Check if the new trade count is a milestone
+                // Check if trade count is a milestone and send embed
                 CheckTradeMilestone(details.TradeCount, channel, user);
                 return details.Code;
             }
-
             var code = GenerateRandomTradeCode();
-            _tradeCodeDetails[trainerID] = new TradeCodeDetails { Code = code, TradeCount = 1 };
+            _tradeCodeDetails![trainerID] = new TradeCodeDetails { Code = code, TradeCount = 1 };
             SaveToFile();
 
-            // Check if the new user hits the first milestone
+            // Check for first trade milestone
             CheckTradeMilestone(1, channel, user);
             return code;
+        }
+
+        public int GetTradeCount(ulong trainerID)
+        {
+            LoadFromFile();
+            return _tradeCodeDetails!.TryGetValue(trainerID, out var details) ? details.TradeCount : 0;
+        }
+
+        public TradeCodeDetails? GetTradeDetails(ulong trainerID)
+        {
+            LoadFromFile();
+            return _tradeCodeDetails!.TryGetValue(trainerID, out var details) ? details : null;
+        }
+
+        public void UpdateTradeDetails(ulong trainerID, string ot, int tid, int sid)
+        {
+            LoadFromFile();
+            if (_tradeCodeDetails!.TryGetValue(trainerID, out var details))
+            {
+                details.OT = ot;
+                details.TID = tid;
+                details.SID = sid;
+                SaveToFile();
+            }
+        }
+
+        public bool UpdateTradeCode(ulong trainerID, int newCode)
+        {
+            LoadFromFile();
+            if (_tradeCodeDetails!.TryGetValue(trainerID, out var details))
+            {
+                details.Code = newCode;
+                SaveToFile();
+                return true;
+            }
+            return false;
         }
 
         private static int GenerateRandomTradeCode()
@@ -113,27 +131,20 @@ namespace SysBot.Pokemon
                 .WithColor(Color.Gold)
                 .WithImageUrl(_milestoneImages[tradeCount]);
 
-            if (tradeCount == 1)
-            {
-                embedBuilder.WithDescription("Congratulations on your very first trade!\nCollect medals by trading with the bot!\nEvery 50 trades is a new medal!\nHow many can you collect?\nSee your current medals with **.medals**");
-            }
-            else
-            {
-                embedBuilder.WithDescription($"You’ve completed {tradeCount} trades!\n*Keep up the great work!*");
-            }
+            embedBuilder.WithDescription(
+                tradeCount == 1
+                    ? "Congratulations on your very first trade!\nCollect medals by trading with the bot!\nEvery 50 trades is a new medal!\nHow many can you collect?\nSee your current medals with **ml**."
+                    : $"You’ve completed {tradeCount} trades!\n*Keep up the great work!*");
 
-            var embed = embedBuilder.Build();
-            await channel.SendMessageAsync(embed: embed);
+            await channel.SendMessageAsync(embed: embedBuilder.Build());
         }
-
 
         private void LoadFromFile()
         {
             if (File.Exists(FileName))
             {
                 string json = File.ReadAllText(FileName);
-                _tradeCodeDetails = JsonConvert.DeserializeObject<Dictionary<ulong, TradeCodeDetails>>(json)
-                                    ?? new Dictionary<ulong, TradeCodeDetails>();
+                _tradeCodeDetails = JsonSerializer.Deserialize<Dictionary<ulong, TradeCodeDetails>>(json, SerializerOptions);
             }
             else
             {
@@ -145,7 +156,7 @@ namespace SysBot.Pokemon
         {
             try
             {
-                string json = JsonConvert.SerializeObject(_tradeCodeDetails, Formatting.Indented);
+                string json = JsonSerializer.Serialize(_tradeCodeDetails, SerializerOptions);
                 File.WriteAllText(FileName, json);
             }
             catch (IOException ex)
@@ -159,43 +170,6 @@ namespace SysBot.Pokemon
             catch (Exception ex)
             {
                 LogUtil.LogInfo("TradeCodeStorage", $"An error occurred while saving trade codes to file: {ex.Message}");
-            }
-        }
-
-        public bool DeleteTradeCode(ulong trainerID)
-        {
-            LoadFromFile();
-
-            if (_tradeCodeDetails.Remove(trainerID))
-            {
-                SaveToFile();
-                return true;
-            }
-            return false;
-        }
-
-        public int GetTradeCount(ulong trainerID)
-        {
-            LoadFromFile();
-            return _tradeCodeDetails.TryGetValue(trainerID, out var details) ? details.TradeCount : 0;
-        }
-
-        public TradeCodeDetails? GetTradeDetails(ulong trainerID)
-        {
-            LoadFromFile();
-            return _tradeCodeDetails.TryGetValue(trainerID, out var details) ? details : null;
-        }
-
-        public void UpdateTradeDetails(ulong trainerID, string? ot, int tid, int sid)
-        {
-            LoadFromFile();
-
-            if (_tradeCodeDetails.TryGetValue(trainerID, out var details))
-            {
-                details.OT = ot ?? details.OT;
-                details.TID = tid;
-                details.SID = sid;
-                SaveToFile();
             }
         }
 
@@ -224,8 +198,8 @@ namespace SysBot.Pokemon
         {
             public int Code { get; set; }
             public string? OT { get; set; }
-            public int TID { get; set; }
             public int SID { get; set; }
+            public int TID { get; set; }
             public int TradeCount { get; set; }
         }
     }
