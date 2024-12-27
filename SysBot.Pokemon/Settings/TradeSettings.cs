@@ -354,6 +354,9 @@ public class TradeSettings : IBotStateSettings, ICountSettings
         [Category(EmbedSettings), Description("Will show MetDate in trade embed (Discord only)."), DisplayName("Show Met Date")]
         public bool ShowMetDate { get; set; } = true;
 
+        [Category(EmbedSettings), Description("Will show MetLocation in trade embed (Discord only)."), DisplayName("Show Met Location")]
+        public bool ShowMetLocation { get; set; } = true;
+
         [Category(EmbedSettings), Description("Will show Ability in trade embed (Discord only)."), DisplayName("Show Ability")]
         public bool ShowAbility { get; set; } = true;
 
