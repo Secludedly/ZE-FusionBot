@@ -215,38 +215,6 @@ public class PokeTradeBotLA(PokeTradeHub<PA8> Hub, PokeBotState Config) : PokeRo
         return (null, PokeTradePriorities.TierFree);
     }
 
-    private bool GetNextBatchTrade(PokeTradeDetail<PA8> currentTrade, out PokeTradeDetail<PA8>? nextDetail)
-    {
-        nextDetail = null;
-        var batchQueue = Hub.Queues.GetQueue(PokeRoutineType.Batch);
-        Log($"Searching for next trade after {currentTrade.BatchTradeNumber}/{currentTrade.TotalBatchTrades}");
-
-        // Get all trades for this user
-        var userTrades = batchQueue.Queue.GetSnapshot()
-            .Select(x => x.Value)
-            .Where(x => x.Trainer.ID == currentTrade.Trainer.ID)
-            .OrderBy(x => x.BatchTradeNumber)
-            .ToList();
-
-        // Log what we found
-        foreach (var trade in userTrades)
-        {
-            Log($"Found trade in queue: #{trade.BatchTradeNumber}/{trade.TotalBatchTrades} for trainer {trade.Trainer.TrainerName}");
-        }
-
-        // Get the next sequential trade
-        nextDetail = userTrades.FirstOrDefault(x => x.BatchTradeNumber == currentTrade.BatchTradeNumber + 1);
-
-        if (nextDetail != null)
-        {
-            Log($"Selected next trade {nextDetail.BatchTradeNumber}/{nextDetail.TotalBatchTrades}");
-            return true;
-        }
-
-        Log("No more trades found for this user");
-        return false;
-    }
-
     private void CleanupAllBatchTradesFromQueue(PokeTradeDetail<PA8> detail)
     {
         var result = Hub.Queues.Info.ClearTrade(detail.Trainer.ID);
@@ -356,22 +324,60 @@ public class PokeTradeBotLA(PokeTradeHub<PA8> Hub, PokeBotState Config) : PokeRo
 
     private async Task<PokeTradeResult> PerformBatchTrade(SAV8LA sav, PokeTradeDetail<PA8> poke, CancellationToken token)
     {
+        int completedTrades = 0;
+        var startingDetail = poke;
+        var originalTrainerID = startingDetail.Trainer.ID;
+        bool isFirstTrade = true;
+
+        // Verify that this is actually the first trade in the batch
+        // If not, find the first trade and use that as our starting point
+        if (startingDetail.BatchTradeNumber != 1 && startingDetail.TotalBatchTrades > 1)
+        {
+            Log($"Trade initiated with non-first batch item ({startingDetail.BatchTradeNumber}/{startingDetail.TotalBatchTrades}). Searching for first item...");
+
+            var batchQueue = Hub.Queues.GetQueue(PokeRoutineType.Batch);
+            var firstTrade = batchQueue.Queue.GetSnapshot()
+                .Select(x => x.Value)
+                .Where(x => x.Trainer.ID == startingDetail.Trainer.ID &&
+                           x.UniqueTradeID == startingDetail.UniqueTradeID &&
+                           x.BatchTradeNumber == 1)
+                .FirstOrDefault();
+
+            if (firstTrade != null)
+            {
+                Log($"Found first trade in batch. Starting with trade 1/{startingDetail.TotalBatchTrades} instead.");
+                poke = firstTrade;
+                startingDetail = firstTrade;
+            }
+            else
+            {
+                Log($"WARNING: Could not find first trade in batch. Will continue with trade {startingDetail.BatchTradeNumber}/{startingDetail.TotalBatchTrades}");
+            }
+        }
+
+        // Helper method to send collected Pokémon back to the user before early return
         void SendCollectedPokemonAndCleanup()
         {
-            var allReceived = _batchTracker.GetReceivedPokemon(poke.Trainer.ID);
+            var allReceived = _batchTracker.GetReceivedPokemon(originalTrainerID);
             if (allReceived.Count > 0)
             {
-                poke.SendNotification(this, "Sending you the Pokémon you traded to me before the interruption.");
+                poke.SendNotification(this, $"Sending you the {allReceived.Count} Pokémon you traded to me before the interruption.");
 
-                // Send back all collected Pokémon
+                // Log the Pokémon we're returning for debugging
+                Log($"Returning {allReceived.Count} Pokémon to trainer {originalTrainerID}.");
                 foreach (var pokemon in allReceived)
                 {
+                    Log($"  - Returning: {pokemon.Species} (Checksum: {pokemon.Checksum:X8})");
                     poke.TradeFinished(this, pokemon);
                 }
             }
+            else
+            {
+                Log($"No Pokémon found to return for trainer {originalTrainerID}.");
+            }
 
             // Cleanup
-            _batchTracker.ClearReceivedPokemon(poke.Trainer.ID);
+            _batchTracker.ClearReceivedPokemon(originalTrainerID);
         }
 
         // Update Barrier Settings
@@ -400,10 +406,6 @@ public class PokeTradeBotLA(PokeTradeHub<PA8> Hub, PokeBotState Config) : PokeRo
         await Click(DRIGHT, 0_500, token).ConfigureAwait(false);
         await Click(A, 1_500, token).ConfigureAwait(false);
         await Click(A, 2_000, token).ConfigureAwait(false);
-
-        int completedTrades = 0;
-        var startingDetail = poke;
-        bool isFirstTrade = true;
 
         while (completedTrades < startingDetail.TotalBatchTrades)
         {
@@ -440,8 +442,8 @@ public class PokeTradeBotLA(PokeTradeHub<PA8> Hub, PokeBotState Config) : PokeRo
 
             if (token.IsCancellationRequested)
             {
-                if (completedTrades > 0)
-                    poke.SendNotification(this, "Routine canceled. Remaining batch trades canceled.");
+                if (startingDetail.TotalBatchTrades > 1)
+                    poke.SendNotification(this, $"Canceling the remaining batch trades after trade {completedTrades + 1}/{startingDetail.TotalBatchTrades}. The routine has been interrupted.");
                 SendCollectedPokemonAndCleanup();
                 await ExitTrade(false, token).ConfigureAwait(false);
                 return PokeTradeResult.RoutineCancel;
@@ -450,7 +452,7 @@ public class PokeTradeBotLA(PokeTradeHub<PA8> Hub, PokeBotState Config) : PokeRo
             if (!partnerFound)
             {
                 if (completedTrades > 0)
-                    poke.SendNotification(this, "No trainer found. Remaining batch trades canceled.");
+                    poke.SendNotification(this, $"No trainer found after trade {completedTrades + 1}/{startingDetail.TotalBatchTrades}. Canceling the remaining trades.");
                 SendCollectedPokemonAndCleanup();
                 await ExitTrade(false, token).ConfigureAwait(false);
                 return PokeTradeResult.NoTrainerFound;
@@ -477,7 +479,10 @@ public class PokeTradeBotLA(PokeTradeHub<PA8> Hub, PokeBotState Config) : PokeRo
             {
 #pragma warning disable CS8604 // Possible null reference argument.
 #pragma warning disable CS8602 // Dereference of a possibly null reference.
-                tradeCodeStorage.UpdateTradeDetails(poke.Trainer.ID, shouldUpdateOT ? tradePartner.TrainerName : existingTradeDetails.OT, shouldUpdateTID ? int.Parse(tradePartner.TID7) : existingTradeDetails.TID, shouldUpdateSID ? int.Parse(tradePartner.SID7) : existingTradeDetails.SID);
+                tradeCodeStorage.UpdateTradeDetails(poke.Trainer.ID,
+     shouldUpdateOT ? tradePartner.TrainerName : existingTradeDetails.OT,
+     shouldUpdateTID ? int.Parse(tradePartner.TID7) : existingTradeDetails.TID,
+     shouldUpdateSID ? int.Parse(tradePartner.SID7) : existingTradeDetails.SID);
 #pragma warning restore CS8602 // Dereference of a possibly null reference.
 #pragma warning restore CS8604 // Possible null reference argument.
             }
@@ -486,7 +491,7 @@ public class PokeTradeBotLA(PokeTradeHub<PA8> Hub, PokeBotState Config) : PokeRo
             if (partnerCheck != PokeTradeResult.Success)
             {
                 if (completedTrades > 0)
-                    poke.SendNotification(this, "Partner check failed. Remaining batch trades canceled.");
+                    poke.SendNotification(this, $"Partner check failed after trade {completedTrades + 1}/{startingDetail.TotalBatchTrades}. Canceling the remaining trades.");
                 SendCollectedPokemonAndCleanup();
                 await ExitTrade(false, token).ConfigureAwait(false);
                 return partnerCheck;
@@ -502,7 +507,7 @@ public class PokeTradeBotLA(PokeTradeHub<PA8> Hub, PokeBotState Config) : PokeRo
             if (!offering)
             {
                 if (completedTrades > 0)
-                    poke.SendNotification(this, "Trade partner took too long. Remaining batch trades canceled.");
+                    poke.SendNotification(this, $"Trade partner took too long after trade {completedTrades + 1}/{startingDetail.TotalBatchTrades}. Canceling the remaining trades.");
                 SendCollectedPokemonAndCleanup();
                 await ExitTrade(false, token).ConfigureAwait(false);
                 return PokeTradeResult.TrainerTooSlow;
@@ -514,7 +519,7 @@ public class PokeTradeBotLA(PokeTradeHub<PA8> Hub, PokeBotState Config) : PokeRo
             if (offered == null || offered.Species == 0 || !offered.ChecksumValid)
             {
                 if (completedTrades > 0)
-                    poke.SendNotification(this, "Offered Pokemon was invalid. Remaining batch trades canceled.");
+                    poke.SendNotification(this, $"Invalid Pokémon offered after trade {completedTrades + 1}/{startingDetail.TotalBatchTrades}. Canceling the remaining trades.");
                 Log("Trade ended because trainer offer was rescinded too quickly.");
                 SendCollectedPokemonAndCleanup();
                 await ExitTrade(false, token).ConfigureAwait(false);
@@ -526,7 +531,7 @@ public class PokeTradeBotLA(PokeTradeHub<PA8> Hub, PokeBotState Config) : PokeRo
             if (update != PokeTradeResult.Success)
             {
                 if (completedTrades > 0)
-                    poke.SendNotification(this, "Update check failed. Remaining batch trades canceled.");
+                    poke.SendNotification(this, $"Update check failed after trade {completedTrades + 1}/{startingDetail.TotalBatchTrades}. Canceling the remaining trades.");
                 SendCollectedPokemonAndCleanup();
                 await ExitTrade(false, token).ConfigureAwait(false);
                 return update;
@@ -544,7 +549,7 @@ public class PokeTradeBotLA(PokeTradeHub<PA8> Hub, PokeBotState Config) : PokeRo
             if (tradeResult != PokeTradeResult.Success)
             {
                 if (completedTrades > 0)
-                    poke.SendNotification(this, "Trade confirmation failed. Remaining batch trades canceled.");
+                    poke.SendNotification(this, $"Trade confirmation failed after trade {completedTrades + 1}/{startingDetail.TotalBatchTrades}. Canceling the remaining trades.");
                 if (tradeResult == PokeTradeResult.TrainerLeft)
                     Log("Trade canceled because trainer left the trade.");
                 SendCollectedPokemonAndCleanup();
@@ -554,8 +559,8 @@ public class PokeTradeBotLA(PokeTradeHub<PA8> Hub, PokeBotState Config) : PokeRo
 
             if (token.IsCancellationRequested)
             {
-                if (completedTrades > 0)
-                    poke.SendNotification(this, "Routine canceled. Remaining batch trades canceled.");
+                if (startingDetail.TotalBatchTrades > 1)
+                    poke.SendNotification(this, $"Canceling the remaining batch trades after trade {completedTrades + 1}/{startingDetail.TotalBatchTrades}. The routine has been interrupted.");
                 SendCollectedPokemonAndCleanup();
                 await ExitTrade(false, token).ConfigureAwait(false);
                 return PokeTradeResult.RoutineCancel;
@@ -568,7 +573,7 @@ public class PokeTradeBotLA(PokeTradeHub<PA8> Hub, PokeBotState Config) : PokeRo
             if (SearchUtil.HashByDetails(received) == SearchUtil.HashByDetails(toSend) && received.Checksum == toSend.Checksum)
             {
                 if (completedTrades > 0)
-                    poke.SendNotification(this, "Trade not completed properly. Remaining batch trades canceled.");
+                    poke.SendNotification(this, $"Partner did not complete trade {completedTrades + 1}/{startingDetail.TotalBatchTrades}. Canceling the remaining trades.");
                 Log("User did not complete the trade.");
                 SendCollectedPokemonAndCleanup();
                 await ExitTrade(false, token).ConfigureAwait(false);
@@ -581,12 +586,14 @@ public class PokeTradeBotLA(PokeTradeHub<PA8> Hub, PokeBotState Config) : PokeRo
             LogSuccessfulTrades(poke, trainerNID, tradePartner.TrainerName);
             completedTrades++;
 
-            _batchTracker.AddReceivedPokemon(poke.Trainer.ID, received);
+            _batchTracker.AddReceivedPokemon(originalTrainerID, received);
+            Log($"Added received Pokémon {received.Species} (Checksum: {received.Checksum:X8}) to batch tracker for trainer {originalTrainerID} (Trade {completedTrades}/{startingDetail.TotalBatchTrades})");
 
             if (completedTrades == startingDetail.TotalBatchTrades)
             {
                 // Get all collected Pokemon before cleaning anything up
-                var allReceived = _batchTracker.GetReceivedPokemon(poke.Trainer.ID);
+                var allReceived = _batchTracker.GetReceivedPokemon(originalTrainerID);
+                Log($"Batch trades complete. Found {allReceived.Count} Pokémon stored for trainer {originalTrainerID}");
 
                 // First send notification that trades are complete
                 poke.SendNotification(this, "## **FINISHED!**\nAll batch trades completed!\n\nThanks for trading!");
@@ -594,13 +601,18 @@ public class PokeTradeBotLA(PokeTradeHub<PA8> Hub, PokeBotState Config) : PokeRo
                 // Then finish each trade with the corresponding received Pokemon
                 foreach (var pokemon in allReceived)
                 {
-                    poke.TradeFinished(this, pokemon);  // This sends each Pokemon back to the user
+                    Log($"  - Returning: {pokemon.Species} (Checksum: {pokemon.Checksum:X8})");
+                    poke.TradeFinished(this, pokemon);
                 }
 
-                // cleanup
-                Hub.Queues.CompleteTrade(this, poke);
-                _batchTracker.ClearReceivedPokemon(poke.Trainer.ID);
+                // Mark the batch as fully completed and clean up
+                Hub.Queues.CompleteTrade(this, startingDetail);
+                CleanupAllBatchTradesFromQueue(startingDetail);
+                _batchTracker.ClearReceivedPokemon(originalTrainerID);
+
+                // Exit the trade state to prevent further searching
                 await ExitTrade(false, token).ConfigureAwait(false);
+                poke.IsProcessing = false; // Ensure the trade is marked as not processing
                 break;
             }
 
@@ -634,15 +646,50 @@ public class PokeTradeBotLA(PokeTradeHub<PA8> Hub, PokeBotState Config) : PokeRo
                 continue;
             }
 
-            poke.SendNotification(this, "Unable to find the next trade in sequence. Batch trade will be terminated.");
+            poke.SendNotification(this, $"Unable to find the next trade in sequence after trade {completedTrades}/{startingDetail.TotalBatchTrades}. Batch trade will be terminated.");
             SendCollectedPokemonAndCleanup();
             await ExitTrade(false, token).ConfigureAwait(false);
             return PokeTradeResult.Success;
         }
 
+        // Ensure we exit properly even if the loop breaks unexpectedly
         await ExitTrade(false, token).ConfigureAwait(false);
+        poke.IsProcessing = false; // Explicitly mark as not processing
         return PokeTradeResult.Success;
     }
+
+    private bool GetNextBatchTrade(PokeTradeDetail<PA8> currentTrade, out PokeTradeDetail<PA8>? nextDetail)
+    {
+        nextDetail = null;
+        var batchQueue = Hub.Queues.GetQueue(PokeRoutineType.Batch);
+        Log($"{currentTrade.Trainer.TrainerName}-{currentTrade.Trainer.ID}: Searching for next trade after {currentTrade.BatchTradeNumber}/{currentTrade.TotalBatchTrades}");
+
+        // Get all trades for this user - include UniqueTradeID filter to avoid mixing different batches
+        var userTrades = batchQueue.Queue.GetSnapshot()
+            .Select(x => x.Value)
+            .Where(x => x.Trainer.ID == currentTrade.Trainer.ID &&
+                       x.UniqueTradeID == currentTrade.UniqueTradeID)
+            .OrderBy(x => x.BatchTradeNumber)
+            .ToList();
+
+        // Log what we found
+        foreach (var trade in userTrades)
+        {
+            Log($"{currentTrade.Trainer.TrainerName}-{currentTrade.Trainer.ID}: Found trade in queue: #{trade.BatchTradeNumber}/{trade.TotalBatchTrades} for trainer {trade.Trainer.TrainerName}");
+        }
+
+        // Get the next sequential trade
+        nextDetail = userTrades.FirstOrDefault(x => x.BatchTradeNumber == currentTrade.BatchTradeNumber + 1);
+        if (nextDetail != null)
+        {
+            Log($"{currentTrade.Trainer.TrainerName}-{currentTrade.Trainer.ID}: Selected next trade {nextDetail.BatchTradeNumber}/{nextDetail.TotalBatchTrades}");
+            return true;
+        }
+
+        Log($"{currentTrade.Trainer.TrainerName}-{currentTrade.Trainer.ID}: No more trades found for this user");
+        return false;
+    }
+
 
     private async Task<PokeTradeResult> PerformLinkCodeTrade(SAV8LA sav, PokeTradeDetail<PA8> poke, CancellationToken token)
     {

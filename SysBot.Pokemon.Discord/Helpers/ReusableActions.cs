@@ -15,18 +15,68 @@ public static class ReusableActions
 {
     public static async Task SendPKMAsync(this IMessageChannel channel, PKM pkm, string msg = "")
     {
-        var tmp = Path.Combine(Path.GetTempPath(), Util.CleanFileName(pkm.FileName));
-        await File.WriteAllBytesAsync(tmp, pkm.DecryptedPartyData);
-        await channel.SendFileAsync(tmp, msg).ConfigureAwait(false);
-        File.Delete(tmp);
+        // Create a unique filename for each Pokémon
+        var uniqueId = Guid.NewGuid().ToString("N").Substring(0, 8);
+        var fileName = $"{uniqueId}_{Util.CleanFileName(pkm.FileName)}";
+        var tmp = Path.Combine(Path.GetTempPath(), fileName);
+
+        try
+        {
+            // Write the file
+            await File.WriteAllBytesAsync(tmp, pkm.DecryptedPartyData);
+
+            // Send the file and WAIT for it to complete
+            await channel.SendFileAsync(tmp, msg);
+
+            // Add a small delay to ensure Discord processes each file separately
+            await Task.Delay(700);
+        }
+        finally
+        {
+            // Make sure we attempt to delete the temp file even if an exception occurs
+            try
+            {
+                if (File.Exists(tmp))
+                    File.Delete(tmp);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error deleting temporary file: {ex.Message}");
+            }
+        }
     }
 
     public static async Task SendPKMAsync(this IUser user, PKM pkm, string msg = "")
     {
-        var tmp = Path.Combine(Path.GetTempPath(), Util.CleanFileName(pkm.FileName));
-        await File.WriteAllBytesAsync(tmp, pkm.DecryptedPartyData);
-        await user.SendFileAsync(tmp, msg).ConfigureAwait(false);
-        File.Delete(tmp);
+        // Create a unique filename for each Pokémon
+        var uniqueId = Guid.NewGuid().ToString("N").Substring(0, 8);
+        var fileName = $"{uniqueId}_{Util.CleanFileName(pkm.FileName)}";
+        var tmp = Path.Combine(Path.GetTempPath(), fileName);
+
+        try
+        {
+            // Write the file
+            await File.WriteAllBytesAsync(tmp, pkm.DecryptedPartyData);
+
+            // Send the file and WAIT for it to complete
+            await user.SendFileAsync(tmp, msg);
+
+            // Add a small delay to ensure Discord processes each file separately
+            await Task.Delay(700);
+        }
+        finally
+        {
+            // Make sure we attempt to delete the temp file even if an exception occurs
+            try
+            {
+                if (File.Exists(tmp))
+                    File.Delete(tmp);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error deleting temporary file: {ex.Message}");
+            }
+        }
     }
 
     public static async Task RepostPKMAsShowdownAsync(this ISocketMessageChannel channel, IAttachment att, SocketUserMessage userMessage)
