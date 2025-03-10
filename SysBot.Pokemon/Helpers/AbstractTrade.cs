@@ -576,6 +576,7 @@ namespace SysBot.Pokemon.Helpers
             [(int)Species.IronBundle] = [(new(2023, 12, 22), new(2023, 12, 24))], // Iron Bundle
             [(int)Species.Dondozo] = [(new(2024, 07, 26), new(2024, 08, 08))], // Dondozo
             [(int)Species.Dragonite] = [(new(2024, 08, 23), new(2024, 09, 01))], // Dragonite
+            [(int)Species.Meowscarada] = [(new(2025, 02, 28), new(2025, 03, 06))], // Meowscarada
         };
 
         public static void CheckAndSetUnrivaledDate(PKM pk)
