@@ -108,10 +108,10 @@ namespace SysBot.Pokemon.Helpers
             {
                 lock (list)
                 {
-                    return new List<T>(list); // Return copy of list
+                    return [.. list]; // Return copy of list
                 }
             }
-            return new List<T>();
+            return [];
         }
     }
 }

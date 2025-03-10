@@ -577,6 +577,7 @@ namespace SysBot.Pokemon.Helpers
             [(int)Species.Dondozo] = [(new(2024, 07, 26), new(2024, 08, 08))], // Dondozo
             [(int)Species.Dragonite] = [(new(2024, 08, 23), new(2024, 09, 01))], // Dragonite
             [(int)Species.Meowscarada] = [(new(2025, 02, 28), new(2025, 03, 06))], // Meowscarada
+            [(int)Species.Skeledirge] = [(new(2025, 03, 06), new(2025, 03, 13))], // Skeledirge
         };
 
         public static void CheckAndSetUnrivaledDate(PKM pk)

@@ -805,6 +805,25 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
         int completedTrades = 0;
         var startingDetail = poke;
 
+        // Helper method to send collected Pokémon back to the user before early return
+        void SendCollectedPokemonAndCleanup()
+        {
+            var allReceived = _batchTracker.GetReceivedPokemon(startingDetail.Trainer.ID);
+            if (allReceived.Count > 0)
+            {
+                poke.SendNotification(this, "Sending you the Pokémon you traded to me before the interruption.");
+
+                // Send back all collected Pokémon
+                foreach (var pokemon in allReceived)
+                {
+                    poke.TradeFinished(this, pokemon);
+                }
+            }
+
+            // Cleanup
+            _batchTracker.ClearReceivedPokemon(startingDetail.Trainer.ID);
+        }
+
         while (completedTrades < startingDetail.TotalBatchTrades)
         {
             var toSend = poke.TradeData;
@@ -838,6 +857,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
                 await ExitTradeToPortal(false, token).ConfigureAwait(false);
                 if (startingDetail.TotalBatchTrades > 1)
                     poke.SendNotification(this, "Canceling the remaining batch trades.\nThe routine has been interrupted.");
+                SendCollectedPokemonAndCleanup();
                 return PokeTradeResult.RoutineCancel;
             }
 
@@ -852,6 +872,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
                 poke.TradeCanceled(this, PokeTradeResult.NoTrainerFound);
 
                 CleanupAllBatchTradesFromQueue(startingDetail);
+                SendCollectedPokemonAndCleanup();
 
                 if (!await RecoverToPortal(token).ConfigureAwait(false))
                 {
@@ -871,6 +892,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
                 if (++cnt > 20) // Didn't make it in after 10 seconds.
                 {
                     await Click(A, 1_000, token).ConfigureAwait(false);
+                    SendCollectedPokemonAndCleanup();
                     if (!await RecoverToPortal(token).ConfigureAwait(false))
                     {
                         Log("Failed to recover to portal.");
@@ -917,6 +939,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
             {
                 if (startingDetail.TotalBatchTrades > 1)
                     poke.SendNotification(this, $"Trade partner verification failed after trade {completedTrades + 1}/{startingDetail.TotalBatchTrades}. Canceling the remaining trades.");
+                SendCollectedPokemonAndCleanup();
                 await Click(A, 1_000, token).ConfigureAwait(false);
                 await ExitTradeToPortal(false, token).ConfigureAwait(false);
                 return partnerCheck;
@@ -927,6 +950,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
             {
                 if (startingDetail.TotalBatchTrades > 1)
                     poke.SendNotification(this, $"Trade partner took too long after trade {completedTrades + 1}/{startingDetail.TotalBatchTrades}. Canceling the remaining trades.");
+                SendCollectedPokemonAndCleanup();
                 await ExitTradeToPortal(false, token).ConfigureAwait(false);
                 return PokeTradeResult.TrainerTooSlow;
             }
@@ -951,6 +975,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
                 Log("Trade ended because a valid Pokémon was not offered.");
                 if (startingDetail.TotalBatchTrades > 1)
                     poke.SendNotification(this, $"Invalid Pokémon offered after trade {completedTrades + 1}/{startingDetail.TotalBatchTrades}. Canceling the remaining trades.");
+                SendCollectedPokemonAndCleanup();
                 await ExitTradeToPortal(false, token).ConfigureAwait(false);
                 return PokeTradeResult.TrainerTooSlow;
             }
@@ -962,6 +987,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
             {
                 if (startingDetail.TotalBatchTrades > 1)
                     poke.SendNotification(this, $"Update check failed after trade {completedTrades + 1}/{startingDetail.TotalBatchTrades}. Canceling the remaining trades.");
+                SendCollectedPokemonAndCleanup();
                 await ExitTradeToPortal(false, token).ConfigureAwait(false);
                 return update;
             }
@@ -972,6 +998,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
             {
                 if (startingDetail.TotalBatchTrades > 1)
                     poke.SendNotification(this, $"Trade confirmation failed after trade {completedTrades + 1}/{startingDetail.TotalBatchTrades}. Canceling the remaining trades.");
+                SendCollectedPokemonAndCleanup();
                 await ExitTradeToPortal(false, token).ConfigureAwait(false);
                 return tradeResult;
             }
@@ -991,6 +1018,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
             {
                 if (startingDetail.TotalBatchTrades > 1)
                     poke.SendNotification(this, $"Partner did not complete the trade {completedTrades + 1}/{startingDetail.TotalBatchTrades}. Canceling the remaining trades.");
+                SendCollectedPokemonAndCleanup();
                 await ExitTradeToPortal(false, token).ConfigureAwait(false);
                 return PokeTradeResult.TrainerTooSlow;
             }
@@ -1012,7 +1040,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
                 // Then finish each trade with the corresponding received Pokemon
                 foreach (var pokemon in allReceived)
                 {
-                    poke.TradeFinished(this, pokemon);  // This sends each Pokemon back to the user
+                    poke.TradeFinished(this, pokemon);
                 }
 
                 // Finally do cleanup
@@ -1027,6 +1055,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
                 if (nextDetail == null)
                 {
                     poke.SendNotification(this, "Error in batch sequence. Ending trades.");
+                    SendCollectedPokemonAndCleanup();
                     await ExitTradeToPortal(false, token).ConfigureAwait(false);
                     return PokeTradeResult.Success;
                 }
@@ -1053,6 +1082,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
                 continue;
             }
             poke.SendNotification(this, "Unable to find the next trade in sequence. Batch trade will be terminated.");
+            SendCollectedPokemonAndCleanup();
             await ExitTradeToPortal(false, token).ConfigureAwait(false);
             return PokeTradeResult.Success;
         }

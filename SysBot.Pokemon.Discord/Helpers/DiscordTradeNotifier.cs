@@ -101,10 +101,32 @@ public class DiscordTradeNotifier<T> : IPokeTradeNotifier<T>
     {
         OnFinish?.Invoke(routine);
         var tradedToUser = Data.Species;
-        var message = tradedToUser != 0 ? $"Trade finished. Enjoy!" : "Trade finished!";
+        // Create different messages based on whether this is a single trade or part of a batch
+        string message;
+        if (TotalBatchTrades > 1)
+        {
+            // This is part of a batch, but we still want to confirm each individual trade
+            message = tradedToUser != 0
+                ? $"Trade {BatchTradeNumber}/{TotalBatchTrades} completed! Pokémon sent."
+                : $"Trade {BatchTradeNumber}/{TotalBatchTrades} completed!";
+        }
+        else
+        {
+            // Standard single trade message
+            message = tradedToUser != 0 ? $"Trade finished. Enjoy!" : "Trade finished!";
+        }
         Trader.SendMessageAsync(message).ConfigureAwait(false);
+
+        // Always send back the received Pokémon if ReturnPKMs is enabled
         if (result is not null && Hub.Config.Discord.ReturnPKMs)
-            Trader.SendPKMAsync(result, "Here's what you traded me!").ConfigureAwait(false);
+        {
+            // Add more context for batch trades
+            string fileMessage = TotalBatchTrades > 1
+                ? $"Here's the Pokémon you traded me (Trade {BatchTradeNumber}/{TotalBatchTrades})!"
+                : "Here's what you traded me!";
+
+            Trader.SendPKMAsync(result, fileMessage).ConfigureAwait(false);
+        }
     }
 
     public void SendNotification(PokeRoutineExecutor<T> routine, PokeTradeDetail<T> info, string message)
