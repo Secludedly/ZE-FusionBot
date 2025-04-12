@@ -56,6 +56,7 @@ public class DiscordSettings
     [Category(Operation), Description("Custom message the bot will reply with when a user says hello to it. Use string formatting to mention the user in the reply.")]
     public string HelloResponse { get; set; } = "Hi {0}!";
 
+
     // Whitelists
 
     [Category(Roles), Description("Users with this role are allowed to enter the Trade queue.")]
