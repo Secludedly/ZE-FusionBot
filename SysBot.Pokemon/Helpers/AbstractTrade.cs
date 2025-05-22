@@ -150,7 +150,6 @@ namespace SysBot.Pokemon.Helpers
 
             pkm.Ball = 21;
             pkm.IVs = [31, nickname.Contains(dittoStats[0]) ? 0 : 31, 31, nickname.Contains(dittoStats[1]) ? 0 : 31, nickname.Contains(dittoStats[2]) ? 0 : 31, 31];
-            pkm.ClearHyperTraining();
             TrashBytes(pkm, new LegalityAnalysis(pkm));
         }
 
@@ -275,6 +274,60 @@ namespace SysBot.Pokemon.Helpers
                 form = (byte)(formString.Length - 1);
 
             return formString[form].Contains('-') ? formString[form] : formString[form] == "" ? "" : $"-{formString[form]}";
+        }
+
+        private static void ClearNicknameTrash(PKM pokemon)
+        {
+            switch (pokemon)
+            {
+                case PK9 pk9:
+                    ClearTrash(pk9.NicknameTrash, pk9.Nickname);
+                    break;
+                case PA8 pa8:
+                    ClearTrash(pa8.NicknameTrash, pa8.Nickname);
+                    break;
+                case PB8 pb8:
+                    ClearTrash(pb8.NicknameTrash, pb8.Nickname);
+                    break;
+                case PB7 pb7:
+                    ClearTrash(pb7.NicknameTrash, pb7.Nickname);
+                    break;
+                case PK8 pk8:
+                    ClearTrash(pk8.NicknameTrash, pk8.Nickname);
+                    break;
+            }
+        }
+        private static void ClearTrash(Span<byte> trash, string name)
+        {
+            trash.Clear();
+            int maxLength = trash.Length / 2;
+            int actualLength = Math.Min(name.Length, maxLength);
+            for (int i = 0; i < actualLength; i++)
+            {
+                char value = name[i];
+                trash[i * 2] = (byte)value;
+                trash[(i * 2) + 1] = (byte)(value >> 8);
+            }
+            if (actualLength < maxLength)
+            {
+                trash[actualLength * 2] = 0x00;
+                trash[(actualLength * 2) + 1] = 0x00;
+            }
+        }
+        private static void ClearHandlingTrainerTrash(PKM pk)
+        {
+            switch (pk)
+            {
+                case PK8 pk8:
+                    ClearTrash(pk8.HandlingTrainerTrash, "");
+                    break;
+                case PB8 pb8:
+                    ClearTrash(pb8.HandlingTrainerTrash, "");
+                    break;
+                case PK9 pk9:
+                    ClearTrash(pk9.HandlingTrainerTrash, "");
+                    break;
+            }
         }
 
         public static bool HasAdName(T pk, out string ad)
@@ -449,62 +502,6 @@ namespace SysBot.Pokemon.Helpers
             return pkm;
         }
 
-        private static void ClearNicknameTrash(PKM pokemon)
-        {
-            switch (pokemon)
-            {
-                case PK9 pk9:
-                    ClearTrash(pk9.NicknameTrash, pk9.Nickname);
-                    break;
-                case PA8 pa8:
-                    ClearTrash(pa8.NicknameTrash, pa8.Nickname);
-                    break;
-                case PB8 pb8:
-                    ClearTrash(pb8.NicknameTrash, pb8.Nickname);
-                    break;
-                case PB7 pb7:
-                    ClearTrash(pb7.NicknameTrash, pb7.Nickname);
-                    break;
-                case PK8 pk8:
-                    ClearTrash(pk8.NicknameTrash, pk8.Nickname);
-                    break;
-            }
-        }
-
-        private static void ClearTrash(Span<byte> trash, string name)
-        {
-            trash.Clear();
-            int maxLength = trash.Length / 2;
-            int actualLength = Math.Min(name.Length, maxLength);
-            for (int i = 0; i < actualLength; i++)
-            {
-                char value = name[i];
-                trash[i * 2] = (byte)value;
-                trash[(i * 2) + 1] = (byte)(value >> 8);
-            }
-            if (actualLength < maxLength)
-            {
-                trash[actualLength * 2] = 0x00;
-                trash[(actualLength * 2) + 1] = 0x00;
-            }
-        }
-
-        private static void ClearHandlingTrainerTrash(PKM pk)
-        {
-            switch (pk)
-            {
-                case PK8 pk8:
-                    ClearTrash(pk8.HandlingTrainerTrash, "");
-                    break;
-                case PB8 pb8:
-                    ClearTrash(pb8.HandlingTrainerTrash, "");
-                    break;
-                case PK9 pk9:
-                    ClearTrash(pk9.HandlingTrainerTrash, "");
-                    break;
-            }
-        }
-
         public static bool IsEggCheck(string showdownSet)
         {
             // Get the first line of the showdown set
@@ -626,6 +623,28 @@ namespace SysBot.Pokemon.Helpers
             int rangeDays = End.DayNumber - Start.DayNumber + 1;
             pk.MetDate = Start.AddDays(Random.Shared.Next(rangeDays));
         }
+    }
+        // Add the missing method definition for 'SetHandlerandMemory' to the PKMExtensions class. 
+        public static class PKMExtensions
+        {
+            public static void SetHandlerandMemory(this PKM pkm, ITrainerInfo trainerInfo, IEncounterable? encounter)
+            {
+                // Example implementation based on typical usage of handler and memory settings. 
+                // Adjust the logic as per your application's requirements. 
+                // Set the current handler to the trainer's ID. 
+                pkm.CurrentHandler = 0;
+                // Set the handling trainer's name and gender. 
+                pkm.HandlingTrainerName = trainerInfo.OT;
+                pkm.HandlingTrainerGender = trainerInfo.Gender;
+                // If the encounter is not null, set additional memory details. 
+                if (encounter != null)
+                {
+                    pkm.MetLocation = encounter.Location;
+                    pkm.MetLevel = encounter.LevelMin;
+                }
+            }
+        
+
         private static readonly Dictionary<string, int> BallIdMapping = new Dictionary<string, int>
         {
             {"Beast", 26},

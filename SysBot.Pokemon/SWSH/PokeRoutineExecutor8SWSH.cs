@@ -261,10 +261,6 @@ public abstract class PokeRoutineExecutor8SWSH(PokeBotState Config) : PokeRoutin
             await Task.Delay(2_000 + timing.ExtraTimeCheckGame, token).ConfigureAwait(false);
         }
 
-        await Click(A, 1_000 + timing.ExtraTimeCheckDLC, token).ConfigureAwait(false);
-        // If they have DLC on the system and can't use it, requires pressing UP + A to start the game.
-        // Should be harmless otherwise since they'll be in loading screen.
-        await Click(DUP, 0_600, token).ConfigureAwait(false);
         await Click(A, 0_600, token).ConfigureAwait(false);
 
         Log("Restarting the game!");

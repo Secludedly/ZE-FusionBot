@@ -10,4 +10,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <DebugType>none</DebugType>
   </PropertyGroup>
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+  </PropertyGroup>
 </Project>

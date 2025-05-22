@@ -15,8 +15,8 @@ namespace SysBot.Pokemon.Discord
     /// <summary>
     /// Provides functionality for listing and requesting Pokémon wondercard events via Discord commands.
     /// Users can interact with the system in multiple ways:
-    /// 
-    /// 1. Listing Events: 
+    ///
+    /// 1. Listing Events:
     ///    - Users can list events from a specified generation or game. Optionally, users can filter this list by specifying a Pokémon species name.
     ///    - Command format: .srp {generationOrGame} [speciesName] [pageX]
     ///    - Example: .srp gen9 Mew page2
@@ -39,6 +39,7 @@ namespace SysBot.Pokemon.Discord
     public class SpecialRequestModule<T> : ModuleBase<SocketCommandContext> where T : PKM, new()
     {
         private const int itemsPerPage = 25;
+
         private static TradeQueueInfo<T> Info => SysCord<T>.Runner.Hub.Queues.Info;
 
         private static T? GetRequest(Download<PKM> dl)
@@ -144,11 +145,11 @@ namespace SysBot.Pokemon.Discord
                     return;
                 }
 
-                var code = Info.GetRandomTradeCode(userID, Context.Channel, Context.User);
+                var code = Info.GetRandomTradeCode((int)userID);
                 var lgcode = Info.GetRandomLGTradeCode();
                 var sig = Context.User.GetFavor();
 
-                await AddTradeToQueueAsync(code, Context.User.Username, pk as T, sig, Context.User, lgcode: lgcode).ConfigureAwait(false);
+                await AddTradeToQueueAsync(code, Context.User.Username, pk, sig, Context.User, lgcode: lgcode).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -160,7 +161,7 @@ namespace SysBot.Pokemon.Discord
             }
         }
 
-        private static MysteryGift[]? GetEventData(string generationOrGame)
+        public static MysteryGift[]? GetEventData(string generationOrGame)
         {
             return generationOrGame.ToLowerInvariant() switch
             {
@@ -177,17 +178,18 @@ namespace SysBot.Pokemon.Discord
             };
         }
 
-        private static IOrderedEnumerable<(int Index, string EventInfo)> GetFilteredEvents(MysteryGift[] eventData, string speciesName = "")
+        private static IEnumerable<(int Index, string EventInfo)> GetFilteredEvents(MysteryGift[] eventData, string speciesName = "")
         {
             return eventData
-                .Where(gift =>
-                    gift.IsEntity &&
-                    !gift.IsItem &&
-                    (string.IsNullOrWhiteSpace(speciesName) || GameInfo.Strings.Species[gift.Species].Equals(speciesName, StringComparison.OrdinalIgnoreCase))
-                )
                 .Select((gift, index) =>
                 {
+                    if (!gift.IsEntity || gift.IsItem)
+                        return (Index: -1, EventInfo: string.Empty);
+
                     string species = GameInfo.Strings.Species[gift.Species];
+                    if (!string.IsNullOrWhiteSpace(speciesName) && !species.Equals(speciesName, StringComparison.OrdinalIgnoreCase))
+                        return (Index: -1, EventInfo: string.Empty);
+
                     string levelInfo = $"{gift.Level}";
                     string formName = ShowdownParsing.GetStringFromForm(gift.Form, GameInfo.Strings, gift.Species, gift.Context);
                     formName = !string.IsNullOrEmpty(formName) ? $"-{formName}" : "";
@@ -197,10 +199,10 @@ namespace SysBot.Pokemon.Discord
 
                     return (Index: index + 1, EventInfo: eventDetails);
                 })
-                .OrderBy(x => x.Index);
+                .Where(x => x.Index != -1);
         }
 
-        private static EmbedBuilder BuildEventListEmbed(string generationOrGame, IOrderedEnumerable<(int Index, string EventInfo)> allEvents, int page, int pageCount, string botPrefix)
+        private static EmbedBuilder BuildEventListEmbed(string generationOrGame, IEnumerable<(int Index, string EventInfo)> allEvents, int page, int pageCount, string botPrefix)
         {
             var embed = new EmbedBuilder()
                 .WithTitle($"Available Events - {generationOrGame.ToUpperInvariant()}")
@@ -247,100 +249,33 @@ namespace SysBot.Pokemon.Discord
                 await userMessage.DeleteAsync().ConfigureAwait(false);
         }
 
-        public static T? ConvertEventToPKM(MysteryGift selectedEvent)
+        public static T? ConvertEventToPKM(MysteryGift selectedEvent, byte? requestedLanguage = null)
         {
-            var download = new Download<PKM>
+            // Create a SimpleTrainerInfo instance with just version and language
+            // Don't try to set other properties - let the MysteryGift implementation handle defaults
+            var trainer = new SimpleTrainerInfo(selectedEvent.Version)
             {
-                Data = selectedEvent.ConvertToPKM(new SimpleTrainerInfo(), EncounterCriteria.Unrestricted),
-                Success = true
+                Language = requestedLanguage ?? (byte)LanguageID.English,
             };
 
-            if (download.Data is null)
+            // Let the original implementation handle everything including special cases
+            PKM? pkm = selectedEvent.ConvertToPKM(trainer, EncounterCriteria.Unrestricted);
+
+            if (pkm is null)
                 return null;
 
-            var pk = GetRequest(download);
-            if (pk is null)
-                return null;
+            // Convert to the correct type if necessary
+            if (pkm is T pk)
+                return pk;
 
-            if (selectedEvent is IEncounterServerDate)
-            {
-                var (start, end) = GetEncounterDateRange(selectedEvent);
-                if (start.HasValue)
-                {
-                    // If end date is null ("Never"), set the MetDate to the start date
-                    if (end is null)
-                    {
-                        pk.MetDate = start.Value;  // Set to the start date only
-                    }
-                    else
-                    {
-                        // Generate a random date between start and end if both are available
-                        pk.MetDate = GenerateRandomDateInRange(start.Value, end.Value);
-                    }
-                }
-                else
-                {
-                    // Start date not found, using current date
-                    pk.MetDate = DateOnly.FromDateTime(DateTime.UtcNow);
-                }
-            }
-            else
-            {
-                // Not an IEncounterServerDate, using current date
-                pk.MetDate = DateOnly.FromDateTime(DateTime.UtcNow);
-            }
-
-            return pk;
-        }
-
-        private static (DateOnly? Start, DateOnly? End) GetEncounterDateRange(MysteryGift selectedEvent)
-        {
-            if (selectedEvent is WC8 wc8)
-            {
-                if (EncounterServerDate.WC8Gifts.TryGetValue(wc8.CardID, out var wc8Range))
-                    return (wc8Range.Start, wc8Range.End);
-                else if (EncounterServerDate.WC8GiftsChk.TryGetValue(wc8.Checksum, out var wc8ChkRange))
-                    return (wc8ChkRange.Start, wc8ChkRange.End);
-            }
-            else if (selectedEvent is WA8 wa8 && EncounterServerDate.WA8Gifts.TryGetValue(wa8.CardID, out var wa8Range))
-            {
-                return (wa8Range.Start, wa8Range.End);
-            }
-            else if (selectedEvent is WB8 wb8 && EncounterServerDate.WB8Gifts.TryGetValue(wb8.CardID, out var wb8Range))
-            {
-                return (wb8Range.Start, wb8Range.End);
-            }
-            else if (selectedEvent is WC9 wc9)
-            {
-                if (EncounterServerDate.WC9Gifts.TryGetValue(wc9.CardID, out var wc9Range))
-                    return (wc9Range.Start, wc9Range.End);
-                else if (EncounterServerDate.WC9GiftsChk.TryGetValue(wc9.Checksum, out var wc9ChkRange))
-                    return (wc9ChkRange.Start, wc9ChkRange.End);
-            }
-
-            return (null, null);
-        }
-
-        private static DateOnly GenerateRandomDateInRange(DateOnly startDate, DateOnly endDate)
-        {
-            var random = new Random();
-            var totalDays = (endDate.DayNumber - startDate.DayNumber) + 1;
-            if (totalDays <= 0)
-                return startDate;
-            var randomDays = random.Next(totalDays);
-            return startDate.AddDays(randomDays);
+            return EntityConverter.ConvertToType(pkm, typeof(T), out _) as T;
         }
 
         [Command("geteventpokemon")]
         [Alias("gep")]
-        [Summary("Downloads the requested event as a pk file and sends it to the user.")]
-        public async Task GetEventPokemonAsync(string generationOrGame, [Remainder] string args = "")
+        [Summary("Downloads the requested event as a pk file and sends it to the user. Optionally, specify the language.")]
+        public async Task GetEventPokemonAsync(string generationOrGame, int eventIndex, byte? language = null)
         {
-            if (!int.TryParse(args, out int index))
-            {
-                await ReplyAsync("Invalid event index. Please provide a valid event number.").ConfigureAwait(false);
-                return;
-            }
             try
             {
                 var eventData = GetEventData(generationOrGame);
@@ -349,19 +284,28 @@ namespace SysBot.Pokemon.Discord
                     await ReplyAsync($"Invalid generation or game: {generationOrGame}").ConfigureAwait(false);
                     return;
                 }
+
                 var entityEvents = eventData.Where(gift => gift.IsEntity && !gift.IsItem).ToArray();
-                if (index < 1 || index > entityEvents.Length)
+                if (eventIndex < 1 || eventIndex > entityEvents.Length)
                 {
-                    await ReplyAsync($"Invalid event index. Please use a valid event number from the `{SysCord<T>.Runner.Config.Discord.CommandPrefix}srp {generationOrGame}` command.").ConfigureAwait(false);
+                    await ReplyAsync($"Invalid event index. Please use a valid event number from the `{SysCord<T>.Runner.Config.Discord.CommandPrefix}gep {generationOrGame}` command.").ConfigureAwait(false);
                     return;
                 }
-                var selectedEvent = entityEvents[index - 1];
+
+                var selectedEvent = entityEvents[eventIndex - 1];
                 var pk = ConvertEventToPKM(selectedEvent);
                 if (pk == null)
                 {
                     await ReplyAsync("Wondercard data provided is not compatible with this module!").ConfigureAwait(false);
                     return;
                 }
+
+                // If language is provided, set pk.Language
+                if (language.HasValue)
+                {
+                    pk.Language = language.Value;
+                }
+
                 try
                 {
                     await Context.User.SendPKMAsync(pk);
@@ -382,14 +326,14 @@ namespace SysBot.Pokemon.Discord
             }
         }
 
-        private async Task AddTradeToQueueAsync(int code, string trainerName, T? pk, RequestSignificance sig, SocketUser usr, bool isBatchTrade = false, int batchTradeNumber = 1, int totalBatchTrades = 1, bool isMysteryEgg = false, List<Pictocodes>? lgcode = null, PokeTradeType tradeType = PokeTradeType.Specific, bool ignoreAutoOT = false, bool isHiddenTrade = false)
+        private async Task AddTradeToQueueAsync(int code, string trainerName, T pk, RequestSignificance sig, SocketUser usr, bool isBatchTrade = false, int batchTradeNumber = 1, int totalBatchTrades = 1, bool isMysteryEgg = false, bool isMysteryMon = false, List<Pictocodes>? lgcode = null, PokeTradeType tradeType = PokeTradeType.Specific, bool ignoreAutoOT = false, bool isHiddenTrade = false)
         {
             lgcode ??= TradeModule<T>.GenerateRandomPictocodes(3);
             var la = new LegalityAnalysis(pk);
             if (!la.Valid)
             {
                 string responseMessage = pk.IsEgg ? "Invalid Showdown Set for this Egg. Please review your information and try again." :
-                    $"{typeof(T).Name} attachment is not legal, and cannot be traded!";
+                    $"{typeof(T).Name} attachment is not legal, and cannot be traded!\n\n{la.Report()}\n";
                 var reply = await ReplyAsync(responseMessage).ConfigureAwait(false);
                 await Task.Delay(6000);
                 await reply.DeleteAsync().ConfigureAwait(false);

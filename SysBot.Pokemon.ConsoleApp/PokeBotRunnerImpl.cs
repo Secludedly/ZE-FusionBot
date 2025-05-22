@@ -2,7 +2,7 @@ using PKHeX.Core;
 using SysBot.Pokemon.Discord;
 using System.Threading;
 using System.Threading.Tasks;
-using SysBot.Pokemon.Bilibili;
+
 
 namespace SysBot.Pokemon.ConsoleApp;
 
@@ -15,12 +15,11 @@ public class PokeBotRunnerImpl<T> : PokeBotRunner<T> where T : PKM, new()
     public PokeBotRunnerImpl(PokeTradeHub<T> hub, BotFactory<T> fac) : base(hub, fac) { }
     public PokeBotRunnerImpl(PokeTradeHubConfig config, BotFactory<T> fac) : base(config, fac) { }
 
-    private static BilibiliLiveBot<T>? Bilibili;
+
 
     protected override void AddIntegrations()
     {
         AddDiscordBot(Hub.Config.Discord);
-        AddBilibiliBot(Hub.Config.Bilibili);
     }
 
     private void AddDiscordBot(DiscordSettings config)
@@ -38,11 +37,4 @@ public class PokeBotRunnerImpl<T> : PokeBotRunner<T> where T : PKM, new()
         Task.Run(() => bot.MainAsync(token, CancellationToken.None), CancellationToken.None);
     }
 
-
-    private void AddBilibiliBot(BilibiliSettings config)
-    {
-        if (string.IsNullOrWhiteSpace(config.LogUrl) || config.RoomId == 0) return;
-        if (Bilibili != null) return;
-        Bilibili = new BilibiliLiveBot<T>(config, Hub);
-    }
 }

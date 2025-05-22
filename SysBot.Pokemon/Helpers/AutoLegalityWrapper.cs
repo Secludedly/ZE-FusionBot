@@ -23,7 +23,7 @@ public static class AutoLegalityWrapper
     private static void InitializeAutoLegality(LegalitySettings cfg)
     {
         InitializeCoreStrings();
-        EncounterEvent.RefreshMGDB(cfg.MGDBPath);
+        EncounterEvent.RefreshMGDB(new[] { cfg.MGDBPath }.AsSpan());
         InitializeTrainerDatabase(cfg);
         InitializeSettings(cfg);
     }
@@ -50,11 +50,10 @@ public static class AutoLegalityWrapper
         settings.Nickname.SetAllTo(validRestriction);
 
         // As of February 2024, the default setting in PKHeX is Invalid for missing HOME trackers.
-        // If the host wants to allow missing HOME trackers, we need to override the default setting.
+        // If the host wants to allow missing HOME trackers, we need to disable the default setting.
         bool allowMissingHOME = !cfg.EnableHOMETrackerCheck;
-        APILegality.AllowHOMETransferGeneration = allowMissingHOME;
         if (allowMissingHOME)
-            settings.HOMETransfer.HOMETransferTrackerNotPresent = Severity.Fishy;
+            settings.HOMETransfer.Disable();
 
         // We need all the encounter types present, so add the missing ones at the end.
         var missing = EncounterPriority.Except(cfg.PrioritizeEncounters);
@@ -71,9 +70,9 @@ public static class AutoLegalityWrapper
 
         // Seed the Trainer Database with enough fake save files so that we return a generation sensitive format when needed.
         var fallback = GetDefaultTrainer(cfg);
-        for (byte generation = 1; generation <= PKX.Generation; generation++)
+        for (byte generation = 1; generation <= GameUtil.GetGeneration(GameVersion.Gen9); generation++)
         {
-            var versions = GameUtil.GetVersionsInGeneration(generation, PKX.Version);
+            var versions = GameUtil.GetVersionsInGeneration(generation, GameVersion.Any);
             foreach (var version in versions)
                 RegisterIfNoneExist(fallback, generation, version);
         }

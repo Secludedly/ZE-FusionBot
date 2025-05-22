@@ -232,7 +232,7 @@ public abstract class PokeRoutineExecutor8BS : PokeRoutineExecutor<PB8>
             }
         }
 
-        await Task.Delay(5_000 + timing.ExtraTimeLoadOverworld, token).ConfigureAwait(false);
+        await Task.Delay(5_000 + timing.OpeningGameSettings.ExtraTimeLoadOverworld, token).ConfigureAwait(false);
         Log("Back in the overworld!");
     }
 

@@ -13,6 +13,7 @@ using SysBot.Pokemon.Helpers;
 using System.Drawing;
 using SysBot.Pokemon.WinForms.Properties;
 using Microsoft.Extensions.DependencyInjection;
+using System.ComponentModel;
 
 namespace SysBot.Pokemon.WinForms;
 
@@ -23,6 +24,7 @@ public sealed partial class Main : Form
 
     private IPokeBotRunner RunningEnvironment { get; set; }
     private ProgramConfig Config { get; set; }
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public static bool IsUpdating { get; set; } = false;
 
     private bool _isFormLoading = true;

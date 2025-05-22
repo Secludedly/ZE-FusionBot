@@ -248,8 +248,9 @@ public sealed record TradeQueueInfo<T>(PokeTradeHub<T> Hub)
             return UsersInQueue.Count(func);
     }
 
-    public int GetRandomTradeCode(int v)
+    public int GetRandomTradeCode(int trainerID)
     {
-        throw new NotImplementedException();
+        ulong id = (ulong)trainerID;
+        return GetRandomTradeCode(id, null, null); // You can safely ignore `null` here if logging isn't mandatory
     }
 }

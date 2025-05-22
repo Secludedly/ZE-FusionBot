@@ -146,7 +146,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             return;
         }
 
-        var code = Info.GetRandomTradeCode(userID, Context.Channel, Context.User);
+        var code = Info.GetRandomTradeCode(Context.User.Id, Context.Channel, Context.User);
         await DittoTrade(code, keyword, language, nature).ConfigureAwait(false);
         if (Context.Message is IUserMessage userMessage)
         {
@@ -203,7 +203,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         {
             if (AbstractTrade<T>.HasAdName(pk, out string ad))
             {
-                await ReplyAndDeleteAsync("Detected Admon URL in the Pokémon's nickname or OT, which is not allowed. You also suck for trying.", 5);
+                await ReplyAndDeleteAsync("Detected Adname in the Pokémon's name or trainer name, which is not allowed.", 5);
                 return;
             }
         }
@@ -228,7 +228,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             await ReplyAsync("You already have an existing trade in the queue. Please wait until it is processed.").ConfigureAwait(false);
             return;
         }
-        var code = Info.GetRandomTradeCode(userID, Context.Channel, Context.User);
+        var code = Info.GetRandomTradeCode(Context.User.Id, Context.Channel, Context.User);
         await ItemTrade(code, item).ConfigureAwait(false);
     }
 
@@ -388,7 +388,6 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         }
         var ignoreAutoOT = content.Contains("OT:") || content.Contains("TID:") || content.Contains("SID:");
         content = ReusableActions.StripCodeBlock(content);
-        content = AbstractTrade<T>.ConvertBalls(content);
 
         // Check if the showdown set contains "Egg"
         bool isEgg = AbstractTrade<T>.IsEggCheck(content);
@@ -612,7 +611,6 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
 
         var ignoreAutoOT = content.Contains("OT:") || content.Contains("TID:") || content.Contains("SID:");
         content = ReusableActions.StripCodeBlock(content);
-        content = AbstractTrade<T>.ConvertBalls(content);
 
         // Check if the showdown set contains "Egg"
         bool isEgg = AbstractTrade<T>.IsEggCheck(content);
