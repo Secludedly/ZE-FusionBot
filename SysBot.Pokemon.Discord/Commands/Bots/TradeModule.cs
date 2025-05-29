@@ -4,6 +4,7 @@ using Discord.Net;
 using Discord.WebSocket;
 using PKHeX.Core;
 using SysBot.Base;
+using SysBot.Pokemon.Discord.Helpers;
 using SysBot.Pokemon.Helpers;
 using System;
 using System.Collections.Generic;
@@ -203,7 +204,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         {
             if (AbstractTrade<T>.HasAdName(pk, out string ad))
             {
-                await ReplyAndDeleteAsync("Detected Adname in the Pokémon's name or trainer name, which is not allowed.", 5);
+                await ReplyAndDeleteAsync("Detected Admon URL in the Pokémon's nickname or OT, which is not allowed. You also suck for trying.", 5);
                 return;
             }
         }
@@ -320,6 +321,10 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             return;
         }
         content = ReusableActions.StripCodeBlock(content);
+
+        // Normalize user-friendly aliases like "Size: 255" → ".Scale=255"
+        content = BatchNormalizer.NormalizeBatchCommands(content);
+
         var set = new ShowdownSet(content);
         var template = AutoLegalityWrapper.GetTemplate(set);
         _ = Task.Run(async () =>
@@ -391,6 +396,9 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
 
         // Check if the showdown set contains "Egg"
         bool isEgg = AbstractTrade<T>.IsEggCheck(content);
+
+        // Normalize user-friendly aliases like "Size: 255" → ".Scale=255"
+        content = BatchNormalizer.NormalizeBatchCommands(content);
 
         var set = new ShowdownSet(content);
         var template = AutoLegalityWrapper.GetTemplate(set);
@@ -612,9 +620,13 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         var ignoreAutoOT = content.Contains("OT:") || content.Contains("TID:") || content.Contains("SID:");
         content = ReusableActions.StripCodeBlock(content);
 
+        // Normalize user-friendly aliases like "Size: 255" → ".Scale=255"
+        content = BatchNormalizer.NormalizeBatchCommands(content);
+
         // Check if the showdown set contains "Egg"
         bool isEgg = AbstractTrade<T>.IsEggCheck(content);
 
+        // Proceed to showdown parsing
         var set = new ShowdownSet(content);
         var template = AutoLegalityWrapper.GetTemplate(set);
 
@@ -826,6 +838,9 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             _ = ReplyAndDeleteAsync("You already have an existing trade in the queue. Please wait until it is processed.", 2);
             return;
         }
+
+        // Normalize user-friendly aliases like "Size: 255" → ".Scale=255"
+        content = BatchNormalizer.NormalizeBatchCommands(content);
 
         content = ReusableActions.StripCodeBlock(content);
         var trades = TradeModule<T>.ParseBatchTradeContent(content);
