@@ -178,7 +178,7 @@ public static class BatchNormalizer
                     lines[i] = $".{key}={random}";
                 }
 
-                // .MetDate= or .EggMetDate= → MetDate: or EggMetDate: // Value can be in various formats //
+                // .MetDate= or .EggMetDate= → Met Date: or Egg Date: // Value can be in various formats //
                 else if ((key == "MetDate" || key == "EggMetDate") && TryParseFlexibleDate(value, out string formatted))
                 {
                     lines[i] = $".{key}={formatted}";
