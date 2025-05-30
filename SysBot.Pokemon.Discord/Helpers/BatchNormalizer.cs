@@ -2,6 +2,8 @@ using System.Collections.Generic;
 using System;
 using System.Text.RegularExpressions;
 using System.Linq;
+using PKHeX.Core;
+using Discord;
 
 namespace SysBot.Pokemon.Discord.Helpers;
 
@@ -110,37 +112,38 @@ public static class BatchNormalizer
     { "Sapphire", 1 },
     { "Ruby", 2 },
     { "Emerald", 3 },
-    { "FireRed", 4 }, { "FR", 4 },
-    { "LeafGreen", 5 }, { "LG", 5 },
+    { "Fire Red", 4 }, { "FR", 4 },
+    { "Leaf Green", 5 }, { "LG", 5 },
     { "Colosseum", 15 }, { "XD", 15 },
-    { "HeartGold", 7 }, { "HG", 7 },
-    { "SoulSilver", 8 }, { "SS", 8 },
+    { "Heart Gold", 7 }, { "HG", 7 },
+    { "Soul Silver", 8 }, { "SS", 8 },
     { "Diamond", 10 }, { "D", 10 },
     { "Pearl", 11 }, { "P", 11 },
     { "Platinum", 12 }, { "Pt", 12 },
     { "Black", 21 }, { "B", 21 },
-    { "Black2", 23 }, { "B2", 23 },
+    { "Black 2", 23 }, { "B2", 23 },
     { "White", 20 }, { "W", 20 },
-    { "White2", 22 }, { "W2", 22 },
+    { "White 2", 22 }, { "W2", 22 },
     { "X", 24 },
     { "Y", 25 },
-    { "AlphaSapphire", 26 }, { "AS", 26 },
-    { "OmegaRuby", 27 }, { "OR", 27 },
+    { "Alpha Sapphire", 26 }, { "AS", 26 },
+    { "Omega Ruby", 27 }, { "OR", 27 },
     { "Sun", 30 }, { "S", 30 },
     { "Moon", 31 }, { "M", 31 },
-    { "UltraSun", 32 }, { "US", 32 },
-    { "UltraMoon", 33 }, { "UM", 33 },
+    { "Ultra Sun", 32 }, { "US", 32 },
+    { "Ultra Moon", 33 }, { "UM", 33 },
     { "Pikachu", 42 }, { "LetsGoPikachu", 42 }, { "LGP", 42 },
     { "Eevee", 43 }, { "LetsGoEevee", 43 }, { "LGE", 43 },
-    { "PokemonGO", 34 }, { "GO", 34 },
+    { "Pokemon GO", 34 }, { "GO", 34 },
     { "Sword", 44 }, { "SW", 44 },
     { "Shield", 45 }, { "SH", 45 },
-    { "LegendsArceus", 47 }, { "PLA", 47 },
-    { "BrilliantDiamond", 48 }, { "BD", 48 },
-    { "ShiningPearl", 49 }, { "SP", 49 },
+    { "Legends Arceus", 47 }, { "PLA", 47 },
+    { "Brilliant Diamond", 48 }, { "BD", 48 },
+    { "Shining Pearl", 49 }, { "SP", 49 },
     { "Scarlet", 50 }, { "SL", 50 },
     { "Violet", 51 }, { "VL", 51 }
 };
+
 
 
     //////////////////////////////////// NEW COMMAND LOGIC //////////////////////////////////////
@@ -222,9 +225,9 @@ public static class BatchNormalizer
                     lines[i] = $".Ribbon{ribbon}=True";
                 }
 
+                // GVs now follow this format → GVs: 7 HP / 7 Atk / 7 Def / 7 SpA / 7 SpD / 7 Spe //
                 else if (key == "GVs")
                 {
-                    // GVs now follow this format → GVs: 7 HP / 7 Atk / 7 Def / 7 SpA / 7 SpD / 7 Spe //
                     var statMatches = Regex.Matches(value, @"(\d+)\s*(HP|Atk|Def|SpA|SpD|Spe)", RegexOptions.IgnoreCase);
                     foreach (Match stat in statMatches)
                     {
