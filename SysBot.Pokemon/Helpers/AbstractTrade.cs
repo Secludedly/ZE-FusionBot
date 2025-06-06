@@ -536,6 +536,8 @@ namespace SysBot.Pokemon.Helpers
             // Generation 2
             [(int)Species.Meganium] = [(new(2024, 04, 05), new(2024, 04, 07)), (new(2024, 04, 12), new(2024, 04, 14))], // Meganium
             [(int)Species.Typhlosion] = [(new(2023, 04, 14), new(2023, 04, 16)), (new(2023, 04, 21), new(2023, 04, 23))], // Typhlosion
+            [(int)Species.Feraligatr] = [(new(2024, 11, 01), new(2024, 11, 03)), (new(2024, 11, 08), new(2024, 11, 10))], // Feraligatr
+            [(int)Species.Porygon2] = [(new(2025, 06, 05), new(2025, 06, 15))], // Porygon2
 
             // Generation 3
             [(int)Species.Sceptile] = [(new(2024, 06, 28), new(2024, 06, 30)), (new(2024, 07, 05), new(2024, 07, 07))], // Sceptile
