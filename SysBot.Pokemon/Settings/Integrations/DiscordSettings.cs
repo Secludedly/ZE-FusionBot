@@ -42,7 +42,7 @@ public class DiscordSettings
     public bool AsyncCommands { get; set; }
 
     [Category(Startup), Description("Custom Status for playing a game.")]
-    public string BotGameStatus { get; set; } = "SysBot.NET: Pokémon";
+    public string BotGameStatus { get; set; } = "ZE FusionBot: Pokémon";
 
     [Category(Startup), Description("Indicates the Discord presence status color only considering bots that are Trade-type.")]
     public bool BotColorStatusTradeOnly { get; set; } = true;

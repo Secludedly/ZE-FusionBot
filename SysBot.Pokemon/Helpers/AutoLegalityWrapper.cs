@@ -23,7 +23,7 @@ public static class AutoLegalityWrapper
     private static void InitializeAutoLegality(LegalitySettings cfg)
     {
         InitializeCoreStrings();
-        EncounterEvent.RefreshMGDB(new[] { cfg.MGDBPath }.AsSpan());
+        EncounterEvent.RefreshMGDB([cfg.MGDBPath]);
         InitializeTrainerDatabase(cfg);
         InitializeSettings(cfg);
     }
@@ -58,7 +58,7 @@ public static class AutoLegalityWrapper
         // We need all the encounter types present, so add the missing ones at the end.
         var missing = EncounterPriority.Except(cfg.PrioritizeEncounters);
         cfg.PrioritizeEncounters.AddRange(missing);
-        cfg.PrioritizeEncounters = cfg.PrioritizeEncounters.Distinct().ToList(); // Don't allow duplicates.
+        cfg.PrioritizeEncounters = [.. cfg.PrioritizeEncounters.Distinct()]; // Don't allow duplicates.
         EncounterMovesetGenerator.PriorityList = cfg.PrioritizeEncounters;
     }
 

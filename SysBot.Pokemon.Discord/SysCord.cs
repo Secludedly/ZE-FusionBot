@@ -193,38 +193,57 @@ public sealed class SysCord<T> where T : PKM, new()
         {
             try
             {
-                IMessageChannel? channel = _client.GetChannel(channelId) as IMessageChannel;
-                if (channel == null)
+                ITextChannel? textChannel = _client.GetChannel(channelId) as ITextChannel;
+                if (textChannel == null)
                 {
-                    channel = await _client.Rest.GetChannelAsync(channelId) as IMessageChannel;
-                    if (channel == null)
-                    {
-                        LogUtil.LogInfo("SysCord", $"AnnounceBotStatus: Failed to find channel with ID {channelId} even after direct fetch.");
-                        continue;
-                    }
+                    var restChannel = await _client.Rest.GetChannelAsync(channelId);
+                    textChannel = restChannel as ITextChannel;
                 }
 
-                if (_announcementMessageIds.TryGetValue(channelId, out ulong messageId))
+                if (textChannel != null)
                 {
-                    try
+                    if (_announcementMessageIds.TryGetValue(channelId, out ulong messageId))
                     {
-                        await channel.DeleteMessageAsync(messageId);
+                        try
+                        {
+                            await textChannel.DeleteMessageAsync(messageId);
+                        }
+                        catch { }
                     }
-                    catch
+                    var message = await textChannel.SendMessageAsync(embed: embed);
+                    _announcementMessageIds[channelId] = message.Id;
+
+                    if (SysCordSettings.Settings.ChannelStatus)
                     {
-                        // Ignore exception when deleting previous message
+                        try
+                        {
+                            var emoji = status == "Online"
+                            ? SysCordSettings.Settings.OnlineEmoji
+                            : SysCordSettings.Settings.OfflineEmoji;
+                            var currentName = textChannel.Name;
+                            var updatedChannelName = $"{emoji}{TrimStatusEmoji(currentName)}";
+                            if (currentName != updatedChannelName)
+                            {
+                                await textChannel.ModifyAsync(x => x.Name = updatedChannelName);
+                            }
+                        }
+                        catch (HttpException ex) when (ex.DiscordCode == DiscordErrorCode.InsufficientPermissions)
+                        {
+                            LogUtil.LogInfo("SysCord", $"Cannot update channel name for {channelId}: Missing Manage Channel permission");
+                        }
+                        catch (HttpException ex) when (ex.DiscordCode == DiscordErrorCode.RequestEntityTooLarge)
+                        {
+                            LogUtil.LogInfo("SysCord", $"Cannot update channel name for {channelId}: Rate limited");
+                        }
+                        catch (Exception ex)
+                        {
+                            LogUtil.LogInfo("SysCord", $"Failed to update channel name for {channelId}: {ex.Message}");
+                        }
                     }
                 }
-
-                var message = await channel.SendMessageAsync(embed: embed);
-                _announcementMessageIds[channelId] = message.Id;
-                LogUtil.LogInfo("SysCord", $"AnnounceBotStatus: {fullStatusMessage} announced in channel {channelId}.");
-
-                if (SysCordSettings.Settings.ChannelStatus && channel is ITextChannel textChannel)
+                else
                 {
-                    var emoji = status == "Online" ? SysCordSettings.Settings.OnlineEmoji : SysCordSettings.Settings.OfflineEmoji;
-                    var updatedChannelName = $"{emoji}{SysCord<T>.TrimStatusEmoji(textChannel.Name)}";
-                    await textChannel.ModifyAsync(x => x.Name = updatedChannelName);
+                    LogUtil.LogInfo("SysCord", $"Channel {channelId} is not a text channel or could not be found");
                 }
             }
             catch (Exception ex)
@@ -234,7 +253,6 @@ public sealed class SysCord<T> where T : PKM, new()
             }
         }
     }
-
     public async Task HandleBotStart()
     {
         try

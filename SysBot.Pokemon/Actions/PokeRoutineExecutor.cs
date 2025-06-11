@@ -8,6 +8,7 @@ using static SysBot.Base.SwitchButton;
 using System.Threading;
 using System.Threading.Tasks;
 using SysBot.Pokemon.Helpers;
+using System.Xml;
 
 namespace SysBot.Pokemon;
 
@@ -27,7 +28,7 @@ public abstract class PokeRoutineExecutor<T>(IConsoleBotManaged<IConsoleConnecti
             return;
         var dir = Path.Combine(folder, subfolder);
         Directory.CreateDirectory(dir);
-        var fn = Path.Combine(dir, Util.CleanFileName(pk.FileName));
+        var fn = Path.Combine(dir, PathUtil.CleanFileName(pk.FileName));
         File.WriteAllBytes(fn, pk.DecryptedPartyData);
         LogUtil.LogInfo($"Saved file: {fn}", "Dump");
     }

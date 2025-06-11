@@ -13,7 +13,7 @@ public class DetailsExtractor<T> where T : PKM, new()
 {
     public static EmbedData ExtractPokemonDetails(T pk, SocketUser user, bool isMysteryEgg, bool isCloneRequest, bool isDumpRequest, bool isFixOTRequest, bool isSpecialRequest, bool isBatchTrade, int batchTradeNumber, int totalBatchTrades)
     {
-        var strings = GameInfo.GetStrings(1);
+        var strings = GameInfo.GetStrings(pk.Language);
         var embedData = new EmbedData
         {
             // Basic Pokémon details
@@ -31,16 +31,17 @@ public class DetailsExtractor<T> where T : PKM, new()
         // Pokémon identity and special attributes
         embedData.Ability = GetAbilityName(pk);
         embedData.Nature = GetNatureName(pk);
-        embedData.SpeciesName = GameInfo.GetStrings(1).Species[pk.Species];
+        embedData.SpeciesName = strings.Species[pk.Species];
         embedData.SpecialSymbols = GetSpecialSymbols(pk);
         embedData.FormName = ShowdownParsing.GetStringFromForm(pk.Form, strings, pk.Species, pk.Context);
         embedData.HeldItem = strings.itemlist[pk.HeldItem];
         embedData.Ball = strings.balllist[pk.Ball];
 
         // Display elements
-        int[] ivs = pk.IVs;
+        Span<int> ivs = stackalloc int[6];
+        pk.GetIVs(ivs);
         string ivsDisplay;
-        if (ivs.All(iv => iv == 31))
+        if (ivs.ToArray().All(iv => iv == 31))
         {
             ivsDisplay = "6IV";
         }

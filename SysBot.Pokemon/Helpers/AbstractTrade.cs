@@ -208,6 +208,7 @@ namespace SysBot.Pokemon.Helpers
             pk.SetEVs([0, 0, 0, 0, 0, 0]);
 
             MarkingApplicator.SetMarkings(pk);
+            RibbonApplicator.RemoveAllValidRibbons(pk);
 
             pk.ClearRelearnMoves();
 
@@ -259,7 +260,6 @@ namespace SysBot.Pokemon.Helpers
             pk.Move1_PPUps = pk.Move2_PPUps = pk.Move3_PPUps = pk.Move4_PPUps = 0;
             pk.SetMaximumPPCurrent(pk.Moves);
             pk.SetSuggestedHyperTrainingData();
-            pk.SetSuggestedRibbons(template, enc, false);
         }
 
         public static string FormOutput(ushort species, byte form, out string[] formString)
