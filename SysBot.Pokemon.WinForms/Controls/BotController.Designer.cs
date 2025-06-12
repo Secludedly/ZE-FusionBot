@@ -40,7 +40,7 @@ namespace SysBot.Pokemon.WinForms
             // 
             L_Description.AutoSize = true;
             L_Description.Font = new System.Drawing.Font("Gadugi", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, 0);
-            L_Description.Location = new System.Drawing.Point(184, 14);
+            L_Description.Location = new System.Drawing.Point(184, 15);
             L_Description.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             L_Description.Name = "L_Description";
             L_Description.Size = new System.Drawing.Size(49, 19);
@@ -51,7 +51,7 @@ namespace SysBot.Pokemon.WinForms
             // 
             L_Left.AutoSize = true;
             L_Left.Font = new System.Drawing.Font("Gadugi", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, 0);
-            L_Left.Location = new System.Drawing.Point(41, 3);
+            L_Left.Location = new System.Drawing.Point(41, 6);
             L_Left.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             L_Left.Name = "L_Left";
             L_Left.Size = new System.Drawing.Size(114, 38);
