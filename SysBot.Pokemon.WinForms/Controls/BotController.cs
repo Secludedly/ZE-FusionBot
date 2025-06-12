@@ -14,9 +14,16 @@ public partial class BotController : UserControl
     private IPokeBotRunner? Runner;
     public EventHandler? Remove;
 
+    private readonly Image GreenImage = Image.FromStream(new System.IO.MemoryStream(Properties.Resources.status_green));
+    private readonly Image YellowImage = Image.FromStream(new System.IO.MemoryStream(Properties.Resources.status_yellow));
+    private readonly Image RedImage = Image.FromStream(new System.IO.MemoryStream(Properties.Resources.status_red));
+    private readonly Image AquaImage = Image.FromStream(new System.IO.MemoryStream(Properties.Resources.status_aqua));
+    private readonly Image TransparentImage = Image.FromStream(new System.IO.MemoryStream(Properties.Resources.status_transparent));
+
     public BotController()
     {
         InitializeComponent();
+        PB_Lamp.Tag = "NoTheme"; // Prevent theme from overriding this image
         var opt = (BotControlCommand[])Enum.GetValues(typeof(BotControlCommand));
 
         for (int i = 1; i < opt.Length; i++)
@@ -76,63 +83,39 @@ public partial class BotController : UserControl
     {
         ReloadStatus();
         var bot = b.Bot;
-        L_Description.Text = $"[{bot.LastTime:hh:mm:ss}] {bot.Connection.Label}: {bot.LastLogged}";
+        L_Description.Text = $"[{bot.LastTime:hh\\:mm\\:ss}] {bot.Connection.Label}: {bot.LastLogged}";
         L_Left.Text = $"{bot.Connection.Name}{Environment.NewLine}{State.InitialRoutine}";
 
         var lastTime = bot.LastTime;
         if (!b.IsRunning)
         {
-            PB_Lamp.BackColor = Color.Transparent;
+            PB_Lamp.Image = TransparentImage;
             return;
         }
         if (!b.Bot.Connection.Connected)
         {
-            PB_Lamp.BackColor = Color.Aqua;
+            PB_Lamp.Image = AquaImage;
             return;
         }
 
         var cfg = bot.Config;
         if (cfg is { CurrentRoutineType: PokeRoutineType.Idle, NextRoutineType: PokeRoutineType.Idle })
         {
-            PB_Lamp.BackColor = Color.Yellow;
+            PB_Lamp.Image = YellowImage;
             return;
         }
         if (LastUpdateStatus == lastTime)
             return;
 
-        // Color decay from Green based on time
         const int threshold = 100;
-        Color good = Color.Gold;
-        Color bad = Color.DarkRed;
-
         var delta = DateTime.Now - lastTime;
         var seconds = delta.Seconds;
-
         LastUpdateStatus = lastTime;
+
         if (seconds > 2 * threshold)
-            return; // already changed by now
+            return;
 
-        if (seconds > threshold)
-        {
-            if (PB_Lamp.BackColor == bad)
-                return; // should we notify on change instead?
-            PB_Lamp.BackColor = bad;
-        }
-        else
-        {
-            // blend from green->red, favoring green until near saturation
-            var factor = seconds / (double)threshold;
-            var blend = Blend(bad, good, factor * factor);
-            PB_Lamp.BackColor = blend;
-        }
-    }
-
-    private static Color Blend(Color color, Color backColor, double amount)
-    {
-        byte r = (byte)((color.R * amount) + (backColor.R * (1 - amount)));
-        byte g = (byte)((color.G * amount) + (backColor.G * (1 - amount)));
-        byte b = (byte)((color.B * amount) + (backColor.B * (1 - amount)));
-        return Color.FromArgb(r, g, b);
+        PB_Lamp.Image = seconds > threshold ? RedImage : GreenImage;
     }
 
     public void TryRemove()
@@ -161,15 +144,15 @@ public partial class BotController : UserControl
             case BotControlCommand.RebootAndStop: bot.RebootAndStop(); break;
             case BotControlCommand.Resume: bot.Resume(); break;
             case BotControlCommand.Restart:
-            {
-                var prompt = WinFormsUtil.Prompt(MessageBoxButtons.YesNo, "Are you sure you want to restart the connection?");
-                if (prompt != DialogResult.Yes)
-                    return;
+                {
+                    var prompt = WinFormsUtil.Prompt(MessageBoxButtons.YesNo, "Are you sure you want to restart the connection?");
+                    if (prompt != DialogResult.Yes)
+                        return;
 
-                Runner.InitializeStart();
-                bot.Restart();
-                break;
-            }
+                    Runner.InitializeStart();
+                    bot.Restart();
+                    break;
+                }
             default:
                 WinFormsUtil.Alert($"{cmd} is not a command that can be sent to the Bot.");
                 return;

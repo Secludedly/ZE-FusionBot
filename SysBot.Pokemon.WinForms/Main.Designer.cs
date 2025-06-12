@@ -96,6 +96,7 @@ namespace SysBot.Pokemon.WinForms
             // B_Stop
             // 
             B_Stop.FlatStyle = FlatStyle.Flat;
+            B_Stop.Font = new Font("Gadugi", 7.8F, FontStyle.Regular, GraphicsUnit.Point, 0);
             B_Stop.Location = new Point(584, 9);
             B_Stop.Margin = new Padding(5, 4, 5, 4);
             B_Stop.Name = "B_Stop";
@@ -108,17 +109,19 @@ namespace SysBot.Pokemon.WinForms
             // comboBox2
             // 
             comboBox2.DropDownStyle = ComboBoxStyle.DropDownList;
+            comboBox2.Font = new Font("Gadugi", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
             comboBox2.FormattingEnabled = true;
             comboBox2.Location = new Point(937, 11);
             comboBox2.Margin = new Padding(5, 4, 5, 4);
             comboBox2.Name = "comboBox2";
-            comboBox2.Size = new Size(130, 28);
+            comboBox2.Size = new Size(130, 27);
             comboBox2.TabIndex = 12;
             comboBox2.SelectedIndexChanged += comboBox2_SelectedIndexChanged;
             // 
             // B_Start
             // 
             B_Start.FlatStyle = FlatStyle.Flat;
+            B_Start.Font = new Font("Gadugi", 7.8F, FontStyle.Regular, GraphicsUnit.Point, 0);
             B_Start.Location = new Point(505, 9);
             B_Start.Margin = new Padding(5, 4, 5, 4);
             B_Start.Name = "B_Start";
@@ -131,22 +134,24 @@ namespace SysBot.Pokemon.WinForms
             // comboBox1
             // 
             comboBox1.DropDownStyle = ComboBoxStyle.DropDownList;
+            comboBox1.Font = new Font("Gadugi", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
             comboBox1.FormattingEnabled = true;
             comboBox1.Location = new Point(853, 11);
             comboBox1.Margin = new Padding(5, 4, 5, 4);
             comboBox1.Name = "comboBox1";
-            comboBox1.Size = new Size(76, 28);
+            comboBox1.Size = new Size(76, 27);
             comboBox1.TabIndex = 11;
             comboBox1.SelectedIndexChanged += comboBox1_SelectedIndexChanged;
             // 
             // CB_Protocol
             // 
             CB_Protocol.DropDownStyle = ComboBoxStyle.DropDownList;
+            CB_Protocol.Font = new Font("Gadugi", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
             CB_Protocol.FormattingEnabled = true;
             CB_Protocol.Location = new Point(246, 11);
             CB_Protocol.Margin = new Padding(5, 4, 5, 4);
             CB_Protocol.Name = "CB_Protocol";
-            CB_Protocol.Size = new Size(76, 28);
+            CB_Protocol.Size = new Size(76, 27);
             CB_Protocol.TabIndex = 10;
             CB_Protocol.SelectedIndexChanged += CB_Protocol_SelectedIndexChanged;
             // 
@@ -164,32 +169,33 @@ namespace SysBot.Pokemon.WinForms
             // 
             // TB_IP
             // 
-            TB_IP.Font = new Font("Courier New", 8.25F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            TB_IP.Font = new Font("Gadugi", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
             TB_IP.Location = new Point(10, 13);
             TB_IP.Margin = new Padding(5, 4, 5, 4);
             TB_IP.Name = "TB_IP";
-            TB_IP.Size = new Size(153, 23);
+            TB_IP.Size = new Size(153, 27);
             TB_IP.TabIndex = 8;
             TB_IP.Text = "192.168.0.1";
             // 
             // CB_Routine
             // 
             CB_Routine.DropDownStyle = ComboBoxStyle.DropDownList;
+            CB_Routine.Font = new Font("Gadugi", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
             CB_Routine.FormattingEnabled = true;
             CB_Routine.Location = new Point(332, 11);
             CB_Routine.Margin = new Padding(5, 4, 5, 4);
             CB_Routine.Name = "CB_Routine";
-            CB_Routine.Size = new Size(115, 28);
+            CB_Routine.Size = new Size(115, 27);
             CB_Routine.TabIndex = 7;
             // 
             // NUD_Port
             // 
-            NUD_Port.Font = new Font("Courier New", 8.25F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            NUD_Port.Font = new Font("Gadugi", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
             NUD_Port.Location = new Point(173, 13);
             NUD_Port.Margin = new Padding(5, 4, 5, 4);
             NUD_Port.Maximum = new decimal(new int[] { 65535, 0, 0, 0 });
             NUD_Port.Name = "NUD_Port";
-            NUD_Port.Size = new Size(63, 23);
+            NUD_Port.Size = new Size(63, 27);
             NUD_Port.TabIndex = 6;
             NUD_Port.Value = new decimal(new int[] { 6000, 0, 0, 0 });
             // 
@@ -210,6 +216,7 @@ namespace SysBot.Pokemon.WinForms
             // B_RebootStop
             // 
             B_RebootStop.FlatStyle = FlatStyle.Flat;
+            B_RebootStop.Font = new Font("Gadugi", 7.8F, FontStyle.Regular, GraphicsUnit.Point, 0);
             B_RebootStop.Location = new Point(679, 9);
             B_RebootStop.Margin = new Padding(5, 4, 5, 4);
             B_RebootStop.Name = "B_RebootStop";
@@ -222,6 +229,7 @@ namespace SysBot.Pokemon.WinForms
             // updater
             // 
             updater.FlatStyle = FlatStyle.Flat;
+            updater.Font = new Font("Gadugi", 7.8F, FontStyle.Regular, GraphicsUnit.Point, 0);
             updater.Location = new Point(758, 9);
             updater.Margin = new Padding(5, 4, 5, 4);
             updater.Name = "updater";
@@ -245,6 +253,7 @@ namespace SysBot.Pokemon.WinForms
             // 
             // PG_Hub
             // 
+            PG_Hub.BackColor = SystemColors.Control;
             PG_Hub.Dock = DockStyle.Fill;
             PG_Hub.Location = new Point(5, 4);
             PG_Hub.Margin = new Padding(5, 4, 5, 4);

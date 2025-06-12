@@ -641,7 +641,19 @@ public sealed partial class Main : Form
 
         updater.BackColor = SkyBlue;                        // Sky blue for updater background
         updater.ForeColor = White;                           // White text color for updater font
+
+        // 🛡️ Preserve PB_Lamp images from being overwritten by theme
+        foreach (Control ctrl in FLP_Bots.Controls)
+        {
+            if (ctrl is BotController botCtrl &&
+                botCtrl.Controls.Find("PB_Lamp", true).FirstOrDefault() is PictureBox lamp &&
+                lamp.Tag?.ToString() == "NoTheme")
+            {
+                continue; // Skip theming this PB_Lamp
+            }
+        }
     }
+
 
     private void ApplyShinyZeraoraTheme()
     {
@@ -714,6 +726,17 @@ public sealed partial class Main : Form
 
         updater.BackColor = SoftMatteGold;
         updater.ForeColor = SoftMatteText;
+
+        // 🛡️ Preserve PB_Lamp images from being overwritten by theme
+        foreach (Control ctrl in FLP_Bots.Controls)
+        {
+            if (ctrl is BotController botCtrl &&
+                botCtrl.Controls.Find("PB_Lamp", true).FirstOrDefault() is PictureBox lamp &&
+                lamp.Tag?.ToString() == "NoTheme")
+            {
+                continue; // Skip theming this PB_Lamp
+            }
+        }
     }
 
     private void ApplyGengarTheme()
@@ -787,7 +810,18 @@ public sealed partial class Main : Form
         updater.BackColor = HauntingShadows;
         updater.ForeColor = GhostlyGrey;
 
+        // 🛡️ Preserve PB_Lamp images from being overwritten by theme
+        foreach (Control ctrl in FLP_Bots.Controls)
+        {
+            if (ctrl is BotController botCtrl &&
+                botCtrl.Controls.Find("PB_Lamp", true).FirstOrDefault() is PictureBox lamp &&
+                lamp.Tag?.ToString() == "NoTheme")
+            {
+                continue; // Skip theming this PB_Lamp
+            }
+        }
     }
+
 
     private void ApplyLightTheme()
     {
@@ -859,6 +893,16 @@ public sealed partial class Main : Form
         updater.BackColor = HarderSoftBlue;
         updater.ForeColor = DarkBlue;
 
+        // 🛡️ Preserve PB_Lamp images from being overwritten by theme
+        foreach (Control ctrl in FLP_Bots.Controls)
+        {
+            if (ctrl is BotController botCtrl &&
+                botCtrl.Controls.Find("PB_Lamp", true).FirstOrDefault() is PictureBox lamp &&
+                lamp.Tag?.ToString() == "NoTheme")
+            {
+                continue; // Skip theming this PB_Lamp
+            }
+        }
     }
 
     private void ApplyPokemonTheme()
@@ -933,7 +977,18 @@ public sealed partial class Main : Form
         updater.BackColor = PokeRedShadow;
         updater.ForeColor = SoftWhite;
 
+        // 🛡️ Preserve PB_Lamp images from being overwritten by theme
+        foreach (Control ctrl in FLP_Bots.Controls)
+        {
+            if (ctrl is BotController botCtrl &&
+                botCtrl.Controls.Find("PB_Lamp", true).FirstOrDefault() is PictureBox lamp &&
+                lamp.Tag?.ToString() == "NoTheme")
+            {
+                continue; // Skip theming this PB_Lamp
+            }
+        }
     }
+
 
     private void ApplyDarkTheme()
     {
@@ -1006,6 +1061,16 @@ public sealed partial class Main : Form
         updater.BackColor = DarkRedShadow;
         updater.ForeColor = SoftWhite;
 
+        // 🛡️ Preserve PB_Lamp images from being overwritten by theme
+        foreach (Control ctrl in FLP_Bots.Controls)
+        {
+            if (ctrl is BotController botCtrl &&
+                botCtrl.Controls.Find("PB_Lamp", true).FirstOrDefault() is PictureBox lamp &&
+                lamp.Tag?.ToString() == "NoTheme")
+            {
+                continue; // Skip theming this PB_Lamp
+            }
+        }
     }
 
 
@@ -1082,7 +1147,19 @@ public sealed partial class Main : Form
         updater.BackColor = DarkNuclear;
         updater.ForeColor = WhiteSoft;
 
+
+        // 🛡️ Preserve PB_Lamp images from being overwritten by theme
+        foreach (Control ctrl in FLP_Bots.Controls)
+        {
+            if (ctrl is BotController botCtrl &&
+                botCtrl.Controls.Find("PB_Lamp", true).FirstOrDefault() is PictureBox lamp &&
+                lamp.Tag?.ToString() == "NoTheme")
+            {
+                continue; // Skip theming this PB_Lamp
+            }
+        }
     }
+
 
     private void ApplyBlueTheme()
     {
@@ -1156,6 +1233,16 @@ public sealed partial class Main : Form
         updater.BackColor = BrightBlue;
         updater.ForeColor = WhiteSoft;
 
+        // 🛡️ Preserve PB_Lamp images from being overwritten by theme
+        foreach (Control ctrl in FLP_Bots.Controls)
+        {
+            if (ctrl is BotController botCtrl &&
+                botCtrl.Controls.Find("PB_Lamp", true).FirstOrDefault() is PictureBox lamp &&
+                lamp.Tag?.ToString() == "NoTheme")
+            {
+                continue; // Skip theming this PB_Lamp
+            }
+        }
     }
 
     private void ApplyAkatsukiTheme()
@@ -1228,6 +1315,17 @@ public sealed partial class Main : Form
 
         updater.BackColor = DarkNearBlack;
         updater.ForeColor = BrightRed;
+
+        // 🛡️ Preserve PB_Lamp images from being overwritten by theme
+        foreach (Control ctrl in FLP_Bots.Controls)
+        {
+            if (ctrl is BotController botCtrl &&
+                botCtrl.Controls.Find("PB_Lamp", true).FirstOrDefault() is PictureBox lamp &&
+                lamp.Tag?.ToString() == "NoTheme")
+            {
+                continue; // Skip theming this PB_Lamp
+            }
+        }
     }
 
     private void ApplyNarutoTheme()
@@ -1299,8 +1397,20 @@ public sealed partial class Main : Form
 
         updater.BackColor = BlackGray;
         updater.ForeColor = MatteOrange;
+
+        // 🛡️ Preserve PB_Lamp images from being overwritten by theme
+        foreach (Control ctrl in FLP_Bots.Controls)
+        {
+            if (ctrl is BotController botCtrl &&
+                botCtrl.Controls.Find("PB_Lamp", true).FirstOrDefault() is PictureBox lamp &&
+                lamp.Tag?.ToString() == "NoTheme")
+            {
+                continue; // Skip theming this PB_Lamp
+            }
+        }
     }
-        private void ApplyShinyMewtwoTheme()
+
+    private void ApplyShinyMewtwoTheme()
     {
         // Define Shiny Mewtwo theme colors
         Color SoftWhite = Color.FromArgb(230, 230, 230);        // A darker shade of white, closer to gray
@@ -1368,6 +1478,17 @@ public sealed partial class Main : Form
 
         updater.BackColor = SoftLimeGreen;
         updater.ForeColor = Black;
+
+        // 🛡️ Preserve PB_Lamp images from being overwritten by theme
+        foreach (Control ctrl in FLP_Bots.Controls)
+        {
+            if (ctrl is BotController botCtrl &&
+                botCtrl.Controls.Find("PB_Lamp", true).FirstOrDefault() is PictureBox lamp &&
+                lamp.Tag?.ToString() == "NoTheme")
+            {
+                continue; // Skip theming this PB_Lamp
+            }
+        }
     }
 
     private void ApplyShinyUmbreonTheme()
@@ -1439,7 +1560,19 @@ public sealed partial class Main : Form
 
         updater.BackColor = DarkBlue;
         updater.ForeColor = White;
+
+        // 🛡️ Preserve PB_Lamp images from being overwritten by theme
+        foreach (Control ctrl in FLP_Bots.Controls)
+        {
+            if (ctrl is BotController botCtrl &&
+                botCtrl.Controls.Find("PB_Lamp", true).FirstOrDefault() is PictureBox lamp &&
+                lamp.Tag?.ToString() == "NoTheme")
+            {
+                continue; // Skip theming this PB_Lamp
+            }
+        }
     }
+
     private void ApplyBlackAndWhiteTheme()
     {
         // Define Black & White theme colors
@@ -1509,7 +1642,19 @@ public sealed partial class Main : Form
 
         updater.BackColor = MediumGray;                     // Medium gray for updater background
         updater.ForeColor = White;                           // White text color for updater font
+
+        // 🛡️ Preserve PB_Lamp images from being overwritten by theme
+        foreach (Control ctrl in FLP_Bots.Controls)
+        {
+            if (ctrl is BotController botCtrl &&
+                botCtrl.Controls.Find("PB_Lamp", true).FirstOrDefault() is PictureBox lamp &&
+                lamp.Tag?.ToString() == "NoTheme")
+            {
+                continue; // Skip theming this PB_Lamp
+            }
+        }
     }
+
     private void ApplyPokemonScarletTheme()
     {
         // Define Pokémon Scarlet theme colors
@@ -1579,7 +1724,19 @@ public sealed partial class Main : Form
 
         updater.BackColor = DarkRed;                     // Matte yellow for updater background
         updater.ForeColor = White;                           // White text color for updater font
+
+        // 🛡️ Preserve PB_Lamp images from being overwritten by theme
+        foreach (Control ctrl in FLP_Bots.Controls)
+        {
+            if (ctrl is BotController botCtrl &&
+                botCtrl.Controls.Find("PB_Lamp", true).FirstOrDefault() is PictureBox lamp &&
+                lamp.Tag?.ToString() == "NoTheme")
+            {
+                continue; // Skip theming this PB_Lamp
+            }
+        }
     }
+
     private void ApplyPokemonVioletTheme()
     {
         // Define Pokémon Scarlet theme colors
@@ -1649,7 +1806,19 @@ public sealed partial class Main : Form
 
         updater.BackColor = DarkViolet;                         // Dark violet for updater background
         updater.ForeColor = White;                               // White text color for updater font
+
+        // 🛡️ Preserve PB_Lamp images from being overwritten by theme
+        foreach (Control ctrl in FLP_Bots.Controls)
+        {
+            if (ctrl is BotController botCtrl &&
+                botCtrl.Controls.Find("PB_Lamp", true).FirstOrDefault() is PictureBox lamp &&
+                lamp.Tag?.ToString() == "NoTheme")
+            {
+                continue; // Skip theming this PB_Lamp
+            }
+        }
     }
+
     private void ApplyRainbowTheme()
     {
         // Define Rainbow theme colors
@@ -1723,7 +1892,19 @@ public sealed partial class Main : Form
 
         updater.BackColor = DarkBlue;                      // Dark blue for updater background
         updater.ForeColor = White;                           // White text color for updater font
+
+        // 🛡️ Preserve PB_Lamp images from being overwritten by theme
+        foreach (Control ctrl in FLP_Bots.Controls)
+        {
+            if (ctrl is BotController botCtrl &&
+                botCtrl.Controls.Find("PB_Lamp", true).FirstOrDefault() is PictureBox lamp &&
+                lamp.Tag?.ToString() == "NoTheme")
+            {
+                continue; // Skip theming this PB_Lamp
+            }
+        }
     }
+
     private void ApplyPitchBlackTheme()
     {
         // Set the background color of the Hub form
@@ -1787,6 +1968,17 @@ public sealed partial class Main : Form
 
         updater.BackColor = Color.Black;           // Black updater background
         updater.ForeColor = Color.White;           // White updater text color
+
+        // 🛡️ Preserve PB_Lamp images from being overwritten by theme
+        foreach (Control ctrl in FLP_Bots.Controls)
+        {
+            if (ctrl is BotController botCtrl &&
+                botCtrl.Controls.Find("PB_Lamp", true).FirstOrDefault() is PictureBox lamp &&
+                lamp.Tag?.ToString() == "NoTheme")
+            {
+                continue; // Skip theming this PB_Lamp
+            }
+        }
     }
 }
 
