@@ -170,7 +170,7 @@ public partial class BotController : UserControl
         return bot;
     }
 
-    private void BotController_MouseEnter(object? sender, EventArgs e) => BackColor = Color.LightSkyBlue;
+    private void BotController_MouseEnter(object? sender, EventArgs e) => BackColor = Color.RebeccaPurple;
     private void BotController_MouseLeave(object? sender, EventArgs e) => BackColor = Color.Transparent;
 
     public void ReadState()

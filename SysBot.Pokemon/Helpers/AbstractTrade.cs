@@ -627,7 +627,115 @@ namespace SysBot.Pokemon.Helpers
             int rangeDays = End.DayNumber - Start.DayNumber + 1;
             pk.MetDate = Start.AddDays(Random.Shared.Next(rangeDays));
         }
-    }
+    
+
+            public static byte DetectShowdownLanguage(string content)
+        {
+            // Check for batch command format: .Language=X
+            var batchMatch = Regex.Match(content, @"\.Language=(\d+)");
+            if (batchMatch.Success && byte.TryParse(batchMatch.Groups[1].Value, out byte langCode))
+            {
+                return langCode >= 1 && langCode <= 10 ? langCode : (byte)2; // Validate range and default to English if invalid
+            }
+
+            // Check for explicit language specification
+            var lines = content.Split('\n');
+            foreach (var line in lines)
+            {
+                if (line.StartsWith("Language", StringComparison.OrdinalIgnoreCase))
+                {
+                    var language = line.Substring(line.IndexOf(':') + 1).Trim().ToLowerInvariant();
+
+                    return language switch
+                    {
+                        "english" or "eng" or "en" => 2,
+                        "french" or "français" or "fra" or "fr" => 3,
+                        "italian" or "italiano" or "ita" or "it" => 4,
+                        "german" or "deutsch" or "deu" or "de" => 5,
+                        "spanish" or "español" or "spa" or "es" => 7,
+                        "japanese" or "日本語" or "jpn" or "ja" => 1,
+                        "korean" or "한국어" or "kor" or "ko" => 8,
+                        "chinese simplified" or "中文简体" or "chs" or "zh-cn" => 9,
+                        "chinese traditional" or "中文繁體" or "cht" or "zh-tw" => 10,
+                        _ => 2 // Default to English if language is not recognized
+                    };
+                }
+            }
+
+            // French
+            if (content.Contains("Talent") ||
+                content.Contains("Bonheur") ||
+                content.Contains("Chromatique") ||
+                content.Contains("Niveau") ||
+                content.Contains("Type Téra"))
+            {
+                return 3; // French
+            }
+            // Italian
+            if (content.Contains("Abilità") ||
+                content.Contains("Natura") ||
+                content.Contains("Amicizia") ||
+                content.Contains("Cromatico") ||
+                content.Contains("Livello") ||
+                content.Contains("Teratipo"))
+            {
+                return 4; // Italian
+            }
+            // German
+            if (content.Contains("Fähigkeit") ||
+                content.Contains("Wesen") ||
+                content.Contains("Freundschaft") ||
+                content.Contains("Schillerndes") ||
+                content.Contains("Tera-Typ"))
+            {
+                return 5; // German
+            }
+            // Spanish
+            if (content.Contains("Habilidad") ||
+                content.Contains("Naturaleza") ||
+                content.Contains("Felicidad") ||
+                content.Contains("Teratipo"))
+            {
+                return 7; // Spanish
+            }
+            // Japanese
+            if (content.Contains("特性") ||
+                content.Contains("性格") ||
+                content.Contains("なつき度") ||
+                content.Contains("光ひかる") ||
+                content.Contains("テラスタイプ"))
+            {
+                return 1; // Japanese
+            }
+            // Korean
+            if (content.Contains("특성") ||
+                content.Contains("성격") ||
+                content.Contains("친밀도") ||
+                content.Contains("빛나는") ||
+                content.Contains("테라스탈타입"))
+            {
+                return 8; // Korean
+            }
+            // Chinese Simplified
+            if (content.Contains("亲密度") ||
+                content.Contains("异色") ||
+                content.Contains("太晶属性"))
+            {
+                return 9; // Chinese Simplified
+            }
+            // Traditional Chinese
+            if (content.Contains("親密度") ||
+                content.Contains("發光寶") ||
+                content.Contains("太晶屬性"))
+            {
+                return 10; // Chinese Traditional
+            }
+            // Default to English
+            return 2;
+        }
+    } }
+
+
         // Add the missing method definition for 'SetHandlerandMemory' to the PKMExtensions class. 
         public static class PKMExtensions
         {
@@ -710,4 +818,4 @@ namespace SysBot.Pokemon.Helpers
             return string.Join('\n', lines);
         }
     }
-}
+

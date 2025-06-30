@@ -78,17 +78,45 @@ public class TradeStartModule<T> : ModuleBase<SocketCommandContext> where T : PK
             if (detail.Type == PokeTradeType.Random) return;
 
             var user = _discordClient.GetUser(detail.Trainer.ID);
-            if (user == null) { Console.WriteLine($"User not found for ID {detail.Trainer.ID}."); return; }
+            if (user == null)
+            {
+                Console.WriteLine($"User not found for ID {detail.Trainer.ID}.");
+                return;
+            }
 
-            string speciesName = detail.TradeData != null ? GameInfo.Strings.Species[detail.TradeData.Species] : "";
+            string speciesName = detail.TradeData != null
+                ? GameInfo.Strings.Species[detail.TradeData.Species]
+                : "";
+
+            // Default fallback icon
             string ballImgUrl = "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/specialrequest.gif";
 
-            if (detail.TradeData != null && detail.Type != PokeTradeType.Clone && detail.Type != PokeTradeType.Dump && detail.Type != PokeTradeType.Seed && detail.Type != PokeTradeType.FixOT)
+            if (detail.TradeData != null &&
+                detail.Type is not (PokeTradeType.Clone or PokeTradeType.Dump or PokeTradeType.Seed or PokeTradeType.FixOT))
             {
-                var ballName = GameInfo.GetStrings(1).balllist[detail.TradeData.Ball]
-                    .Replace(" ", "").Replace("(LA)", "").ToLower();
-                ballName = ballName == "pokéball" ? "pokeball" : (ballName.Contains("(la)") ? "la" + ballName : ballName);
-                ballImgUrl = $"https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/AltBallImg/28x28/{ballName}.png";
+                try
+                {
+                    var rawBallName = GameInfo.GetStrings(1).balllist[detail.TradeData.Ball];
+                    string cleanedBall = rawBallName
+                        .Replace(" ", "")
+                        .Replace("(LA)", "")
+                        .Replace("é", "e")
+                        .ToLowerInvariant();
+
+                    if (rawBallName.Contains("(LA)", StringComparison.OrdinalIgnoreCase))
+                        cleanedBall = "la" + cleanedBall;
+
+                    if (cleanedBall == "pokeball" || cleanedBall == "pokéball")
+                        cleanedBall = "pokeball";
+
+                    ballImgUrl = $"https://raw.secludedly.workers.dev/AltBallImg/28x28/{cleanedBall}.png";
+                    Console.WriteLine($"BALL IMG URL: {ballImgUrl}");
+
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error resolving ball image: {ex.Message}");
+                }
             }
 
             string tradeTitle = detail.IsMysteryEgg ? "✨ Mystery Egg" : detail.Type switch
@@ -100,20 +128,28 @@ public class TradeStartModule<T> : ModuleBase<SocketCommandContext> where T : PK
                 _ => speciesName
             };
 
-            string embedImageUrl = detail.IsMysteryEgg ? "https://raw.githubusercontent.com/https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/mysteryegg3.png" : detail.Type switch
-            {
-                PokeTradeType.Clone => "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/Cloning.png",
-                PokeTradeType.Dump => "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/Dumping.png",
-                PokeTradeType.FixOT => "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/FixOTing.png",
-                PokeTradeType.Seed => "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/Seeding.png",
-                _ => detail.TradeData != null ? AbstractTrade<T>.PokeImg(detail.TradeData, false, true) : ""
-            };
+            string embedImageUrl = detail.IsMysteryEgg
+                ? "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/mysteryegg3.png"
+                : detail.Type switch
+                {
+                    PokeTradeType.Clone => "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/Cloning.png",
+                    PokeTradeType.Dump => "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/Dumping.png",
+                    PokeTradeType.FixOT => "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/FixOTing.png",
+                    PokeTradeType.Seed => "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/Seeding.png",
+                    _ => detail.TradeData != null
+                    ? AbstractTrade<T>.PokeImg(detail.TradeData, false, true)
+                    : ""
+
+                };
 
             var (r, g, b) = await GetDominantColorAsync(embedImageUrl);
 
-            string footerText = detail.Type == PokeTradeType.Clone || detail.Type == PokeTradeType.Dump || detail.Type == PokeTradeType.Seed || detail.Type == PokeTradeType.FixOT
-                ? "Now Initializing..."
-                : $"Now Initializing...\nYour {(detail.IsMysteryEgg ? "✨ Mystery Egg" : speciesName)} is now on its way!";
+            string footerText = detail.Type switch
+            {
+                PokeTradeType.Clone or PokeTradeType.Dump or PokeTradeType.Seed or PokeTradeType.FixOT
+                    => "Now Initializing...",
+                _ => $"Now Initializing...\nYour {(detail.IsMysteryEgg ? "✨ Mystery Egg" : speciesName)} is now on its way!"
+            };
 
             var embed = new EmbedBuilder()
                 .WithColor(new DiscordColor(r, g, b))
@@ -129,6 +165,7 @@ public class TradeStartModule<T> : ModuleBase<SocketCommandContext> where T : PK
         SysCord<T>.Runner.Hub.Queues.Forwarders.Add(Logger);
         Channels.Add(cid, new TradeStartAction(cid, Logger, c.Name));
     }
+
 
     [Command("startInfo")]
     [Summary("Dumps the Start Notification settings.")]
