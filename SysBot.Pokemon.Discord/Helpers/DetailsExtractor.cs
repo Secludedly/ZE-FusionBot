@@ -37,6 +37,7 @@ public class DetailsExtractor<T> where T : PKM, new()
         embedData.HeldItem = strings.itemlist[pk.HeldItem];
         embedData.Ball = strings.balllist[pk.Ball];
 
+
         // Display elements
         Span<int> ivs = stackalloc int[6];
         pk.GetIVs(ivs);
@@ -119,7 +120,7 @@ public class DetailsExtractor<T> where T : PKM, new()
         var teraType = isStellar ? TradeSettings.MoveType.Stellar : (TradeSettings.MoveType)pk9.TeraType;
 
         if (SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.UseTeraEmojis)
-        { 
+        {
             var emojiInfo = SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.TeraTypeEmojis.Find(e => e.MoveType == teraType);
             if (emojiInfo != null && !string.IsNullOrEmpty(emojiInfo.EmojiCode))
             {
@@ -315,6 +316,7 @@ public class DetailsExtractor<T> where T : PKM, new()
         leftSideContent +=
 
             (SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.ShowLevel ? $"**Level:** {embedData.Level}\n" : "") +
+            (SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.ShowBall ? $"**Ball:** {embedData.Ball}\n" : "") +
             (SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.ShowMetLevel ? $"**Met Level:** {embedData.MetLevel}\n" : "") +
             (SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.ShowMetDate ? $"**Met Date:** {embedData.MetDate}\n" : "") +
             (SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.ShowAbility ? $"**Ability:** {embedData.Ability}\n" : "") +
@@ -356,31 +358,32 @@ public class DetailsExtractor<T> where T : PKM, new()
         pk.GetEVs(evs);
         return evs;
     }
-}
 
-public class EmbedData
-{
-    public List<string>? Moves { get; set; }
-    public int Level { get; set; }
-    public string? TeraType { get; set; }
-    public (string, byte) Scale { get; set; }
-    public string? Ability { get; set; }
-    public string? Nature { get; set; }
-    public int Language { get; set; }
-    public string? SpeciesName { get; set; }
-    public string? SpecialSymbols { get; set; }
-    public string? FormName { get; set; }
-    public string? HeldItem { get; set; }
-    public string? Ball { get; set; }
-    public string? IVsDisplay { get; set; }
-    public string? EVsDisplay { get; set; }
-    public string? MetDate { get; set; }
-    public byte MetLevel { get; set; }
-    public string? MovesDisplay { get; set; }
-    public string? PokemonDisplayName { get; set; }
-    public string? TradeTitle { get; set; }
-    public string? AuthorName { get; set; }
-    public string? EmbedImageUrl { get; set; }
-    public string? HeldItemUrl { get; set; }
-    public bool IsLocalFile { get; set; }
+    public class EmbedData
+    {
+        public List<string>? Moves { get; set; }
+        public int Level { get; set; }
+        public string? TeraType { get; set; }
+        public (string, byte) Scale { get; set; }
+        public string? Ability { get; set; }
+        public string? Nature { get; set; }
+        public int Language { get; set; }
+        public string? SpeciesName { get; set; }
+        public string? SpecialSymbols { get; set; }
+        public string? FormName { get; set; }
+        public string? HeldItem { get; set; }
+        public string? Ball { get; set; }
+        public string? BallImageUrl { get; set; }
+        public string? IVsDisplay { get; set; }
+        public string? EVsDisplay { get; set; }
+        public string? MetDate { get; set; }
+        public byte MetLevel { get; set; }
+        public string? MovesDisplay { get; set; }
+        public string? PokemonDisplayName { get; set; }
+        public string? TradeTitle { get; set; }
+        public string? AuthorName { get; set; }
+        public string? EmbedImageUrl { get; set; }
+        public string? HeldItemUrl { get; set; }
+        public bool IsLocalFile { get; set; }
+    }
 }

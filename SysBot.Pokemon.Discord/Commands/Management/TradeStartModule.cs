@@ -71,11 +71,42 @@ public class TradeStartModule<T> : ModuleBase<SocketCommandContext> where T : PK
         await ReplyAsync("Added Start Notification output to this channel!").ConfigureAwait(false);
     }
 
+    private static readonly Dictionary<string, string> BallFileMap = new(StringComparer.OrdinalIgnoreCase)
+{
+    { "poke ball", "poke_ball" },
+    { "great ball", "great_ball" },
+    { "ultra ball", "ultra_ball" },
+    { "master ball", "master_ball" },
+    { "dive ball", "dive_ball" },
+    { "nest ball", "nest_ball" },
+    { "repeat ball", "repeat_ball" },
+    { "timer ball", "timer_ball" },
+    { "luxury ball", "luxury_ball" },
+    { "premier ball", "premier_ball" },
+    { "heal ball", "heal_ball" },
+    { "quick ball", "quick_ball" },
+    { "dusk ball", "dusk_ball" },
+    { "cherish ball", "cherish_ball" },
+    { "friend ball", "friend_ball" },
+    { "level ball", "level_ball" },
+    { "lure ball", "lure_ball" },
+    { "moon ball", "moon_ball" },
+    { "love ball", "love_ball" },
+    { "fast ball", "fast_ball" },
+    { "heavy ball", "heavy_ball" },
+    { "dream ball", "dream_ball" },
+    { "beast ball", "beast_ball" },
+    { "safari ball", "safari_ball" },
+    { "sport ball", "sport_ball" },
+    { "strange ball", "strange_ball" },
+};
+
     private static void AddLogChannel(ISocketMessageChannel c, ulong cid)
     {
         async void Logger(PokeRoutineExecutorBase bot, PokeTradeDetail<T> detail)
         {
-            if (detail.Type == PokeTradeType.Random) return;
+            if (detail.Type == PokeTradeType.Random)
+                return;
 
             var user = _discordClient.GetUser(detail.Trainer.ID);
             if (user == null)
@@ -96,22 +127,17 @@ public class TradeStartModule<T> : ModuleBase<SocketCommandContext> where T : PK
             {
                 try
                 {
-                    var rawBallName = GameInfo.GetStrings(1).balllist[detail.TradeData.Ball];
-                    string cleanedBall = rawBallName
-                        .Replace(" ", "")
-                        .Replace("(LA)", "")
-                        .Replace("é", "e")
-                        .ToLowerInvariant();
+                    string rawBallName = GameInfo.GetStrings(1).balllist[detail.TradeData.Ball].Trim();
 
-                    if (rawBallName.Contains("(LA)", StringComparison.OrdinalIgnoreCase))
-                        cleanedBall = "la" + cleanedBall;
-
-                    if (cleanedBall == "pokeball" || cleanedBall == "pokéball")
-                        cleanedBall = "pokeball";
-
-                    ballImgUrl = $"https://raw.secludedly.workers.dev/AltBallImg/28x28/{cleanedBall}.png";
-                    Console.WriteLine($"BALL IMG URL: {ballImgUrl}");
-
+                    if (BallFileMap.TryGetValue(rawBallName, out string fileName))
+                    {
+                        ballImgUrl = $"https://raw.githack.com/Secludedly/ZE-FusionBot-Sprite-Images/main/AltBallImg/28x28/{fileName}.png";
+                        Console.WriteLine($"Resolved ball icon: {ballImgUrl}");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Unknown ball name: '{rawBallName}' — using fallback icon.");
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -137,9 +163,8 @@ public class TradeStartModule<T> : ModuleBase<SocketCommandContext> where T : PK
                     PokeTradeType.FixOT => "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/FixOTing.png",
                     PokeTradeType.Seed => "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/Seeding.png",
                     _ => detail.TradeData != null
-                    ? AbstractTrade<T>.PokeImg(detail.TradeData, false, true)
-                    : ""
-
+                        ? AbstractTrade<T>.PokeImg(detail.TradeData, false, true)
+                        : ""
                 };
 
             var (r, g, b) = await GetDominantColorAsync(embedImageUrl);
@@ -165,6 +190,7 @@ public class TradeStartModule<T> : ModuleBase<SocketCommandContext> where T : PK
         SysCord<T>.Runner.Hub.Queues.Forwarders.Add(Logger);
         Channels.Add(cid, new TradeStartAction(cid, Logger, c.Name));
     }
+
 
 
     [Command("startInfo")]
