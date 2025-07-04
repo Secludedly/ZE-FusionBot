@@ -4,6 +4,7 @@ using Discord.Net;
 using Discord.WebSocket;
 using PKHeX.Core;
 using SysBot.Base;
+using SysBot.Pokemon.Discord.Helpers;
 using SysBot.Pokemon.Helpers;
 using System;
 using System.Collections.Generic;
@@ -286,6 +287,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             return;
         }
         content = ReusableActions.StripCodeBlock(content);
+        content = BatchNormalizer.NormalizeBatchCommands(content);
         var set = new ShowdownSet(content);
         var template = AutoLegalityWrapper.GetTemplate(set);
         _ = Task.Run(async () =>
@@ -364,6 +366,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
 
         var ignoreAutoOT = content.Contains("OT:") || content.Contains("TID:") || content.Contains("SID:");
         content = ReusableActions.StripCodeBlock(content);
+        content = BatchNormalizer.NormalizeBatchCommands(content);
         bool isEgg = AbstractTrade<T>.IsEggCheck(content);
 
         _ = ShowdownParsing.TryParseAnyLanguage(content, out ShowdownSet? set);
@@ -567,6 +570,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
 
         var ignoreAutoOT = content.Contains("OT:") || content.Contains("TID:") || content.Contains("SID:");
         content = ReusableActions.StripCodeBlock(content);
+        content = BatchNormalizer.NormalizeBatchCommands(content);
         bool isEgg = AbstractTrade<T>.IsEggCheck(content);
 
         _ = ShowdownParsing.TryParseAnyLanguage(content, out ShowdownSet? set);
@@ -756,6 +760,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         }
 
         content = ReusableActions.StripCodeBlock(content);
+        content = BatchNormalizer.NormalizeBatchCommands(content);
         var trades = TradeModule<T>.ParseBatchTradeContent(content);
         var maxTradesAllowed = SysCord<T>.Runner.Config.Trade.TradeConfiguration.MaxPkmsPerTrade;
 
