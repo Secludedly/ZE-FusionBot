@@ -136,7 +136,7 @@ This bot unites the forks of various other developers - some new, some old, some
   <tr>
     <td align="center">
       <p>Switch Remote for PC</p>
-      <img width="100%" src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/README_SwitchRemoteForPC.gif alt="gif1"/>
+      <img width="100%" src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/README_SwitchRemoteForPC.gif" alt="gif1"/>
     </td>
     <td align="center">
       <p>SysDVR Feature</p>
