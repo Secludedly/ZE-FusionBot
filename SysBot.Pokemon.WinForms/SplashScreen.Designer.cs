@@ -37,10 +37,9 @@ namespace SysBot.Pokemon.WinForms
             // pictureBox1
             // 
             pictureBox1.Image = (System.Drawing.Image)resources.GetObject("pictureBox1.Image");
-            pictureBox1.Location = new System.Drawing.Point(0, -2);
+            pictureBox1.Location = new System.Drawing.Point(1, 0);
             pictureBox1.Name = "pictureBox1";
-            pictureBox1.Size = new System.Drawing.Size(1113, 246);
-            pictureBox1.SizeMode = System.Windows.Forms.PictureBoxSizeMode.StretchImage;
+            pictureBox1.Size = new System.Drawing.Size(1007, 469);
             pictureBox1.TabIndex = 0;
             pictureBox1.TabStop = false;
             // 
@@ -48,7 +47,7 @@ namespace SysBot.Pokemon.WinForms
             // 
             AutoScaleDimensions = new System.Drawing.SizeF(8F, 20F);
             AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            ClientSize = new System.Drawing.Size(1113, 243);
+            ClientSize = new System.Drawing.Size(1007, 469);
             Controls.Add(pictureBox1);
             FormBorderStyle = System.Windows.Forms.FormBorderStyle.None;
             Name = "SplashScreen";

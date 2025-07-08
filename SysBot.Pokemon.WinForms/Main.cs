@@ -1,1985 +1,861 @@
+using FontAwesome.Sharp;
 using PKHeX.Core;
 using SysBot.Base;
+using SysBot.Pokemon.Discord;
+using SysBot.Pokemon.Helpers;
+using SysBot.Pokemon.WinForms.Properties;
 using SysBot.Pokemon.Z3;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using SysBot.Pokemon.Helpers;
-using System.Drawing;
-using SysBot.Pokemon.WinForms.Properties;
-using Microsoft.Extensions.DependencyInjection;
-using System.ComponentModel;
 
-namespace SysBot.Pokemon.WinForms;
-
-public sealed partial class Main : Form
+namespace SysBot.Pokemon.WinForms
 {
-    private readonly List<PokeBotState> Bots = [];
-
-
-    private IPokeBotRunner RunningEnvironment { get; set; }
-    private ProgramConfig Config { get; set; }
-    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-    public static bool IsUpdating { get; set; } = false;
-
-    private bool _isFormLoading = true;
-    public Main()
+    public sealed partial class Main : Form
     {
-        InitializeComponent();
-        comboBox1.SelectedIndexChanged += new EventHandler(comboBox1_SelectedIndexChanged);
-        this.Load += async (sender, e) => await InitializeAsync();
+        // Main form properties
+        private Form activeForm = null; // Active child form in the main panel
 
-    }
+        // Running environment and configuration
+        private IPokeBotRunner RunningEnvironment { get; set; } // Bot runner based on game mode
 
-    private async Task InitializeAsync()
-    {
-        if (IsUpdating)
-            return;
-        PokeTradeBotSWSH.SeedChecker = new Z3SeedSearchHandler<PK8>();
+        // Program configuration
+        private ProgramConfig Config { get; set; }
 
+        // Static properties for update state
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] // Do not serialize in the designer
+        public static bool IsUpdating { get; set; } = false;
 
-        // Update checker
-        UpdateChecker updateChecker = new UpdateChecker();
-        await UpdateChecker.CheckForUpdatesAsync();
+        // Program has update flag
+        internal bool hasUpdate = false;
 
+        // Flag to indicate if the form is still loading
+        private bool _isFormLoading = true;
 
-        if (File.Exists(Program.ConfigPath))
+        // Left‑side button styling
+        private IconButton currentBtn;                             // Currently active button
+        private Panel leftBorderBtn;                               // Left border panel for the active button
+        private Dictionary<IconButton, Timer> hoverTimers = new(); // Dictionary to hold hover timers for buttons
+
+        // BotsForm & runner to help manage the bots
+        private readonly List<PokeBotState> Bots = new(); // List of bots created in the program
+        private BotsForm _botsForm;                       // BotsForm instance to manage bot controls
+        private IPokeBotRunner _runner;                   // Runner instance to manage bot operations
+
+        // Place GameMode BG Images into panelLeftSide
+        public Panel PanelLeftSide => panelLeftSide;
+
+        // LogsForm loading
+        private LogsForm _logsForm;
+
+        // HubForm loading
+        private HubForm _hubForm;
+
+        // Main Constructor
+        public Main()
         {
-            var lines = File.ReadAllText(Program.ConfigPath);
-            Config = JsonSerializer.Deserialize(lines, ProgramConfigContext.Default.ProgramConfig) ?? new ProgramConfig();
-            LogConfig.MaxArchiveFiles = Config.Hub.MaxArchiveFiles;
-            LogConfig.LoggingEnabled = Config.Hub.LoggingEnabled;
-            comboBox1.SelectedValue = (int)Config.Mode;
-            RunningEnvironment = GetRunner(Config);
-            foreach (var bot in Config.Bots)
-            {
-                bot.Initialize();
-                AddBot(bot);
-            }
+            Task.Run(BotMonitor);      // Start the bot monitor
+            InitializeComponent();     // Initialize all the form components before program
+            InitializeLeftSideImage(); // Initialize the left side BG image in panelLeftSide
+
+            // Wait for the form crap to load before initializing
+            this.Load += async (s, e) => await InitializeAsync();
+
+            // Load custom fonts before initializing
+            FontManager.LoadFonts(
+                "bahnschrift.ttf",
+                "Bobbleboddy_light.ttf",
+                "gadugi.ttf",
+                "gadugib.ttf",
+                "segoeui.ttf",
+                "segoeuib.ttf",
+                "segoeuii.ttf",
+                "segoeuil.ttf",
+                "UbuntuMono-R.ttf",
+                "UbuntuMono-B.ttf",
+                "UbuntuMono-BI.ttf",
+                "UbuntuMono-RI.ttf",
+                "segoeuisl.ttf",
+                "segoeuiz.ttf",
+                "seguibl.ttf",
+                "seguibli.ttf",
+                "seguili.ttf",
+                "seguisb.ttf",
+                "seguisbi.ttf",
+                "seguisli.ttf",
+                "SegUIVar.ttf"
+                );
+
+            // Set up left‑panel buttons & effects
+            ApplyButtonEffects();
+            SetupHoverAnimation(btnBots);                         // Bots button
+            SetupHoverAnimation(btnHub);                          // Hub button
+            SetupHoverAnimation(btnLogs);                         // Logs button
+            leftBorderBtn = new Panel { Size = new Size(7, 60) }; // Left border for active button
+            panelLeftSide.Controls.Add(leftBorderBtn);            // Add left border to the panel
+            panelTitleBar.MouseDown += panelTitleBar_MouseDown;   // Allow dragging the window from the title bar
+
+            // Title‑bar controls
+            this.Text = ""; // Set the form title to empty
+
+            this.ControlBox = false;                                           // Disable the default Minimize/Maximize/Close
+            this.FormBorderStyle = FormBorderStyle.None;                       // Remove the default form border
+            this.DoubleBuffered = true;                                        // Enable double buffering to reduce flickering
+            this.SetStyle(ControlStyles.ResizeRedraw, true);                   // Redraw on resize
+            this.MaximizedBounds = Screen.FromHandle(this.Handle).WorkingArea; // Set the maximized bounds to the working area of the screen
+
+            // Handlers for the Close/Maximize/Minimize buttons
+            btnClose.Click += BtnClose_Click;       // Close button
+            btnMaximize.Click += BtnMaximize_Click; // Maximize button
+            btnMinimize.Click += BtnMinimize_Click; // Minimize button
+
+            // Set up hover animations for Close/Maximize/Minimize buttons
+            SetupTopButtonHoverAnimation(btnClose, Color.FromArgb(232, 17, 35));    // Color is red
+            SetupTopButtonHoverAnimation(btnMaximize, Color.FromArgb(0, 120, 215)); // Color is blue
+            SetupTopButtonHoverAnimation(btnMinimize, Color.FromArgb(255, 185, 0)); // Color is yellow
         }
-        else
+
+        // Runs once when Main form first loads
+        private async Task InitializeAsync()
         {
-            Config = new ProgramConfig();
-            RunningEnvironment = GetRunner(Config);
-            Config.Hub.Folder.CreateDefaults(Program.WorkingDirectory);
-        }
+            if (IsUpdating) 
+                return;
 
-        RTB_Logs.MaxLength = 32_767; // character length
-        LoadControls();
-        Text = $"{(string.IsNullOrEmpty(Config.Hub.BotName) ? "ZE FusionBot |" : Config.Hub.BotName)} {TradeBot.Version} | Mode: {Config.Mode}";
-        Task.Run(BotMonitor);
-        InitUtil.InitializeStubs(Config.Mode);
-        _isFormLoading = false;
-        UpdateBackgroundImage(Config.Mode);
-    }
+            PokeTradeBotSWSH.SeedChecker = new Z3SeedSearchHandler<PK8>(); // Initialize the seed checker for SWSH mode
 
-    private static IPokeBotRunner GetRunner(ProgramConfig cfg) => cfg.Mode switch
-    {
-        ProgramMode.SWSH => new PokeBotRunnerImpl<PK8>(cfg.Hub, new BotFactory8SWSH()),
-        ProgramMode.BDSP => new PokeBotRunnerImpl<PB8>(cfg.Hub, new BotFactory8BS()),
-        ProgramMode.LA => new PokeBotRunnerImpl<PA8>(cfg.Hub, new BotFactory8LA()),
-        ProgramMode.SV => new PokeBotRunnerImpl<PK9>(cfg.Hub, new BotFactory9SV()),
-        ProgramMode.LGPE => new PokeBotRunnerImpl<PB7>(cfg.Hub, new BotFactory7LGPE()),
-        _ => throw new IndexOutOfRangeException("Unsupported mode."),
-    };
-
-    private async Task BotMonitor()
-    {
-        while (!Disposing)
-        {
             try
             {
-                foreach (var c in FLP_Bots.Controls.OfType<BotController>())
-                    c.ReadState();
+                var (updateAvailable, _, _) = await UpdateChecker.CheckForUpdatesAsync(); // Check for updates
+                hasUpdate = updateAvailable; // If there's an update, this flag gets checked
             }
-            catch
+            catch { }
+            _botsForm = new BotsForm(); // Initialize the BotsForm instance
+            _logsForm = new LogsForm(); // Initialize the LogsForm instance
+            LogUtil.Forwarders.Add(new UIRichTextBoxForwarder(_logsForm.LogsBox)); // Add a log forwarder to the LogsForm's LogsBox
+            _logsForm.LogsBox.MaxLength = 32767; // Set the maximum length of the LogsBox to 32767 characters (why this number though?)
+
+            // If it knows a config file exists in root folder then load that shit up
+            if (File.Exists(Program.ConfigPath))
             {
-                // Updating the collection by adding/removing bots will change the iterator
-                // Can try a for-loop or ToArray, but those still don't prevent concurrent mutations of the array.
-                // Just try, and if failed, ignore. Next loop will be fine. Locks on the collection are kinda overkill, since this task is not critical.
-            }
-            await Task.Delay(2_000).ConfigureAwait(false);
-        }
-    }
+                var lines = File.ReadAllText(Program.ConfigPath);
+                Config = JsonSerializer.Deserialize<ProgramConfig>(lines) ?? new ProgramConfig();
+                LogConfig.MaxArchiveFiles = Config.Hub.MaxArchiveFiles;
+                LogConfig.LoggingEnabled = Config.Hub.LoggingEnabled;
 
-    private void LoadControls()
-    {
-        MinimumSize = Size;
-        PG_Hub.SelectedObject = RunningEnvironment.Config;
+                // Clean up bad bot entries
+                Config.Bots = Config.Bots
+                    .Where(b => b != null && b.IsValid() && !string.IsNullOrWhiteSpace(b.Connection?.IP))
+                    .GroupBy(b => $"{b.Connection.IP}:{b.Connection.Port}")
+                    .Select(g => g.First())
+                    .ToArray();
 
-        var routines = ((PokeRoutineType[])Enum.GetValues(typeof(PokeRoutineType))).Where(z => RunningEnvironment.SupportsRoutine(z));
-        var list = routines.Select(z => new ComboItem(z.ToString(), (int)z)).ToArray();
-        CB_Routine.DisplayMember = nameof(ComboItem.Text);
-        CB_Routine.ValueMember = nameof(ComboItem.Value);
-        CB_Routine.DataSource = list;
-        CB_Routine.SelectedValue = (int)PokeRoutineType.FlexTrade; // default option
+                RunningEnvironment = GetRunner(Config);
 
-        var protocols = (SwitchProtocol[])Enum.GetValues(typeof(SwitchProtocol));
-        var listP = protocols.Select(z => new ComboItem(z.ToString(), (int)z)).ToArray();
-        CB_Protocol.DisplayMember = nameof(ComboItem.Text);
-        CB_Protocol.ValueMember = nameof(ComboItem.Value);
-        CB_Protocol.DataSource = listP;
-        CB_Protocol.SelectedIndex = (int)SwitchProtocol.WiFi; // default option
-                                                              // Populate the game mode dropdown
-        var gameModes = Enum.GetValues(typeof(ProgramMode))
-            .Cast<ProgramMode>()
-            .Where(m => m != ProgramMode.None) // Exclude the 'None' value
-            .Select(mode => new { Text = mode.ToString(), Value = (int)mode })
-            .ToList();
-
-        comboBox1.DisplayMember = "Text";
-        comboBox1.ValueMember = "Value";
-        comboBox1.DataSource = gameModes;
-
-        // Set the current mode as selected in the dropdown
-        comboBox1.SelectedValue = (int)Config.Mode;
-
-        comboBox2.Items.Add("Light");
-        comboBox2.Items.Add("Dark");
-        comboBox2.Items.Add("Poke");
-        comboBox2.Items.Add("Gengar");
-        comboBox2.Items.Add("Zeraora");
-        comboBox2.Items.Add("Shiny Zeraora");
-        comboBox2.Items.Add("Green");
-        comboBox2.Items.Add("Blue");
-        comboBox2.Items.Add("Akatsuki");
-        comboBox2.Items.Add("Naruto");
-        comboBox2.Items.Add("Shiny Mewtwo");
-        comboBox2.Items.Add("Shiny Umbreon");
-        comboBox2.Items.Add("Scarlet");
-        comboBox2.Items.Add("Violet");
-        comboBox2.Items.Add("Black & White");
-        comboBox2.Items.Add("Messy Colors");
-        comboBox2.Items.Add("Pitch Black");
-
-        // Load the current theme from configuration and set it in the comboBox2
-        string theme = Config.Hub.ThemeOption;
-        if (string.IsNullOrEmpty(theme) || !comboBox2.Items.Contains(theme))
-        {
-            comboBox2.SelectedIndex = 0;  // Set default selection to Light Mode if ThemeOption is empty or invalid
-        }
-        else
-        {
-            comboBox2.SelectedItem = theme;  // Set the selected item in the combo box based on ThemeOption
-        }
-        switch (theme)
-        {
-            case "Dark":
-                ApplyDarkTheme();
-                break;
-            case "Light":
-                ApplyLightTheme();
-                break;
-            case "Poke":
-                ApplyPokemonTheme();
-                break;
-            case "Gengar":
-                ApplyGengarTheme();
-                break;
-            case "Zeraora":
-                ApplyZeraoraTheme();
-                break;
-            case "Shiny Zeraora":
-                ApplyShinyZeraoraTheme();
-                break;
-            case "Green":
-                ApplyGreenTheme();
-                break;
-            case "Blue":
-                ApplyBlueTheme();
-                break;
-            case "Akatsuki":
-                ApplyAkatsukiTheme();
-                break;
-            case "Naruto":
-                ApplyNarutoTheme();
-                break;
-            case "Shiny Mewtwo":
-                ApplyShinyMewtwoTheme();
-                break;
-            case "Shiny Umbreon":
-                ApplyShinyUmbreonTheme();
-                break;
-            case "Scarlet":
-                ApplyPokemonScarletTheme();
-                break;
-            case "Violet":
-                ApplyPokemonVioletTheme();
-                break;
-            case "Black & White":
-                ApplyBlackAndWhiteTheme();
-                break;
-            case "Messy Colors":
-                ApplyRainbowTheme();
-                break;
-            case "Pitch Black":
-                ApplyPitchBlackTheme();
-                break;
-            default:
-                ApplyLightTheme();
-                break;
-        }
-
-        LogUtil.Forwarders.Add(new TextBoxForwarder(RTB_Logs));
-    }
-
-    private ProgramConfig GetCurrentConfiguration()
-    {
-
-        Config.Bots = Bots.ToArray();
-        return Config;
-    }
-
-    private void Main_FormClosing(object sender, FormClosingEventArgs e)
-    {
-        if (IsUpdating)
-        {
-            return;
-        }
-        SaveCurrentConfig();
-        var bots = RunningEnvironment;
-        if (!bots.IsRunning)
-            return;
-
-        async Task WaitUntilNotRunning()
-        {
-            while (bots.IsRunning)
-                await Task.Delay(10).ConfigureAwait(false);
-        }
-
-        // Try to let all bots hard-stop before ending execution of the entire program.
-        WindowState = FormWindowState.Minimized;
-        ShowInTaskbar = false;
-        bots.StopAll();
-        Task.WhenAny(WaitUntilNotRunning(), Task.Delay(5_000)).ConfigureAwait(true).GetAwaiter().GetResult();
-    }
-
-    private void SaveCurrentConfig()
-    {
-        var cfg = GetCurrentConfiguration();
-        var lines = JsonSerializer.Serialize(cfg, ProgramConfigContext.Default.ProgramConfig);
-        File.WriteAllText(Program.ConfigPath, lines);
-    }
-
-    [JsonSerializable(typeof(ProgramConfig))]
-    [JsonSourceGenerationOptions(WriteIndented = true, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
-    public sealed partial class ProgramConfigContext : JsonSerializerContext;
-    private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
-    {
-        if (_isFormLoading) return; // Check to avoid processing during form loading
-
-        if (comboBox1.SelectedValue is int selectedValue)
-        {
-            ProgramMode newMode = (ProgramMode)selectedValue;
-            Config.Mode = newMode;
-
-            SaveCurrentConfig();
-            UpdateRunnerAndUI();
-
-            UpdateBackgroundImage(newMode);
-        }
-    }
-
-    private void UpdateRunnerAndUI()
-    {
-        RunningEnvironment = GetRunner(Config);
-        Text = $"{(string.IsNullOrEmpty(Config.Hub.BotName) ? "ZE FusionBot |" : Config.Hub.BotName)} {TradeBot.Version} | Mode: {Config.Mode}";
-    }
-
-    private void B_Start_Click(object sender, EventArgs e)
-    {
-        SaveCurrentConfig();
-
-        LogUtil.LogInfo("Starting all bots...", "Form");
-        RunningEnvironment.InitializeStart();
-        SendAll(BotControlCommand.Start);
-        Tab_Logs.Select();
-
-        if (Bots.Count == 0)
-            WinFormsUtil.Alert("No bots configured, but all supporting services have been started.");
-    }
-
-
-    private void B_RebootStop_Click(object sender, EventArgs e)
-    {
-        B_Stop_Click(sender, e);
-        Task.Run(async () =>
-        {
-            await Task.Delay(3_500).ConfigureAwait(false);
-            SaveCurrentConfig();
-            LogUtil.LogInfo("Restarting all the consoles...", "Form");
-            RunningEnvironment.InitializeStart();
-            SendAll(BotControlCommand.RebootAndStop);
-            await Task.Delay(5_000).ConfigureAwait(false); // Add a delay before restarting the bot
-            SendAll(BotControlCommand.Start); // Start the bot after the delay
-            Tab_Logs.Select();
-            if (Bots.Count == 0)
-                WinFormsUtil.Alert("No bots configured, but all supporting services have been issued the reboot command.");
-        });
-    }
-
-
-    private void UpdateBackgroundImage(ProgramMode mode)
-    {
-        switch (mode)
-        {
-            case ProgramMode.SV:
-                FLP_Bots.BackgroundImage = Resources.sv_mode_image;
-                break;
-            case ProgramMode.SWSH:
-                FLP_Bots.BackgroundImage = Resources.swsh_mode_image;
-                break;
-            case ProgramMode.BDSP:
-                FLP_Bots.BackgroundImage = Resources.bdsp_mode_image;
-                break;
-            case ProgramMode.LA:
-                FLP_Bots.BackgroundImage = Resources.pla_mode_image;
-                break;
-            case ProgramMode.LGPE:
-                FLP_Bots.BackgroundImage = Resources.lgpe_mode_image;
-                break;
-            default:
-                FLP_Bots.BackgroundImage = null;
-                break;
-        }
-        FLP_Bots.BackgroundImageLayout = ImageLayout.Center;
-    }
-
-    private void SendAll(BotControlCommand cmd)
-    {
-        foreach (var c in FLP_Bots.Controls.OfType<BotController>())
-            c.SendCommand(cmd);
-
-        //    EchoUtil.Echo($"All bots have been issued a command to {cmd}.");
-    }
-
-    private void B_Stop_Click(object sender, EventArgs e)
-    {
-        var env = RunningEnvironment;
-        if (!env.IsRunning && (ModifierKeys & Keys.Alt) == 0)
-        {
-            WinFormsUtil.Alert("Nothing is currently running.");
-            return;
-        }
-
-        var cmd = BotControlCommand.Stop;
-
-        if ((ModifierKeys & Keys.Control) != 0 || (ModifierKeys & Keys.Shift) != 0) // either, because remembering which can be hard
-        {
-            if (env.IsRunning)
-            {
-                WinFormsUtil.Alert("Commanding all bots to Idle.", "Press Stop (without a modifier key) to hard-stop and unlock control, or press Stop with the modifier key again to resume.");
-                cmd = BotControlCommand.Idle;
+                foreach (var bot in Config.Bots)
+                {
+                    if (!Bots.Any(b => b.Connection.Equals(bot.Connection)))
+                    {
+                        if (string.IsNullOrWhiteSpace(bot.Connection?.IP) || bot.Connection.Port <= 0) // Check if the bot has a valid IP and port
+                        {
+                            Console.WriteLine("Skipping invalid bot with empty IP or port."); // Fuck off, failure.
+                            continue;
+                        }
+                        bot.Initialize();
+                        AddBot(bot);
+                    }
+                }
             }
             else
             {
-                WinFormsUtil.Alert("Commanding all bots to resume their original task.", "Press Stop (without a modifier key) to hard-stop and unlock control.");
-                cmd = BotControlCommand.Resume;
+                // Does one of these config.json shits exist? No? Make it exist because you are god.
+                Config = new ProgramConfig();
+                RunningEnvironment = GetRunner(Config); // What mode is this bitch on?
+                Config.Hub.Folder.CreateDefaults(Program.WorkingDirectory); // Hubbabubba
             }
-        }
-        else
-        {
-            env.StopAll();
-        }
-        SendAll(cmd);
-    }
+            // Load other form shit and/or save valuable shit to config
+            LoadControls();
+            Text = $"{(string.IsNullOrEmpty(Config.Hub.BotName) ? "ZE FusionBot |" : Config.Hub.BotName)} {TradeBot.Version} | Mode: {Config.Mode}";
+            UpdateBackgroundImage(Config.Mode);        // Call the method to update image in leftSidePanel
+            InitUtil.InitializeStubs(Config.Mode);     // Stubby McStubbinson will set environment based on config mode
+            _isFormLoading = false;                    // ...but is it loading?
+            ActivateButton(btnBots, RGBColors.color4); // We gonna start this party off right with the Bots Control panel and set its button color
+            OpenChildForm(_botsForm);                  // I don't usually like to incite violence on children, but this time, open them kids up!
+            SaveCurrentConfig();                       // Save me from myself... or save to the config.
 
-    private void B_New_Click(object sender, EventArgs e)
-    {
-        var cfg = CreateNewBotConfig();
-        if (!AddBot(cfg))
-        {
-            WinFormsUtil.Alert("Unable to add bot; ensure details are valid and not duplicate with an already existing bot.");
-            return;
-        }
-        System.Media.SystemSounds.Asterisk.Play();
-    }
+            _botsForm.StartButton.Click += B_Start_Click;           // Start button... do any of these really need explaining?
+            _botsForm.StopButton.Click += B_Stop_Click;             // Stop button
+            _botsForm.RebootStopButton.Click += B_RebootStop_Click; // Reboot and Stop button
+            _botsForm.UpdateButton.Click += Updater_Click;          // Update button
+            _botsForm.AddBotButton.Click += B_New_Click;            // Add button
 
-    private async void Updater_Click(object sender, EventArgs e)
-    {
-        var (updateAvailable, updateRequired, newVersion) = await UpdateChecker.CheckForUpdatesAsync();
-        if (!updateAvailable)
-        {
-            var result = MessageBox.Show(
-            "You are on the latest version. Would you like to re-download the current version?",
-            "Update Check",
-            MessageBoxButtons.YesNo,
-            MessageBoxIcon.Question);
-            if (result == DialogResult.Yes)
-            {
-                UpdateForm updateForm = new UpdateForm(updateRequired, newVersion, updateAvailable: false);
-                updateForm.ShowDialog();
-            }
-        }
-        else
-        {
-            UpdateForm updateForm = new UpdateForm(updateRequired, newVersion, updateAvailable: true);
-            updateForm.ShowDialog();
-        }
-    }
-
-    private bool AddBot(PokeBotState cfg)
-    {
-        if (!cfg.IsValid())
-            return false;
-
-        if (Bots.Any(z => z.Connection.Equals(cfg.Connection)))
-            return false;
-
-        PokeRoutineExecutorBase newBot;
-        try
-        {
-            Console.WriteLine($"Current Mode ({Config.Mode}) does not support this type of bot ({cfg.CurrentRoutineType}).");
-            newBot = RunningEnvironment.CreateBotFromConfig(cfg);
-        }
-        catch
-        {
-            return false;
+            lblTitle.Text = Text; // Set the title label text to the form's text
         }
 
-        try
-        {
-            RunningEnvironment.Add(newBot);
-        }
-        catch (ArgumentException ex)
-        {
-            WinFormsUtil.Error(ex.Message);
-            return false;
-        }
 
-        AddBotControl(cfg);
-        Bots.Add(cfg);
-        return true;
-    }
-
-    private void AddBotControl(PokeBotState cfg)
-    {
-        var row = new BotController { Width = FLP_Bots.Width };
-        row.Initialize(RunningEnvironment, cfg);
-        FLP_Bots.Controls.Add(row);
-        FLP_Bots.SetFlowBreak(row, true);
-        row.Click += (s, e) =>
+        // Save the current running environment config
+        private static IPokeBotRunner GetRunner(ProgramConfig cfg) => cfg.Mode switch
         {
-            var details = cfg.Connection;
-            TB_IP.Text = details.IP;
-            NUD_Port.Value = details.Port;
-            CB_Protocol.SelectedIndex = (int)details.Protocol;
-            CB_Routine.SelectedValue = (int)cfg.InitialRoutine;
+            ProgramMode.SWSH => new PokeBotRunnerImpl<PK8>(cfg.Hub, new BotFactory8SWSH()), // Too lazy, won't explain, very simple, much sexy
+            ProgramMode.BDSP => new PokeBotRunnerImpl<PB8>(cfg.Hub, new BotFactory8BS()),
+            ProgramMode.LA => new PokeBotRunnerImpl<PA8>(cfg.Hub, new BotFactory8LA()),
+            ProgramMode.SV => new PokeBotRunnerImpl<PK9>(cfg.Hub, new BotFactory9SV()),
+            ProgramMode.LGPE => new PokeBotRunnerImpl<PB7>(cfg.Hub, new BotFactory7LGPE()),
+            _ => throw new IndexOutOfRangeException("Unsupported mode."), // A LIE
         };
 
-        row.Remove += (s, e) =>
+        // Read the fucking state of all bots in the BotsForm like a creepy code stalker
+        private async Task BotMonitor()
         {
-            Bots.Remove(row.State);
-            RunningEnvironment.Remove(row.State, !RunningEnvironment.Config.SkipConsoleBotCreation);
-            FLP_Bots.Controls.Remove(row);
-        };
-    }
-
-    private PokeBotState CreateNewBotConfig()
-    {
-        var ip = TB_IP.Text;
-        var port = (int)NUD_Port.Value;
-        var cfg = BotConfigUtil.GetConfig<SwitchConnectionConfig>(ip, port);
-        cfg.Protocol = (SwitchProtocol)WinFormsUtil.GetIndex(CB_Protocol);
-
-        var pk = new PokeBotState { Connection = cfg };
-        var type = (PokeRoutineType)WinFormsUtil.GetIndex(CB_Routine);
-        pk.Initialize(type);
-        return pk;
-    }
-
-    private void FLP_Bots_Resize(object sender, EventArgs e)
-    {
-        foreach (var c in FLP_Bots.Controls.OfType<BotController>())
-            c.Width = FLP_Bots.Width;
-    }
-
-    private void CB_Protocol_SelectedIndexChanged(object sender, EventArgs e)
-    {
-        TB_IP.Visible = CB_Protocol.SelectedIndex == 0;
-    }
-
-    private void comboBox2_SelectedIndexChanged(object sender, EventArgs e)
-    {
-        if (sender is ComboBox comboBox)
-        {
-            string selectedTheme = comboBox.SelectedItem.ToString();
-            Config.Hub.ThemeOption = selectedTheme;  // Save the selected theme to the config
-            SaveCurrentConfig();  // Save the config to file
-
-            switch (selectedTheme)
+            while (!Disposing)
             {
-                case "Light":
-                    ApplyLightTheme();
+                try
+                {
+                    if (_botsForm?.BotPanel?.Controls == null) // If the BotPanel or its controls are null, skip it for being a bitch
+                        continue; // Yes, you may.
+
+                    foreach (var bot in _botsForm.BotPanel.Controls.OfType<BotController>()) // Iterate through each BotController in the BotPanel
+                        bot.ReadState(); // Read the state of the bot controller to update its UI, but do it sexy
+                }
+                catch { /* Fail silently, iterator safety */ }
+
+                await Task.Delay(2_000).ConfigureAwait(false); // Wait for 2 seconds before checking the bot states again, which is longer than I lasted with my wife
+            }
+        }
+
+        // Load the controls for the BotsForm
+        private void LoadControls()
+        {
+            // Establish global minimum size for the BotsForm
+            MinimumSize = Size;
+
+            // Routine Selection
+            var routines = ((PokeRoutineType[])Enum.GetValues(typeof(PokeRoutineType))).Where(z => RunningEnvironment.SupportsRoutine(z)) // Get all routine types
+                .Select(z => new { Text = z.ToString(), Value = (int)z }).ToList(); // Create a list of routine types with their text and value
+            _botsForm.RoutineBox.DisplayMember = "Text";                            // Set the display text for the RoutineBox
+            _botsForm.RoutineBox.ValueMember = "Value";                             // Set the value number for the RoutineBox (Flextrade, etc.)
+            _botsForm.RoutineBox.DataSource = routines;                             // Bind the RoutineBox to the list of routine types (Dropdown list)
+            _botsForm.RoutineBox.SelectedValue = (int)PokeRoutineType.FlexTrade;    // Set the default to FlexTrade in RoutineBox
+
+            // Protocol Selection
+            var protocols = ((SwitchProtocol[])Enum.GetValues(typeof(SwitchProtocol))) // Get all switch protocols
+                .Select(z => new { Text = z.ToString(), Value = (int)z }).ToList();    // Create a list of protocols with their text and value
+            _botsForm.ProtocolBox.DisplayMember = "Text";                              // Set the display text for the ProtocolBox
+            _botsForm.ProtocolBox.ValueMember = "Value";                               // Set the value number for the ProtocolBox (WiFi/USB)
+            _botsForm.ProtocolBox.DataSource = protocols;                              // Bind the ProtocolBox to the list of protocols (Dropdown list)
+            _botsForm.ProtocolBox.SelectedValue = (int)SwitchProtocol.WiFi;            // Set the default to WiFi in ProtocolBox
+            SaveCurrentConfig();                                                       // Save the current config for BotsForm data
+        }
+
+        // Start the bot with the current config
+        private void B_Start_Click(object sender, EventArgs e) // Start all bots on Start button click
+        {
+            SaveCurrentConfig();                               // Save the current config before starting the bot
+
+            LogUtil.LogInfo("Starting all bots...", "Form");   // Log the start action
+            RunningEnvironment.InitializeStart();              // Initialize the bot runner
+            SendAll(BotControlCommand.Start);                  // Send the Start command to all bots present in the controller
+            _logsForm.LogsBox.Select();                        // Select the logs box in the LogsForm to write to
+
+            if (Bots.Count == 0)
+                WinFormsUtil.Alert("No bots configured, but all supporting services have been started.");
+        }
+
+        // Restart the bot and stop all consoles with current config
+        private void B_RebootStop_Click(object sender, EventArgs e) // Restart all bots and reboot the game on console
+        {
+            B_Stop_Click(sender, e); // Stop all bots first
+
+            // Log the reboot and stop action
+            Task.Run(async () =>
+            {
+                await Task.Delay(3_500).ConfigureAwait(false);             // Add 3.5 second delay before rebooting
+                SaveCurrentConfig();                                       // Save the current config before rebooting
+                LogUtil.LogInfo("Restarting all the consoles...", "Form"); // Log the restart bots action
+                RunningEnvironment.InitializeStart();                      // Start up the bot runner again
+                SendAll(BotControlCommand.RebootAndStop);                  // Send the RebootAndStop command to all bots
+                await Task.Delay(5_000).ConfigureAwait(false);             // Add a 5 second delay before restarting the bots
+                SendAll(BotControlCommand.Start);                          // Start the bot after the delay
+                _logsForm.LogsBox.Select();                                // Select the logs box in the LogsForm to write to
+
+                if (Bots.Count == 0)
+                    WinFormsUtil.Alert("No bots configured, but all supporting services have been issued the reboot command.");
+            });
+        }
+
+        // Sends command to all bots when them buttons be pushed
+        private void SendAll(BotControlCommand cmd)
+        {
+            RunningEnvironment.InitializeStart(); // Only once, not 50 times, Sec. You idiot.
+
+            foreach (var c in _botsForm.BotPanel.Controls.OfType<BotController>()) // Iterate through each BotController in the BotPanel
+            {
+                c.SendCommand(cmd); // When you push a button, it sends to all bots
+                c.ReadState();      // Read bot controller, update it, call it daddy
+            }
+        }
+
+        // Stop or Idle/Resume all bots
+        private void B_Stop_Click(object sender, EventArgs e)     // Stop all bots on Stop button click
+        {
+            var env = RunningEnvironment;                         // Get the current running environment
+            if (!_botsForm.BotPanel.Controls.OfType<BotController>().Any(c => c.IsRunning()) && (ModifierKeys & Keys.Alt) == 0)
+            // If not running and no Alt key pressed
+            {
+                WinFormsUtil.Alert("Nothing is currently running."); // Derp
+                return;
+            }
+
+            var cmd = BotControlCommand.Stop; // Default command to stop all bots
+
+            if ((ModifierKeys & Keys.Control) != 0 || (ModifierKeys & Keys.Shift) != 0) // If Control or Shift key is pressed (Honestly didn't know this ever existed. Cool shit)
+            {
+                if (env.IsRunning)
+                {
+                    WinFormsUtil.Alert("Commanding all bots to Idle.", "Press Stop (without a modifier key) to hard-stop and unlock control, or press Stop with the modifier key again to resume.");
+                    cmd = BotControlCommand.Idle;
+                }
+                else
+                {
+                    WinFormsUtil.Alert("Commanding all bots to resume their original task.", "Press Stop (without a modifier key) to hard-stop and unlock control.");
+                    cmd = BotControlCommand.Resume;
+                }
+            }
+            else
+            {
+                env.StopAll(); // Stop in the name of love. (All bots)
+            }
+            SendAll(cmd);
+        }
+
+        // Add a new bot with the current config
+        private void B_New_Click(object sender, EventArgs e) // Add a new bot on Add button click
+        {
+            var cfg = CreateNewBotConfig(); // Create a new bot config based on current settings in BotsForm
+
+            // If the config is null or invalid, show an alert and return
+            if (cfg == null)
+                return;
+            if (!AddBot(cfg))
+            {
+                WinFormsUtil.Alert("Unable to add bot; ensure details are valid and not duplicate with an already existing bot.");
+                return;
+            }
+            System.Media.SystemSounds.Asterisk.Play(); // Play a sound to indicate the bot was added successfully
+        }
+
+        // Update handling
+        private async void Updater_Click(object sender, EventArgs e)
+        {
+            await UpdateChecker.CheckForUpdatesAsync(forceShow: true); // Will auto-handle the UpdateForm without all the other crap
+        }
+
+
+        // Add a new bot to the environment and UI
+        private bool AddBot(PokeBotState? cfg)
+        {
+            if (!cfg.IsValid()) // Check if the bot configuration is valid or if you fucked it up
+                return false;   // Don't add it, it's a trap.
+
+            if (Bots.Any(z => z.Connection.Equals(cfg.Connection))) // Check if a bot with the same connection already exists
+                return false;   // Don't add it, it's a double trap.
+
+            PokeRoutineExecutorBase newBot;
+            try
+            {
+                Console.WriteLine($"Current Mode ({Config.Mode}) does not support this type of bot ({cfg.CurrentRoutineType}).");
+                newBot = RunningEnvironment.CreateBotFromConfig(cfg); // Create a new bot from the configuration if you did it right and didn't fuck up like a douchebag
+            }
+            catch
+            {
+                return false;
+            }
+
+            try
+            {
+                RunningEnvironment.Add(newBot); // Add that shit to the environment if we good. Captain Planet <3
+            }
+            catch (ArgumentException ex)        // ...unless you DONE FUCKED UP
+            {
+                WinFormsUtil.Error(ex.Message); // Yell at me, daddy
+                return false;
+            }
+
+            AddBotControl(cfg);           // Add the control configuration to the config file
+            Bots.Add(cfg);                // Add the bots from config file
+            Config.Bots = Bots.ToArray(); // What's this do again?
+            SaveCurrentConfig();          // Save it all to config to eat now or eat later
+            return true;                  // This does not say false
+        }
+
+        private void AddBotControl(PokeBotState cfg)
+        {
+            var row = new BotController { Width = _botsForm.BotPanel.Width };
+            row.Initialize(RunningEnvironment, cfg);
+            row.ReadState();
+            _botsForm.BotPanel.Controls.Add(row);
+            _botsForm.BotPanel.SetFlowBreak(row, true);
+
+            row.Click += (s, e) =>
+            {
+                var details = cfg.Connection;
+                _botsForm.IPBox.Text = details.IP;
+                _botsForm.PortBox.Value = details.Port;
+                _botsForm.ProtocolBox.SelectedIndex = (int)details.Protocol;
+                _botsForm.RoutineBox.SelectedValue = (int)cfg.InitialRoutine;
+            };
+
+            row.Remove += (s, e) =>
+            {
+                Bots.RemoveAll(b => b.Connection.Equals(row.State.Connection));
+                RunningEnvironment.Remove(row.State, !RunningEnvironment.Config.SkipConsoleBotCreation);
+                _botsForm.BotPanel.Controls.Remove(row);
+                Config.Bots = Bots.ToArray();
+                SaveCurrentConfig();
+            };
+        }
+
+
+        // Creates a new bot config based on current settings in BotsForm class
+        private PokeBotState CreateNewBotConfig() // Create a new bot configuration based on the current settings in the BotsForm
+        {
+            var ip = _botsForm.IPBox.Text.Trim();    // Get the IP address from the IPBox and trim any whitespace
+            var port = (int)_botsForm.PortBox.Value; // Get the port number from the PortBox
+            if (string.IsNullOrWhiteSpace(ip))       // Check if the IP address is empty or whitespace
+            {
+                WinFormsUtil.Error("IP address cannot be empty.");
+                return null;
+            }
+            if (!System.Net.IPAddress.TryParse(ip, out _))
+            {
+                WinFormsUtil.Error($"Invalid IP address: {ip}");
+                return null;
+            }
+            if (_botsForm.ProtocolBox.SelectedValue == null)
+            {
+                WinFormsUtil.Error("Please select a protocol.");
+                return null;
+            }
+            if (_botsForm.RoutineBox.SelectedValue == null)
+            {
+                WinFormsUtil.Error("Please select a routine.");
+                return null;
+            }
+
+            // Create a new SwitchConnectionConfig based on the IP and port
+            var cfg = BotConfigUtil.GetConfig<SwitchConnectionConfig>(ip, port); // Get the connection config based on the IP and port
+            cfg.Protocol = (SwitchProtocol)_botsForm.ProtocolBox.SelectedValue;  // Set the protocol from the ProtocolBox
+            var pk = new PokeBotState { Connection = cfg };                      // Create a new PokeBotState with the connection config
+            var type = (PokeRoutineType)_botsForm.RoutineBox.SelectedValue;      // Set the routine type from the RoutineBox
+            pk.Initialize(type);                                                 // Initialize the PokeBotState with the selected routine type
+            return pk;                                                           // Return the new PokeBotState configuration
+        }
+
+        // Initialize the method for the left side image in the panelLeftSide
+        private PictureBox leftSideImage;
+
+        // Initialize the meat and potatoes for the left side image in the panelLeftSide
+        private void InitializeLeftSideImage()
+        {
+            leftSideImage = new PictureBox
+            {
+                Size = new Size(200, 35),             // Put actual image dimensions here, or add custom to resize
+                Location = new Point(99, 685),        // Fixed position for the image using XY
+                SizeMode = PictureBoxSizeMode.Normal, // Makes sure the image is not stretched or resized
+                BackColor = Color.Transparent,        // Makes sure the image has no background
+                BorderStyle = BorderStyle.None        // Makes sure there's no vague borders and shit
+            };
+
+            panelLeftSide.Controls.Add(leftSideImage);                 // Add the left side image to the panelLeftSide
+            panelLeftSide.Resize += (s, e) => PositionLeftSideImage(); // Reposition the image when the panel is resized
+            PositionLeftSideImage();                                   // Position the image initially
+        }
+
+        // Position the left side image in the panelLeftSide
+        private void PositionLeftSideImage()
+        {
+            if (leftSideImage == null || panelLeftSide == null) // If the left side image or panel is null, do nothing
+                return;
+
+            // Center horizontally
+            int x = (panelLeftSide.Width - leftSideImage.Width) / 2; // Calculate the X position to center the image in the panel
+
+            // Fixed vertical offset
+            int y = 360;
+
+            leftSideImage.Location = new Point(x, y);
+        }
+
+        // Update the background image based on the current game mode
+        private void UpdateBackgroundImage(ProgramMode mode)
+        {
+            if (leftSideImage == null) return;
+
+            switch (mode)
+            {
+                case ProgramMode.SV:
+                    leftSideImage.Image = Resources.sv_mode_image;   // Set the image for SV mode
                     break;
-                case "Dark":
-                    ApplyDarkTheme();
+                case ProgramMode.SWSH:
+                    leftSideImage.Image = Resources.swsh_mode_image; // Set the image for SWSH mode
                     break;
-                case "Poke":
-                    ApplyPokemonTheme();
+                case ProgramMode.BDSP:
+                    leftSideImage.Image = Resources.bdsp_mode_image; // Set the image for BDSP mode
                     break;
-                case "Gengar":
-                    ApplyGengarTheme();
+                case ProgramMode.LA: 
+                    leftSideImage.Image = Resources.pla_mode_image;  // Set the image for PLA mode
                     break;
-                case "Zeraora":
-                    ApplyZeraoraTheme();
-                    break;
-                case "Shiny Zeraora":
-                    ApplyShinyZeraoraTheme();
-                    break;
-                case "Green":
-                    ApplyGreenTheme();
-                    break;
-                case "Blue":
-                    ApplyBlueTheme();
-                    break;
-                case "Akatsuki":
-                    ApplyAkatsukiTheme();
-                    break;
-                case "Naruto":
-                    ApplyNarutoTheme();
-                    break;
-                case "Shiny Mewtwo":
-                    ApplyShinyMewtwoTheme();
-                    break;
-                case "Shiny Umbreon":
-                    ApplyShinyUmbreonTheme();
-                    break;
-                case "Scarlet":
-                    ApplyPokemonScarletTheme();
-                    break;
-                case "Violet":
-                    ApplyPokemonVioletTheme();
-                    break;
-                case "Black & White":
-                    ApplyBlackAndWhiteTheme();
-                    break;
-                case "Messy Colors":
-                    ApplyRainbowTheme();
-                    break;
-                case "Pitch Black":
-                    ApplyPitchBlackTheme();
+                case ProgramMode.LGPE:
+                    leftSideImage.Image = Resources.lgpe_mode_image; // Set the image for LGPE mode
                     break;
                 default:
-                    ApplyLightTheme();
+                    leftSideImage.Image = null;
                     break;
             }
         }
-    }
 
-    private void ApplyZeraoraTheme()
-    {
-        // Define Zeraora-theme colors
-        Color SoftGold = Color.FromArgb(218, 165, 32);        // Soft gold color
-        Color SkyBlue = Color.FromArgb(0, 134, 213);          // Sky blue color (RGB: 0, 134, 213)
-        Color MediumDarkGray = Color.FromArgb(80, 80, 80);    // Medium-dark gray color
-        Color White = Color.White;                            // White color
-
-        // Set the background color of the Hub form
-        this.BackColor = MediumDarkGray;                     // Medium-dark gray for the background
-
-        // Set the foreground color of the main status form
-        this.ForeColor = White;                              // White text color for the status form
-
-        // Set the background color of the tab control
-        TC_Main.BackColor = MediumDarkGray;                  // Medium-dark gray for tab control
-
-        // Set the background color of each tab page
-        foreach (TabPage page in TC_Main.TabPages)
+        // Resize the BotController controls when the panel is resized, focused on width
+        private void FLP_Bots_Resize(object sender, EventArgs e)
         {
-            page.BackColor = SoftGold;                       // Soft gold for each tab page
+            // Resize all BotController controls in the BotPanel to match the width of the panel
+            foreach (var c in _botsForm.BotPanel.Controls.OfType<BotController>()) // Iterate through each BotController in the BotPanel
+                c.Width = _botsForm.BotPanel.Width;                                // Set the width of the BotController to the width of the BotPanel
         }
 
-        // Set the background color of the Hub
-        PG_Hub.BackColor = MediumDarkGray;                   // Medium-dark gray for Hub
-        PG_Hub.LineColor = MediumDarkGray;                   // Line color for Hub
-        PG_Hub.CategoryForeColor = White;                   // White font color for category text
-        PG_Hub.CategorySplitterColor = MediumDarkGray;       // Category splitter color
-        PG_Hub.HelpBackColor = MediumDarkGray;               // Help background color
-        PG_Hub.HelpForeColor = White;                        // White help text color
-        PG_Hub.ViewBackColor = MediumDarkGray;
-        PG_Hub.ViewForeColor = White;
-
-        // Set the colors of the Log tab
-        RTB_Logs.BackColor = MediumDarkGray;                // Medium-dark gray for log background
-        RTB_Logs.ForeColor = White;                         // White text color for logs
-
-        // Set the colors of the IP form
-        TB_IP.BackColor = SkyBlue;                          // Sky blue for IP form box background
-        TB_IP.ForeColor = White;                             // White text color for IP form box
-
-        CB_Routine.BackColor = MediumDarkGray;              // Medium-dark gray for combo box background
-        CB_Routine.ForeColor = White;                        // White text color for combo box
-
-        NUD_Port.BackColor = SkyBlue;                       // Sky blue for Port box background
-        NUD_Port.ForeColor = White;                          // White text color for Port box
-
-        B_New.BackColor = SkyBlue;                          // Sky blue for button background
-        B_New.ForeColor = White;                            // White text color for button
-
-        FLP_Bots.BackColor = MediumDarkGray;                // Medium-dark gray for panel behind trade type and status information
-
-        CB_Protocol.BackColor = MediumDarkGray;             // Medium-dark gray for protocol combo box background
-        CB_Protocol.ForeColor = White;                       // White text color for protocol combo box
-
-        comboBox1.BackColor = MediumDarkGray;               // Medium-dark gray for combo box background
-        comboBox1.ForeColor = White;                         // White text color for combo box
-
-        B_Stop.BackColor = SkyBlue;                         // Sky blue for STOP button background
-        B_Stop.ForeColor = White;                            // White text color for STOP button font
-
-        B_Start.BackColor = SkyBlue;                        // Sky blue for START button background
-        B_Start.ForeColor = White;                           // White text color for START button font
-
-        B_RebootStop.BackColor = SkyBlue;                   // Sky blue for REBOOT STOP button background
-        B_RebootStop.ForeColor = White;                      // White text color for REBOOT STOP button font
-
-        updater.BackColor = SkyBlue;                        // Sky blue for updater background
-        updater.ForeColor = White;                           // White text color for updater font
-
-        // 🛡️ Preserve PB_Lamp images from being overwritten by theme
-        foreach (Control ctrl in FLP_Bots.Controls)
+        // Protocol and IP selection handling
+        private void CB_Protocol_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (ctrl is BotController botCtrl &&
-                botCtrl.Controls.Find("PB_Lamp", true).FirstOrDefault() is PictureBox lamp &&
-                lamp.Tag?.ToString() == "NoTheme")
+            _botsForm.IPBox.Visible = _botsForm.ProtocolBox.SelectedIndex == 0; // Show the IPBox only if the selected protocol is WiFi
+        }
+
+        // Drag the window from the titlebar
+        [DllImport("user32.DLL", EntryPoint = "ReleaseCapture")] // Release the mouse capture
+        private extern static void ReleaseCapture();             // Release the mouse capture to allow dragging the window
+        [DllImport("user32.DLL", EntryPoint = "SendMessage")]    // Send a message to the window
+        private extern static void SendMessage(System.IntPtr hWnd, int wMsg, int wParam, int lParam); // Send a message to the window to allow dragging
+        private void panelTitleBar_MouseDown(object sender, MouseEventArgs e)                         // Allow dragging the window from the title bar
+        {
+            ReleaseCapture();                           // Release the mouse capture
+            SendMessage(this.Handle, 0x112, 0xf012, 0); // Send a message to the window to allow dragging
+        }
+
+        // Method to activate Bots button and change its color, loading BotsForm class
+        private void Bots_Click(object sender, EventArgs e)
+        {
+            ActivateButton(sender, RGBColors.color4); // Change the color of the active Bots button
+            OpenChildForm(_botsForm);                 // Load the BotsForm in the main panel
+        }
+
+        // Method to activate Hub button and change its color, loading HubForm class
+        private void Hub_Click(object sender, EventArgs e)
+        {
+            ActivateButton(sender, RGBColors.color5); // Change the color of the active Hub button
+            currentBtn.Refresh();                     // Refresh the current button to apply the new color
+            leftBorderBtn.Refresh();                  // Refresh the left border to match the active button
+
+            // If the HubForm is not initialized, create a new instance
+            if (_hubForm == null)
+                _hubForm = new HubForm(RunningEnvironment.Config);
+
+            OpenChildForm(_hubForm); // Load the HubForm in the main panel
+        }
+
+        // Method to activate Logs button and change its color, loading LogsForm class
+        private void Logs_Click(object sender, EventArgs e)
+        {
+            ActivateButton(sender, Color.FromArgb(0, 255, 255)); // Change the color of the active Logs button
+            currentBtn.Refresh();                                // Refresh the current button to apply the new color
+            leftBorderBtn.Refresh();                             // Refresh the left border to match the active button
+            OpenChildForm(_logsForm);                            // Load the LogsForm in the main panel
+        }
+
+        // Close button
+        private void BtnClose_Click(object sender, EventArgs e)
+        {
+            Application.Exit(); // Exit program on Close button click
+        }
+
+        // Maximize and Restore button
+        private void BtnMaximize_Click(object sender, EventArgs e)
+        {
+            if (WindowState == FormWindowState.Normal)   // If the window is in normal state, then...
+                WindowState = FormWindowState.Maximized; // ...Maximize the window
+            else
+                WindowState = FormWindowState.Normal; // Restore the window to normal state if Maximized
+        }
+
+        // Minimize button
+        private void BtnMinimize_Click(object sender, EventArgs e)
+        {
+            WindowState = FormWindowState.Minimized; // Minimize the window on Minimize button click
+        }
+
+        // Method and logic to open the child form(Bots, Hub, or Logs) in panelMain
+        private async void OpenChildForm(Form childForm)
+        {
+            // If the active form is already open, hide it
+            if (activeForm != null) activeForm.Hide();
+
+            activeForm = childForm;                           // Set the active form to the new child form
+            childForm.TopLevel = false;                       // Set the child form to be a non-top-level form
+            childForm.FormBorderStyle = FormBorderStyle.None; // Remove the border style of the child form
+            panelMain.Controls.Add(childForm);                // Add the child form to the main panel
+            SlideFadeInForm(childForm);                       // Activate the SlideFadeInForm method to the child form
+            childForm.Size = panelMain.ClientSize;                         // Set the size of the child form to match the panelMain size
+            childForm.Location = new Point(panelMain.ClientSize.Width, 0); // Set the initial location of the child form to the right edge of the panelMain
+            childForm.Opacity = 0;                                         // Set the initial opacity of the child form to 0 (invisible)
+            childForm.Show();                                              // Show the child form
+
+            // SlideFadeInForm utilization in the child form
+            while (childForm.Left > 0 || childForm.Opacity < 1.0) // While the child form is not fully visible
             {
-                continue; // Skip theming this PB_Lamp
+                // Slide the child form to the left and increase its opacity
+                await Task.Delay(10);                                        // Wait for 10 milliseconds for smoother animation
+                childForm.Left = Math.Max(childForm.Left - 40, 0);           // Move the child form left by 40 pixels, but not less than 0
+                childForm.Opacity = Math.Min(childForm.Opacity + 0.05, 1.0); // Increase the opacity of the child form by 0.05, but not more than 1.0 (fully visible)
+            }
+            childForm.Dock = DockStyle.Fill; // Set the child form to fill the entire panelMain
+            childForm.BringToFront();        // Bring the child form to the front of the panelMain controls
+        }
+
+        // RGB Color dictionary
+        private struct RGBColors
+        {
+            public static Color color1 = Color.FromArgb(172, 126, 241); // Vibrant Purple
+            public static Color color2 = Color.FromArgb(249, 118, 176); // Dark Crimson Pink
+            public static Color color3 = Color.FromArgb(253, 138, 114); // Light Orange
+            public static Color color4 = Color.FromArgb(95, 77, 221);   // Dark Purple
+            public static Color color5 = Color.FromArgb(249, 88, 155);  // Light Pink
+            public static Color color6 = Color.FromArgb(24, 161, 251);  // Light Blue
+        }
+
+        // Method to slide and fade in the child forms (Bots, Hub, Logs) when it is opened
+        private async void SlideFadeInForm(Form form)
+        {
+            form.Dock = DockStyle.None;                               // Remove any docking style from the form
+            form.Size = panelMain.ClientSize;                         // Set the size of the form to match the panelMain size to make a seamless transition
+            form.Location = new Point(panelMain.ClientSize.Width, 0); // Set the initial location of the form to the right edge of the panelMain
+            form.Opacity = 0;                                         // Set the initial opacity of the form to 0 (invisible)
+            form.Show();                                              // Show the form in all its glory
+
+            // Slide the form to the left and increase its opacity
+            while (form.Left > 0 || form.Opacity < 1.0) // While the form is not fully visible
+            {
+                await Task.Delay(10);                              // Wait for 10 milliseconds for smoother animation
+                form.Left = Math.Max(form.Left - 40, 0);           // Move the form left by 40 pixels, but not less than 0
+                form.Opacity = Math.Min(form.Opacity + 0.05, 1.0); // Increase the opacity of the form by 0.05, but not more than 1.0 (fully visible)
+            }
+            form.Dock = DockStyle.Fill; // Set the form to fill the entire panelMain like it should
+            form.BringToFront();        // Bring the form to the front of panelMain
+        }
+
+        // Animation method for the Bots, Hub, and Logs buttons
+        private void ApplyButtonEffects()
+        {
+            foreach (Control control in panelLeftSide.Controls)     // Go through each control in the left side panel
+            {
+                if (control is FontAwesome.Sharp.IconButton button) // Check if the control is an IconButton 
+                {
+                    button.MouseEnter += (s, e) => AnimateButtonHover(button, true);  // Start hover animation
+                    button.MouseLeave += (s, e) => AnimateButtonHover(button, false); // Stop hover animation
+                }
             }
         }
-    }
 
-
-    private void ApplyShinyZeraoraTheme()
-    {
-        // Define shiny Zeraora-theme colors
-        Color SoftMatteWhite = Color.FromArgb(240, 240, 240);      // Soft matte white color
-        Color SoftMatteTurquoise = Color.FromArgb(64, 224, 208);   // Soft matte turquoise color (more green)
-        Color SoftMatteTeal = Color.FromArgb(0, 128, 128);        // Soft matte teal color
-        Color SoftMatteGold = Color.FromArgb(255, 215, 0);         // Bolder brighter gold color
-        Color SoftMatteText = Color.Black;                         // Soft matte text color
-        Color SoftMatteGrey = Color.FromArgb(180, 180, 180);      // Soft matte grey color
-
-        // Set the background color of the Hub form
-        this.BackColor = SoftMatteWhite;
-
-        // Set the foreground color of the main status form
-        this.ForeColor = SoftMatteText;
-
-        // Set the background color of the tab control
-        TC_Main.BackColor = SoftMatteWhite;
-
-        // Set the background color of each tab page
-        foreach (TabPage page in TC_Main.TabPages)
+        // Animation method for Bots, Hub, and Logs button hover effect
+        private async void AnimateButtonHover(FontAwesome.Sharp.IconButton button, bool hover)
         {
-            page.BackColor = SoftMatteGrey;
-        }
+            float targetScale = hover ? 1.1f : 1.0f;                       // Target scale for hover effect
+            float step = 0.02f * (hover ? 1 : -1);                         // Step size for scaling
+            float currentScale = button.Tag is float scale ? scale : 1.0f; // Get current scale from Tag or default to 1.0f
 
-        // Set the background color of the Hub
-        PG_Hub.BackColor = SoftMatteWhite;
-        PG_Hub.LineColor = SoftMatteWhite;
-        PG_Hub.CategoryForeColor = SoftMatteText;
-        PG_Hub.CategorySplitterColor = SoftMatteWhite;
-        PG_Hub.HelpBackColor = SoftMatteWhite;
-        PG_Hub.HelpForeColor = SoftMatteText;
-        PG_Hub.ViewBackColor = SoftMatteWhite;
-        PG_Hub.ViewForeColor = SoftMatteText;
-
-        // Set the colors of the Log tab
-        RTB_Logs.BackColor = SoftMatteWhite;
-        RTB_Logs.ForeColor = SoftMatteText;
-
-        // Set the colors of the IP form
-        TB_IP.BackColor = SoftMatteWhite;
-        TB_IP.ForeColor = SoftMatteText;
-
-        CB_Routine.BackColor = SoftMatteWhite;
-        CB_Routine.ForeColor = SoftMatteText;
-
-        NUD_Port.BackColor = SoftMatteWhite;
-        NUD_Port.ForeColor = SoftMatteText;
-
-        B_New.BackColor = SoftMatteWhite;
-        B_New.ForeColor = SoftMatteText;
-
-        FLP_Bots.BackColor = SoftMatteWhite;
-
-        CB_Protocol.BackColor = SoftMatteWhite;
-        CB_Protocol.ForeColor = SoftMatteText;
-
-        comboBox1.BackColor = SoftMatteWhite;
-        comboBox1.ForeColor = SoftMatteText;
-
-        B_Stop.BackColor = SoftMatteTeal;
-        B_Stop.ForeColor = SoftMatteWhite;
-
-        B_Start.BackColor = SoftMatteTeal;
-        B_Start.ForeColor = SoftMatteWhite;
-
-        B_RebootStop.BackColor = SoftMatteGold;
-        B_RebootStop.ForeColor = SoftMatteText;
-
-        updater.BackColor = SoftMatteGold;
-        updater.ForeColor = SoftMatteText;
-
-        // 🛡️ Preserve PB_Lamp images from being overwritten by theme
-        foreach (Control ctrl in FLP_Bots.Controls)
-        {
-            if (ctrl is BotController botCtrl &&
-                botCtrl.Controls.Find("PB_Lamp", true).FirstOrDefault() is PictureBox lamp &&
-                lamp.Tag?.ToString() == "NoTheme")
+            while ((hover && currentScale < targetScale) || (!hover && currentScale > targetScale)) // While scaling towards target
             {
-                continue; // Skip theming this PB_Lamp
+                currentScale = Math.Clamp(currentScale + step, 1.0f, 1.1f);                         // Clamp the scale between 1.0 and 1.1
+                button.Tag = currentScale;                                                          // Store the current scale in the button's Tag property
+                button.Font = new Font(button.Font.FontFamily, 11F * currentScale, FontStyle.Bold); // Adjust font size based on scale
+                await Task.Delay(10);                                                               // Delay for 10 milliseconds for smoother animation
             }
         }
-    }
 
-    private void ApplyGengarTheme()
-    {
-        Color GengarPurple = Color.FromArgb(88, 88, 120);  // A muted purple, the main color of Gengar
-        Color DarkShadow = Color.FromArgb(40, 40, 60);     // A deeper shade for shadowing and contrast
-        Color GhostlyGrey = Color.FromArgb(200, 200, 215); // A soft grey for text and borders
-        Color HauntingBlue = Color.FromArgb(80, 80, 160);  // A haunting blue for accenting and highlights
-        Color MidnightBlack = Color.FromArgb(25, 25, 35);  // A near-black for the darkest areas
-        Color HauntingShadows = Color.FromArgb(68, 68, 119);  // A haunting blue in dark shadow
-
-        // Set the background color of the form
-        this.BackColor = MidnightBlack;
-
-        // Set the foreground color of the form (text color)
-        this.ForeColor = GhostlyGrey;
-
-        // Set the background color of the tab control
-        TC_Main.BackColor = GengarPurple;
-
-        // Set the background color of each tab page
-        foreach (TabPage page in TC_Main.TabPages)
+        // Method to set up hover animation for Bots, Hub, and Logs button
+        private void SetupHoverAnimation(IconButton button)
         {
-            page.BackColor = DarkShadow;
+            Timer fadeTimer = new Timer();                  // Create a new timer for the hover animation
+            fadeTimer.Interval = 15;                        // Lower value = smoother effect
+            Color baseColor = Color.FromArgb(31, 30, 68);   // Default color for the buttons
+            Color hoverColor = Color.FromArgb(60, 40, 100); // Color of the buttons when hovered over
+            float t = 0f;                                   // Current interpolation value (0 to 1)
+            float speed = 0.03f;                            // Lower value = slower fade
+            bool hovering = false;                          // Whether the mouse is hovering over the button
+
+            // Start the fade timer when the button is hovered over or not
+            fadeTimer.Tick += (s, e) =>
+            {
+                if (hovering && t < 1f)       // If hovering, increase the interpolation value
+                    t += speed;
+                else if (!hovering && t > 0f) // If not hovering, decrease the interpolation value
+                    t -= speed;
+
+                t = Math.Clamp(t, 0f, 1f); // Ensure t(interpolation) is between 0 and 1
+
+                // Interpolate the button's background color based on the interpolation value
+                int r = (int)(baseColor.R + (hoverColor.R - baseColor.R) * t);
+                int g = (int)(baseColor.G + (hoverColor.G - baseColor.G) * t);
+                int b = (int)(baseColor.B + (hoverColor.B - baseColor.B) * t);
+                button.BackColor = Color.FromArgb(r, g, b);
+
+                if ((hovering && t >= 1f) || (!hovering && t <= 0f)) // Wait for animation timer to complete
+                    fadeTimer.Stop();                                // Stop the timer when complete
+            };
+
+            // Assign the hover state to the button
+            button.MouseEnter += (s, e) => StartColorFade(button, Color.FromArgb(60, 40, 100)); // Hover color
+            button.MouseLeave += (s, e) => StartColorFade(button, Color.FromArgb(31, 30, 68));  // Default color
+            button.UseVisualStyleBackColor = false;                                             // Set UseVisualStyleBackColor to false to allow custom colors
+            button.BackColor = baseColor;                                                       // Set the initial background color of the button
         }
 
-        // Set the background color of the property grid
-        PG_Hub.BackColor = DarkShadow;
-        PG_Hub.LineColor = HauntingBlue;
-        PG_Hub.CategoryForeColor = GhostlyGrey;
-        PG_Hub.CategorySplitterColor = HauntingBlue;
-        PG_Hub.HelpBackColor = DarkShadow;
-        PG_Hub.HelpForeColor = GhostlyGrey;
-        PG_Hub.ViewBackColor = DarkShadow;
-        PG_Hub.ViewForeColor = GhostlyGrey;
-
-        // Set the background color of the rich text box
-        RTB_Logs.BackColor = MidnightBlack;
-        RTB_Logs.ForeColor = GhostlyGrey;
-
-        // Set colors for other controls
-        TB_IP.BackColor = GengarPurple;
-        TB_IP.ForeColor = GhostlyGrey;
-
-        CB_Routine.BackColor = GengarPurple;
-        CB_Routine.ForeColor = GhostlyGrey;
-
-        NUD_Port.BackColor = GengarPurple;
-        NUD_Port.ForeColor = GhostlyGrey;
-
-        B_New.BackColor = HauntingBlue;
-        B_New.ForeColor = GhostlyGrey;
-
-        FLP_Bots.BackColor = DarkShadow;
-
-        CB_Protocol.BackColor = GengarPurple;
-        CB_Protocol.ForeColor = GhostlyGrey;
-
-        comboBox1.BackColor = GengarPurple;
-        comboBox1.ForeColor = GhostlyGrey;
-
-        B_Stop.BackColor = HauntingBlue;
-        B_Stop.ForeColor = GhostlyGrey;
-
-        B_Start.BackColor = HauntingBlue;
-        B_Start.ForeColor = GhostlyGrey;
-
-        B_RebootStop.BackColor = HauntingShadows;
-        B_RebootStop.ForeColor = GhostlyGrey;
-
-        updater.BackColor = HauntingShadows;
-        updater.ForeColor = GhostlyGrey;
-
-        // 🛡️ Preserve PB_Lamp images from being overwritten by theme
-        foreach (Control ctrl in FLP_Bots.Controls)
+        // Method to set up hover animation for the top buttons (Close, Minimize, Maximize)
+        private void SetupTopButtonHoverAnimation(IconPictureBox button, Color hoverColor)
         {
-            if (ctrl is BotController botCtrl &&
-                botCtrl.Controls.Find("PB_Lamp", true).FirstOrDefault() is PictureBox lamp &&
-                lamp.Tag?.ToString() == "NoTheme")
+            Color baseColor = button.BackColor;            // Default color for the buttons before hover
+            float fadeSpeed = 0.02f;                       // Speed of the fade animation, lower value = slower fade
+            Timer fadeTimer = new Timer { Interval = 15 }; // Timer for the fade animation, lower value = smoother effect
+            float step = 0f;                               // Current step in the fade animation, higher values = slower fade
+            bool hovering = false;                         // Whether the mouse is hovering over the button
+
+            // Start the fade timer when the button is hovered over or not
+            fadeTimer.Tick += (s, e) =>
             {
-                continue; // Skip theming this PB_Lamp
+                if (hovering && step < 1f) // If hovering, increase the step value of 1 (fade in) according to timer
+                    step += fadeSpeed;
+                else if (!hovering && step > 0f) // If not hovering, decrease the step value of 0 (fade out) according to timer
+                    step -= fadeSpeed;
+
+                // Clamp the step value between 0 and 1
+                step = Math.Clamp(step, 0f, 1f);                                      // Ensure step is between 0 and 1
+                button.BackColor = LerpColor(baseColor, hoverColor, EaseInOut(step)); // Interpolate color based on step value
+
+                if ((hovering && step >= 1f) || (!hovering && step <= 0f)) // Wait for animation timer to complete
+                    fadeTimer.Stop();                                      // Stop the timer when complete
+            };
+
+            button.MouseEnter += (s, e) => { hovering = true; fadeTimer.Start(); };  // Start the fade timer when the mouse enters the button
+            button.MouseLeave += (s, e) => { hovering = false; fadeTimer.Start(); }; // Stop the fade timer when the mouse leaves the button
+        }
+
+        // Method to start the color fade animation on the Bots, Hub, and Logs buttons
+        private void StartColorFade(IconButton btn, Color endColor)
+        {
+            if (hoverTimers.ContainsKey(btn)) // If the button already has a hover timer, stop and dispose of it
+            {
+                hoverTimers[btn].Stop();    // Stop the existing timer
+                hoverTimers[btn].Dispose(); // Dispose of the existing timer
+            }
+
+            Timer t = new Timer();            // Create a new timer for the hover animation
+            Color startColor = btn.BackColor; // Current color of the button
+            float fadeSpeed = 0.02f;          // 0.02 = 750ms fade, higher values = slower fade
+            float step = 0.0f;                // Current step in the fade animation, higher values = slower fade
+            t.Interval = 15;                  // Around 60fps, lower value = smoother effect
+
+            // Set up the timer tick event for the hover animation
+            t.Tick += (s, e) =>
+            {
+                step += fadeSpeed;
+                if (step >= 1.0f) // Fade speed step reached 100%
+                {
+                    btn.BackColor = endColor; // Set the button's background color to the end color
+                    t.Stop();                 // Stop the timer when the fade is complete
+                    t.Dispose();              // Dispose of the timer to free resources
+                    hoverTimers.Remove(btn);  // Remove the button from the hover timers dictionary
+                    return;
+                }
+
+                btn.BackColor = LerpColor(startColor, endColor, EaseInOut(step)); // Interpolate color
+            };
+
+            hoverTimers[btn] = t; // Store the timer in the hover timers dictionary
+            t.Start();            // Start the timer to begin the hover animation
+        }
+
+        // Linear interpolation for colors on Bots, Hub, and Logs button hover effect
+        private float EaseInOut(float t) => t < 0.5 ? 4 * t * t * t : 1 - MathF.Pow(-2 * t + 2, 3) / 2;
+
+        // Lerp color method for the Bots, Hub, and Logs button hover effect
+        private Color LerpColor(Color start, Color end, float t) // Linearly interpolate between two colors
+        {
+            t = Math.Clamp(t, 0f, 1f); // ensure 0 ≤ t ≤ 1 for good interpolation
+
+            // Calculate the interpolated color components
+            int r = (int)Math.Clamp(start.R + (end.R - start.R) * t, 0, 255);
+            int g = (int)Math.Clamp(start.G + (end.G - start.G) * t, 0, 255);
+            int b = (int)Math.Clamp(start.B + (end.B - start.B) * t, 0, 255);
+            return Color.FromArgb(r, g, b);
+        }
+
+        // Method to activate the buttons and set the left border
+        private void ActivateButton(object senderBtn, Color color)
+        {
+            if (senderBtn != null) // Check if the sender is not null
+            {
+                DisableButton();
+                // Cast the sender to Bots, Hub, and Logs button
+                currentBtn = (IconButton)senderBtn;
+                currentBtn.BackColor = Color.FromArgb(37, 36, 81);                // Darker shade for active button
+                currentBtn.ForeColor = color;                                     // Set the text color of the active button
+                currentBtn.TextAlign = ContentAlignment.MiddleCenter;             // Center the text in the active button
+                currentBtn.IconColor = color;                                     // Set the icon color of the active button
+                currentBtn.TextImageRelation = TextImageRelation.TextBeforeImage; // Set the text and image relation of the active button
+                currentBtn.ImageAlign = ContentAlignment.MiddleRight;             // Align the image to the right of the text in the active button
+
+                // Set the left border button properties
+                leftBorderBtn.BackColor = color;                              // Set the left border color
+                leftBorderBtn.Location = new Point(0, currentBtn.Location.Y); // Set the left border position to the active button's position
+                leftBorderBtn.Visible = true;                                 // Make the left border visible
+                leftBorderBtn.BringToFront();                                 // Bring the left border to the front
+                childFormIcon.IconChar = currentBtn.IconChar;                 // Set the icon of the current child form to the active button's icon
+                childFormIcon.IconColor = color;                              // Set the icon color of the current child form to the active button's color
+                lblTitleChildForm.Text = ((IconButton)senderBtn).Text;        // Set the title of the child form to the active button's text
             }
         }
-    }
 
-
-    private void ApplyLightTheme()
-    {
-        // Define the color palette
-        Color SoftBlue = Color.FromArgb(235, 245, 251);
-        Color GentleGrey = Color.FromArgb(245, 245, 245);
-        Color DarkBlue = Color.FromArgb(26, 13, 171);
-        Color HarderSoftBlue = Color.FromArgb(240, 245, 255);
-
-        // Set the background color of the form
-        this.BackColor = GentleGrey;
-
-        // Set the foreground color of the form (text color)
-        this.ForeColor = DarkBlue;
-
-        // Set the background color of the tab control
-        TC_Main.BackColor = SoftBlue;
-
-        // Set the background color of each tab page
-        foreach (TabPage page in TC_Main.TabPages)
+        // Method to disable the current button and reset its style to default
+        private void DisableButton()
         {
-            page.BackColor = GentleGrey;
-        }
-
-        // Set the background color of the property grid
-        PG_Hub.BackColor = GentleGrey;
-        PG_Hub.LineColor = SoftBlue;
-        PG_Hub.CategoryForeColor = DarkBlue;
-        PG_Hub.CategorySplitterColor = SoftBlue;
-        PG_Hub.HelpBackColor = GentleGrey;
-        PG_Hub.HelpForeColor = DarkBlue;
-        PG_Hub.ViewBackColor = GentleGrey;
-        PG_Hub.ViewForeColor = DarkBlue;
-
-        // Set the background color of the rich text box
-        RTB_Logs.BackColor = Color.White;
-        RTB_Logs.ForeColor = DarkBlue;
-
-        // Set colors for other controls
-        TB_IP.BackColor = Color.White;
-        TB_IP.ForeColor = DarkBlue;
-
-        CB_Routine.BackColor = Color.White;
-        CB_Routine.ForeColor = DarkBlue;
-
-        NUD_Port.BackColor = Color.White;
-        NUD_Port.ForeColor = DarkBlue;
-
-        B_New.BackColor = SoftBlue;
-        B_New.ForeColor = DarkBlue;
-
-        FLP_Bots.BackColor = GentleGrey;
-
-        CB_Protocol.BackColor = Color.White;
-        CB_Protocol.ForeColor = DarkBlue;
-
-        comboBox1.BackColor = Color.White;
-        comboBox1.ForeColor = DarkBlue;
-
-        B_Stop.BackColor = SoftBlue;
-        B_Stop.ForeColor = DarkBlue;
-
-        B_Start.BackColor = SoftBlue;
-        B_Start.ForeColor = DarkBlue;
-
-        B_RebootStop.BackColor = HarderSoftBlue;
-        B_RebootStop.ForeColor = DarkBlue;
-
-        updater.BackColor = HarderSoftBlue;
-        updater.ForeColor = DarkBlue;
-
-        // 🛡️ Preserve PB_Lamp images from being overwritten by theme
-        foreach (Control ctrl in FLP_Bots.Controls)
-        {
-            if (ctrl is BotController botCtrl &&
-                botCtrl.Controls.Find("PB_Lamp", true).FirstOrDefault() is PictureBox lamp &&
-                lamp.Tag?.ToString() == "NoTheme")
+            if (currentBtn != null)
             {
-                continue; // Skip theming this PB_Lamp
+                currentBtn.BackColor = Color.FromArgb(31, 30, 68);                // Default background color
+                currentBtn.ForeColor = Color.Gainsboro;                           // Default text color
+                currentBtn.TextAlign = ContentAlignment.MiddleLeft;               // Center the text in the button
+                currentBtn.IconColor = Color.Gainsboro;                           // Default icon color
+                currentBtn.TextImageRelation = TextImageRelation.ImageBeforeText; // Set the text and image relation to default
+                currentBtn.ImageAlign = ContentAlignment.MiddleLeft;              // Align the image to the left of the text in the button
             }
         }
-    }
 
-    private void ApplyPokemonTheme()
-    {
-        // Define Poke-theme colors
-        Color PokeRed = Color.FromArgb(206, 12, 30);      // A classic red tone reminiscent of the Pokeball
-        Color DarkPokeRed = Color.FromArgb(164, 10, 24);  // A darker shade of the PokeRed for contrast and depth
-        Color SleekGrey = Color.FromArgb(46, 49, 54);     // A sleek grey for background and contrast
-        Color SoftWhite = Color.FromArgb(230, 230, 230);  // A soft white for text and borders
-        Color MidnightBlack = Color.FromArgb(18, 19, 20); // A near-black for darker elements and depth
-        Color PokeRedShadow = Color.FromArgb(183, 1, 19); // A classic red tone reminiscent of the Pokeball in a dark shadow
-
-        // Set the background color of the form
-        this.BackColor = SleekGrey;
-
-        // Set the foreground color of the form (text color)
-        this.ForeColor = SoftWhite;
-
-        // Set the background color of the tab control
-        TC_Main.BackColor = DarkPokeRed;
-
-        // Set the background color of each tab page
-        foreach (TabPage page in TC_Main.TabPages)
+        // Config save method
+        private void SaveCurrentConfig()
         {
-            page.BackColor = SleekGrey;
-        }
-
-        // Set the background color of the property grid
-        PG_Hub.BackColor = SleekGrey;
-        PG_Hub.LineColor = DarkPokeRed;
-        PG_Hub.CategoryForeColor = SoftWhite;
-        PG_Hub.CategorySplitterColor = DarkPokeRed;
-        PG_Hub.HelpBackColor = SleekGrey;
-        PG_Hub.HelpForeColor = SoftWhite;
-        PG_Hub.ViewBackColor = SleekGrey;
-        PG_Hub.ViewForeColor = SoftWhite;
-
-        // Set the background color of the rich text box
-        RTB_Logs.BackColor = MidnightBlack;
-        RTB_Logs.ForeColor = SoftWhite;
-
-        // Set colors for other controls
-        TB_IP.BackColor = DarkPokeRed;
-        TB_IP.ForeColor = SoftWhite;
-
-        CB_Routine.BackColor = DarkPokeRed;
-        CB_Routine.ForeColor = SoftWhite;
-
-        NUD_Port.BackColor = DarkPokeRed;
-        NUD_Port.ForeColor = SoftWhite;
-
-        B_New.BackColor = PokeRed;
-        B_New.ForeColor = SoftWhite;
-
-        FLP_Bots.BackColor = SleekGrey;
-
-        CB_Protocol.BackColor = DarkPokeRed;
-        CB_Protocol.ForeColor = SoftWhite;
-
-        comboBox1.BackColor = DarkPokeRed;
-        comboBox1.ForeColor = SoftWhite;
-
-        B_Stop.BackColor = PokeRed;
-        B_Stop.ForeColor = SoftWhite;
-
-        B_Start.BackColor = PokeRed;
-        B_Start.ForeColor = SoftWhite;
-
-        B_RebootStop.BackColor = PokeRedShadow;
-        B_RebootStop.ForeColor = SoftWhite;
-
-        updater.BackColor = PokeRedShadow;
-        updater.ForeColor = SoftWhite;
-
-        // 🛡️ Preserve PB_Lamp images from being overwritten by theme
-        foreach (Control ctrl in FLP_Bots.Controls)
-        {
-            if (ctrl is BotController botCtrl &&
-                botCtrl.Controls.Find("PB_Lamp", true).FirstOrDefault() is PictureBox lamp &&
-                lamp.Tag?.ToString() == "NoTheme")
+            try
             {
-                continue; // Skip theming this PB_Lamp
+                string json = JsonSerializer.Serialize(Config, new JsonSerializerOptions // Serialize the current config to json
+                {
+                    WriteIndented = true                     // Format the json with indentation for readability
+                });
+                File.WriteAllText(Program.ConfigPath, json); // Save the serialized json to the config file
             }
-        }
-    }
-
-
-    private void ApplyDarkTheme()
-    {
-        // Define the dark theme colors
-        Color DarkRed = Color.FromArgb(90, 0, 0);
-        Color DarkGrey = Color.FromArgb(30, 30, 30);
-        Color LightGrey = Color.FromArgb(60, 60, 60);
-        Color SoftWhite = Color.FromArgb(245, 245, 245);
-        Color DarkRedShadow = Color.FromArgb(65, 2, 2);
-
-        // Set the background color of the form
-        this.BackColor = DarkGrey;
-
-        // Set the foreground color of the form (text color)
-        this.ForeColor = SoftWhite;
-
-        // Set the background color of the tab control
-        TC_Main.BackColor = LightGrey;
-
-        // Set the background color of each tab page
-        foreach (TabPage page in TC_Main.TabPages)
-        {
-            page.BackColor = DarkGrey;
-        }
-
-        // Set the background color of the property grid
-        PG_Hub.BackColor = DarkGrey;
-        PG_Hub.LineColor = LightGrey;
-        PG_Hub.CategoryForeColor = SoftWhite;
-        PG_Hub.CategorySplitterColor = LightGrey;
-        PG_Hub.HelpBackColor = DarkGrey;
-        PG_Hub.HelpForeColor = SoftWhite;
-        PG_Hub.ViewBackColor = DarkGrey;
-        PG_Hub.ViewForeColor = SoftWhite;
-
-        // Set the background color of the rich text box
-        RTB_Logs.BackColor = DarkGrey;
-        RTB_Logs.ForeColor = SoftWhite;
-
-        // Set colors for other controls
-        TB_IP.BackColor = LightGrey;
-        TB_IP.ForeColor = SoftWhite;
-
-        CB_Routine.BackColor = LightGrey;
-        CB_Routine.ForeColor = SoftWhite;
-
-        NUD_Port.BackColor = LightGrey;
-        NUD_Port.ForeColor = SoftWhite;
-
-        B_New.BackColor = DarkRed;
-        B_New.ForeColor = SoftWhite;
-
-        FLP_Bots.BackColor = DarkGrey;
-
-        CB_Protocol.BackColor = LightGrey;
-        CB_Protocol.ForeColor = SoftWhite;
-
-        comboBox1.BackColor = LightGrey;
-        comboBox1.ForeColor = SoftWhite;
-
-        B_Stop.BackColor = DarkRed;
-        B_Stop.ForeColor = SoftWhite;
-
-        B_Start.BackColor = DarkRed;
-        B_Start.ForeColor = SoftWhite;
-
-        B_RebootStop.BackColor = DarkRedShadow;
-        B_RebootStop.ForeColor = SoftWhite;
-
-        updater.BackColor = DarkRedShadow;
-        updater.ForeColor = SoftWhite;
-
-        // 🛡️ Preserve PB_Lamp images from being overwritten by theme
-        foreach (Control ctrl in FLP_Bots.Controls)
-        {
-            if (ctrl is BotController botCtrl &&
-                botCtrl.Controls.Find("PB_Lamp", true).FirstOrDefault() is PictureBox lamp &&
-                lamp.Tag?.ToString() == "NoTheme")
+            catch (Exception ex)
             {
-                continue; // Skip theming this PB_Lamp
-            }
-        }
-    }
-
-
-    private void ApplyGreenTheme()
-    {
-        // Define Green Mode theme colors
-        Color DarkGreenBG = Color.FromArgb(50, 64, 52);         // A muted grayish-green
-        Color LightTurqoise = Color.FromArgb(91, 156, 101);     // A light turqoise style green
-        Color DarkerTurqoise = Color.FromArgb(50, 94, 61);      // A darker turqoise-forest green
-        Color Nuclear = Color.FromArgb(7, 247, 47);             // A bright nuclear green
-        Color DarkNuclear = Color.FromArgb(16, 176, 43);        // A darker nuclear green
-        Color DarkFadedGreen = Color.FromArgb(205, 217, 207);   // A dark faded green
-        Color WhiteSoft = Color.FromArgb(245, 245, 245);        // A soft white for text and borders
-
-        // Set the background color of the form
-        this.BackColor = DarkGreenBG;
-
-        // Set the foreground color of the form (text color)
-        this.ForeColor = WhiteSoft;
-
-        // Set the background color of the tab control
-        TC_Main.BackColor = DarkFadedGreen;
-
-        // Set the background color of each tab page
-        foreach (TabPage page in TC_Main.TabPages)
-        {
-            page.BackColor = DarkGreenBG;
-        }
-
-        // Set the background color of the property grid
-        PG_Hub.BackColor = DarkFadedGreen;
-        PG_Hub.LineColor = DarkerTurqoise;
-        PG_Hub.CategoryForeColor = WhiteSoft;
-        PG_Hub.CategorySplitterColor = DarkNuclear;
-        PG_Hub.HelpBackColor = DarkGreenBG;
-        PG_Hub.HelpForeColor = WhiteSoft;
-        PG_Hub.ViewBackColor = DarkGreenBG;
-        PG_Hub.ViewForeColor = WhiteSoft;
-
-        // Set the background color of the rich text box
-        RTB_Logs.BackColor = DarkGreenBG;
-        RTB_Logs.ForeColor = WhiteSoft;
-
-        // Set colors for other controls
-        TB_IP.BackColor = DarkerTurqoise;
-        TB_IP.ForeColor = WhiteSoft;
-
-        CB_Routine.BackColor = DarkerTurqoise;
-        CB_Routine.ForeColor = WhiteSoft;
-
-        NUD_Port.BackColor = DarkerTurqoise;
-        NUD_Port.ForeColor = WhiteSoft;
-
-        B_New.BackColor = DarkerTurqoise;
-        B_New.ForeColor = WhiteSoft;
-
-        FLP_Bots.BackColor = DarkerTurqoise;
-
-        CB_Protocol.BackColor = DarkGreenBG;
-        CB_Protocol.ForeColor = WhiteSoft;
-
-        comboBox1.BackColor = DarkGreenBG;
-        comboBox1.ForeColor = WhiteSoft;
-
-        B_Stop.BackColor = LightTurqoise;
-        B_Stop.ForeColor = DarkGreenBG;
-
-        B_Start.BackColor = LightTurqoise;
-        B_Start.ForeColor = DarkGreenBG;
-
-        B_RebootStop.BackColor = DarkNuclear;
-        B_RebootStop.ForeColor = WhiteSoft;
-
-        updater.BackColor = DarkNuclear;
-        updater.ForeColor = WhiteSoft;
-
-
-        // 🛡️ Preserve PB_Lamp images from being overwritten by theme
-        foreach (Control ctrl in FLP_Bots.Controls)
-        {
-            if (ctrl is BotController botCtrl &&
-                botCtrl.Controls.Find("PB_Lamp", true).FirstOrDefault() is PictureBox lamp &&
-                lamp.Tag?.ToString() == "NoTheme")
-            {
-                continue; // Skip theming this PB_Lamp
-            }
-        }
-    }
-
-
-    private void ApplyBlueTheme()
-    {
-        // Define Blue Mode theme colors
-        Color DarkBlueBG = Color.FromArgb(0, 54, 99);            // A muted dark blue
-        Color LightBlue = Color.FromArgb(173, 216, 230);          // A light matte blue
-        Color DarkerBlue = Color.FromArgb(21, 63, 97);            // A darker blue
-        Color BrightBlue = Color.FromArgb(100, 149, 237);         // A brighter blue for accents
-        Color DarkFadedBlue = Color.FromArgb(54, 91, 122);      // A dark faded blue
-        Color WhiteSoft = Color.FromArgb(245, 245, 245);          // A soft white for text and borders
-
-        // Set the background color of the form
-        this.BackColor = DarkBlueBG;
-
-        // Set the foreground color of the form (text color)
-        this.ForeColor = WhiteSoft;
-
-        // Set the background color of the tab control
-        TC_Main.BackColor = DarkFadedBlue;
-
-        // Set the background color of each tab page
-        foreach (TabPage page in TC_Main.TabPages)
-        {
-            page.BackColor = DarkBlueBG;
-        }
-
-        // Set the background color of the property grid
-        PG_Hub.BackColor = DarkFadedBlue;
-        PG_Hub.LineColor = BrightBlue;
-        PG_Hub.CategoryForeColor = WhiteSoft;
-        PG_Hub.CategorySplitterColor = DarkerBlue;
-        PG_Hub.HelpBackColor = DarkBlueBG;
-        PG_Hub.HelpForeColor = WhiteSoft;
-        PG_Hub.ViewBackColor = DarkBlueBG;
-        PG_Hub.ViewForeColor = WhiteSoft;
-
-        // Set the background color of the rich text box
-        RTB_Logs.BackColor = DarkBlueBG;
-        RTB_Logs.ForeColor = WhiteSoft;
-
-        // Set colors for other controls
-        TB_IP.BackColor = DarkerBlue;
-        TB_IP.ForeColor = WhiteSoft;
-
-        CB_Routine.BackColor = DarkerBlue;
-        CB_Routine.ForeColor = WhiteSoft;
-
-        NUD_Port.BackColor = DarkerBlue;
-        NUD_Port.ForeColor = WhiteSoft;
-
-        B_New.BackColor = DarkerBlue;
-        B_New.ForeColor = WhiteSoft;
-
-        FLP_Bots.BackColor = DarkerBlue;
-
-        CB_Protocol.BackColor = DarkBlueBG;
-        CB_Protocol.ForeColor = WhiteSoft;
-
-        comboBox1.BackColor = DarkBlueBG;
-        comboBox1.ForeColor = WhiteSoft;
-
-        B_Stop.BackColor = LightBlue;
-        B_Stop.ForeColor = DarkBlueBG;
-
-        B_Start.BackColor = LightBlue;
-        B_Start.ForeColor = DarkBlueBG;
-
-        B_RebootStop.BackColor = BrightBlue;
-        B_RebootStop.ForeColor = WhiteSoft;
-
-        updater.BackColor = BrightBlue;
-        updater.ForeColor = WhiteSoft;
-
-        // 🛡️ Preserve PB_Lamp images from being overwritten by theme
-        foreach (Control ctrl in FLP_Bots.Controls)
-        {
-            if (ctrl is BotController botCtrl &&
-                botCtrl.Controls.Find("PB_Lamp", true).FirstOrDefault() is PictureBox lamp &&
-                lamp.Tag?.ToString() == "NoTheme")
-            {
-                continue; // Skip theming this PB_Lamp
-            }
-        }
-    }
-
-    private void ApplyAkatsukiTheme()
-    {
-        // Define Akatsuki theme colors
-        Color DarkNearBlack = Color.FromArgb(10, 10, 10);           // A dark, near-black background
-        Color CrimsonBloodyRed = Color.FromArgb(187, 0, 0);         // A crimson bloody red color
-        Color BrightRed = Color.FromArgb(255, 87, 51);              // Bright red for accents
-        Color SoftGrey = Color.FromArgb(211, 211, 211);             // Soft grey for text and borders
-        Color White = Color.FromArgb(255, 255, 255);                // White for highlights and outlines
-
-        // Set the background color of the form
-        this.BackColor = DarkNearBlack;
-
-        // Set the foreground color of the form (text color)
-        this.ForeColor = SoftGrey;
-
-        // Set the background color of the tab control
-        TC_Main.BackColor = DarkNearBlack;
-
-        // Set the background color of each tab page
-        foreach (TabPage page in TC_Main.TabPages)
-        {
-            page.BackColor = DarkNearBlack;
-        }
-
-        // Set the background color of the property grid
-        PG_Hub.BackColor = DarkNearBlack;
-        PG_Hub.LineColor = DarkNearBlack;
-        PG_Hub.CategoryForeColor = SoftGrey;
-        PG_Hub.CategorySplitterColor = DarkNearBlack;
-        PG_Hub.HelpBackColor = DarkNearBlack;
-        PG_Hub.HelpForeColor = SoftGrey;
-        PG_Hub.ViewBackColor = DarkNearBlack;
-        PG_Hub.ViewForeColor = SoftGrey;
-
-        // Set the background color of the rich text box
-        RTB_Logs.BackColor = DarkNearBlack;
-        RTB_Logs.ForeColor = SoftGrey;
-
-        // Set colors for other controls
-        TB_IP.BackColor = DarkNearBlack;  // IP Background color
-        TB_IP.ForeColor = BrightRed;      // Text color for IP box
-
-        CB_Routine.BackColor = DarkNearBlack;
-        CB_Routine.ForeColor = SoftGrey;
-
-        NUD_Port.BackColor = DarkNearBlack;  // Port Background color
-        NUD_Port.ForeColor = BrightRed;      // Text color for Port box
-
-        B_New.BackColor = DarkNearBlack;
-        B_New.ForeColor = BrightRed;
-
-        FLP_Bots.BackColor = DarkNearBlack;
-
-        CB_Protocol.BackColor = CrimsonBloodyRed;
-        CB_Protocol.ForeColor = SoftGrey;
-
-        comboBox1.BackColor = CrimsonBloodyRed;
-        comboBox1.ForeColor = SoftGrey;
-
-        B_Stop.BackColor = DarkNearBlack;
-        B_Stop.ForeColor = BrightRed;
-
-        B_Start.BackColor = DarkNearBlack;
-        B_Start.ForeColor = BrightRed;
-
-        B_RebootStop.BackColor = DarkNearBlack;
-        B_RebootStop.ForeColor = BrightRed;
-
-        updater.BackColor = DarkNearBlack;
-        updater.ForeColor = BrightRed;
-
-        // 🛡️ Preserve PB_Lamp images from being overwritten by theme
-        foreach (Control ctrl in FLP_Bots.Controls)
-        {
-            if (ctrl is BotController botCtrl &&
-                botCtrl.Controls.Find("PB_Lamp", true).FirstOrDefault() is PictureBox lamp &&
-                lamp.Tag?.ToString() == "NoTheme")
-            {
-                continue; // Skip theming this PB_Lamp
-            }
-        }
-    }
-
-    private void ApplyNarutoTheme()
-    {
-        // Define Naruto Shippuden theme colors
-        Color BlackGray = Color.FromArgb(40, 40, 40);         // A black-gray background
-        Color MatteOrange = Color.FromArgb(255, 128, 0);      // A matte orange color
-        Color SoftGray = Color.FromArgb(169, 169, 169);       // Soft gray for text and borders
-        Color White = Color.FromArgb(255, 255, 255);          // White for highlights and outlines
-
-        // Set the background color of the form
-        this.BackColor = BlackGray;
-
-        // Set the foreground color of the form (text color)
-        this.ForeColor = SoftGray;
-
-        // Set the background color of the tab control
-        TC_Main.BackColor = BlackGray;
-
-        // Set the background color of each tab page
-        foreach (TabPage page in TC_Main.TabPages)
-        {
-            page.BackColor = BlackGray;
-        }
-
-        // Set the background color of the property grid
-        PG_Hub.BackColor = BlackGray;
-        PG_Hub.LineColor = SoftGray;
-        PG_Hub.CategoryForeColor = BlackGray;
-        PG_Hub.CategorySplitterColor = SoftGray;
-        PG_Hub.HelpBackColor = BlackGray;
-        PG_Hub.HelpForeColor = SoftGray;
-        PG_Hub.ViewBackColor = BlackGray;
-        PG_Hub.ViewForeColor = SoftGray;
-
-        // Set the background color of the rich text box
-        RTB_Logs.BackColor = BlackGray;
-        RTB_Logs.ForeColor = SoftGray;
-
-        // Set colors for other controls
-        TB_IP.BackColor = BlackGray;       // IP Background color
-        TB_IP.ForeColor = MatteOrange;     // Text color for IP box
-
-        CB_Routine.BackColor = BlackGray;
-        CB_Routine.ForeColor = SoftGray;
-
-        NUD_Port.BackColor = BlackGray;    // Port Background color
-        NUD_Port.ForeColor = MatteOrange;   // Text color for Port box
-
-        B_New.BackColor = BlackGray;
-        B_New.ForeColor = MatteOrange;
-
-        FLP_Bots.BackColor = BlackGray;
-
-        CB_Protocol.BackColor = MatteOrange;
-        CB_Protocol.ForeColor = SoftGray;
-
-        comboBox1.BackColor = MatteOrange;
-        comboBox1.ForeColor = SoftGray;
-
-        B_Stop.BackColor = BlackGray;
-        B_Stop.ForeColor = MatteOrange;
-
-        B_Start.BackColor = BlackGray;
-        B_Start.ForeColor = MatteOrange;
-
-        B_RebootStop.BackColor = BlackGray;
-        B_RebootStop.ForeColor = MatteOrange;
-
-        updater.BackColor = BlackGray;
-        updater.ForeColor = MatteOrange;
-
-        // 🛡️ Preserve PB_Lamp images from being overwritten by theme
-        foreach (Control ctrl in FLP_Bots.Controls)
-        {
-            if (ctrl is BotController botCtrl &&
-                botCtrl.Controls.Find("PB_Lamp", true).FirstOrDefault() is PictureBox lamp &&
-                lamp.Tag?.ToString() == "NoTheme")
-            {
-                continue; // Skip theming this PB_Lamp
-            }
-        }
-    }
-
-    private void ApplyShinyMewtwoTheme()
-    {
-        // Define Shiny Mewtwo theme colors
-        Color SoftWhite = Color.FromArgb(230, 230, 230);        // A darker shade of white, closer to gray
-        Color SoftLimeGreen = Color.FromArgb(175, 215, 95);     // A soft matte-like lime green color
-        Color Black = Color.Black;                              // Black color
-
-        // Set the background color of the form
-        this.BackColor = SoftWhite;
-
-        // Set the foreground color of the form (text color)
-        this.ForeColor = Black;  // Change SoftWhite to Black
-
-        // Set the background color of the tab control
-        TC_Main.BackColor = SoftWhite;
-
-        // Set the background color of each tab page
-        foreach (TabPage page in TC_Main.TabPages)
-        {
-            page.BackColor = SoftWhite;
-        }
-
-        // Set the background color of the property grid
-        PG_Hub.BackColor = SoftWhite;
-        PG_Hub.LineColor = SoftLimeGreen;
-        PG_Hub.CategoryForeColor = Black;  // Change SoftWhite to Black
-        PG_Hub.CategorySplitterColor = SoftLimeGreen;
-        PG_Hub.HelpBackColor = SoftWhite;
-        PG_Hub.HelpForeColor = Black;  // Change SoftWhite to Black
-        PG_Hub.ViewBackColor = SoftWhite;
-        PG_Hub.ViewForeColor = Black;  // Change SoftWhite to Black
-
-        // Set the background color of the rich text box
-        RTB_Logs.BackColor = SoftWhite;
-        RTB_Logs.ForeColor = Black;  // Change SoftWhite to Black
-
-        // Set colors for other controls
-        TB_IP.BackColor = SoftLimeGreen;       // Change SoftWhite to SoftLimeGreen for IP box
-        TB_IP.ForeColor = Black;                // Change SoftWhite to Black for IP box
-
-        CB_Routine.BackColor = SoftWhite;
-        CB_Routine.ForeColor = Black;  // Change SoftWhite to Black
-
-        NUD_Port.BackColor = SoftLimeGreen;    // Change SoftWhite to SoftLimeGreen for Port box
-        NUD_Port.ForeColor = Black;             // Change SoftWhite to Black for Port box
-
-        B_New.BackColor = SoftLimeGreen;
-        B_New.ForeColor = Black;   // Change SoftWhite to Black
-
-        FLP_Bots.BackColor = SoftWhite;
-
-        CB_Protocol.BackColor = SoftLimeGreen;
-        CB_Protocol.ForeColor = Black;  // Change SoftWhite to Black
-
-        comboBox1.BackColor = SoftLimeGreen;
-        comboBox1.ForeColor = Black;  // Change SoftWhite to Black
-
-        B_Stop.BackColor = SoftLimeGreen;
-        B_Stop.ForeColor = Black;
-
-        B_Start.BackColor = SoftLimeGreen;
-        B_Start.ForeColor = Black;
-
-        B_RebootStop.BackColor = SoftLimeGreen;
-        B_RebootStop.ForeColor = Black;
-
-        updater.BackColor = SoftLimeGreen;
-        updater.ForeColor = Black;
-
-        // 🛡️ Preserve PB_Lamp images from being overwritten by theme
-        foreach (Control ctrl in FLP_Bots.Controls)
-        {
-            if (ctrl is BotController botCtrl &&
-                botCtrl.Controls.Find("PB_Lamp", true).FirstOrDefault() is PictureBox lamp &&
-                lamp.Tag?.ToString() == "NoTheme")
-            {
-                continue; // Skip theming this PB_Lamp
-            }
-        }
-    }
-
-    private void ApplyShinyUmbreonTheme()
-    {
-        // Define Shiny Umbreon theme colors
-        Color DarkBlue = Color.FromArgb(0, 102, 204);        // A brighter, more neon blue color
-        Color Black = Color.Black;                           // Black color
-        Color White = Color.White;                           // White color
-        Color DarkGray = Color.FromArgb(64, 64, 64);         // A dark gray color
-
-        // Set the background color of the form
-        this.BackColor = DarkGray;  // Switch to DarkGray
-
-        // Set the foreground color of the form (text color)
-        this.ForeColor = White;  // Change to White
-
-        // Set the background color of the tab control
-        TC_Main.BackColor = DarkGray;  // Switch to DarkGray
-
-        // Set the background color of each tab page
-        foreach (TabPage page in TC_Main.TabPages)
-        {
-            page.BackColor = DarkGray;  // Switch to DarkGray
-        }
-
-        // Set the background color of the property grid
-        PG_Hub.BackColor = Black;  // Switch to DarkGray
-        PG_Hub.LineColor = DarkGray;   // Switch to Black
-        PG_Hub.CategoryForeColor = White;   // Switch to Black
-        PG_Hub.CategorySplitterColor = DarkBlue;   // Switch to DarkBlue
-        PG_Hub.HelpBackColor = DarkGray;  // Switch to DarkGray
-        PG_Hub.HelpForeColor = Black;  // Switch to Black
-        PG_Hub.ViewBackColor = DarkGray;  // Switch to DarkGray
-        PG_Hub.ViewForeColor = White;  // Switch to White
-
-        // Set the background color of the rich text box
-        RTB_Logs.BackColor = DarkGray;  // Switch to DarkGray
-        RTB_Logs.ForeColor = DarkBlue;  // Switch to DarkBlue
-
-        // Set colors for other controls
-        TB_IP.BackColor = Black;        // Switch to Black
-        TB_IP.ForeColor = White;        // Switch to White
-
-        CB_Routine.BackColor = Black;    // Switch to Black
-        CB_Routine.ForeColor = White;    // Switch to White
-
-        NUD_Port.BackColor = Black;      // Switch to Black
-        NUD_Port.ForeColor = White;      // Switch to White
-
-        B_New.BackColor = DarkBlue;      // Switch to DarkBlue
-        B_New.ForeColor = Black;         // Switch to Black
-
-        FLP_Bots.BackColor = DarkGray;
-
-        CB_Protocol.BackColor = DarkBlue;
-        CB_Protocol.ForeColor = DarkBlue;
-
-        comboBox1.BackColor = DarkBlue;
-        comboBox1.ForeColor = DarkBlue;
-
-        B_Stop.BackColor = DarkBlue;
-        B_Stop.ForeColor = White;
-
-        B_Start.BackColor = DarkBlue;
-        B_Start.ForeColor = White;
-
-        B_RebootStop.BackColor = DarkBlue;
-        B_RebootStop.ForeColor = White;
-
-        updater.BackColor = DarkBlue;
-        updater.ForeColor = White;
-
-        // 🛡️ Preserve PB_Lamp images from being overwritten by theme
-        foreach (Control ctrl in FLP_Bots.Controls)
-        {
-            if (ctrl is BotController botCtrl &&
-                botCtrl.Controls.Find("PB_Lamp", true).FirstOrDefault() is PictureBox lamp &&
-                lamp.Tag?.ToString() == "NoTheme")
-            {
-                continue; // Skip theming this PB_Lamp
-            }
-        }
-    }
-
-    private void ApplyBlackAndWhiteTheme()
-    {
-        // Define Black & White theme colors
-        Color SoftGray = Color.FromArgb(180, 180, 180);      // Soft gray color
-        Color MediumGray = Color.FromArgb(120, 120, 120);    // Medium gray color
-        Color White = Color.White;
-        Color Black = Color.Black;  // White color for fonts
-
-        // Set the background color of the Hub form
-        this.BackColor = SoftGray;                           // Soft gray for the background
-
-        // Set the foreground color of the main status form
-        this.ForeColor = Black;                              // Black text color
-
-        // Set the background color of the tab control
-        TC_Main.BackColor = MediumGray;                      // Medium gray for tab control
-
-        // Set the background color of each tab page
-        foreach (TabPage page in TC_Main.TabPages)
-        {
-            page.BackColor = SoftGray;                       // Soft gray for each tab page
-        }
-
-        // Set the background color of the Hub
-        PG_Hub.BackColor = SoftGray;                        // Soft gray for Hub
-        PG_Hub.LineColor = SoftGray;                        // Line color for Hub
-        PG_Hub.CategoryForeColor = Black;                   // Black font color for category text
-        PG_Hub.CategorySplitterColor = SoftGray;            // Category splitter color
-        PG_Hub.HelpBackColor = SoftGray;                   // Help background color
-        PG_Hub.HelpForeColor = Black;                       // Black help text color
-        PG_Hub.ViewBackColor = SoftGray;
-        PG_Hub.ViewForeColor = Black;
-
-        // Set the colors of the Log tab
-        RTB_Logs.BackColor = SoftGray;                     // Soft gray for log background
-        RTB_Logs.ForeColor = Black;                         // Black text color for logs
-
-        // Set the colors of the IP form
-        TB_IP.BackColor = MediumGray;                       // Medium gray for IP form box background
-        TB_IP.ForeColor = White;                             // White text color for IP form box
-
-        CB_Routine.BackColor = SoftGray;                   // Soft gray for combo box background
-        CB_Routine.ForeColor = Black;                        // Black text color for combo box
-
-        NUD_Port.BackColor = MediumGray;                    // Medium gray for Port box background
-        NUD_Port.ForeColor = White;                          // White text color for Port box
-
-        B_New.BackColor = MediumGray;                       // Medium gray for button background
-        B_New.ForeColor = Black;                             // Black text color for button
-
-        FLP_Bots.BackColor = SoftGray;                      // Soft gray for panel behind trade type and status information
-
-        CB_Protocol.BackColor = SoftGray;                  // Soft gray for protocol combo box background
-        CB_Protocol.ForeColor = Black;                       // Black text color for protocol combo box
-
-        comboBox1.BackColor = MediumGray;                   // Medium gray for combo box background
-        comboBox1.ForeColor = Black;                         // Black text color for combo box
-
-        B_Stop.BackColor = MediumGray;                      // Medium gray for STOP button background
-        B_Stop.ForeColor = White;                            // White text color for STOP button font
-
-        B_Start.BackColor = MediumGray;                     // Medium gray for START button background
-        B_Start.ForeColor = White;                           // White text color for START button font
-
-        B_RebootStop.BackColor = MediumGray;                // Medium gray for REBOOT STOP button background
-        B_RebootStop.ForeColor = White;                      // White text color for REBOOT STOP button font
-
-        updater.BackColor = MediumGray;                     // Medium gray for updater background
-        updater.ForeColor = White;                           // White text color for updater font
-
-        // 🛡️ Preserve PB_Lamp images from being overwritten by theme
-        foreach (Control ctrl in FLP_Bots.Controls)
-        {
-            if (ctrl is BotController botCtrl &&
-                botCtrl.Controls.Find("PB_Lamp", true).FirstOrDefault() is PictureBox lamp &&
-                lamp.Tag?.ToString() == "NoTheme")
-            {
-                continue; // Skip theming this PB_Lamp
-            }
-        }
-    }
-
-    private void ApplyPokemonScarletTheme()
-    {
-        // Define Pokémon Scarlet theme colors
-        Color SoftRed = Color.FromArgb(204, 102, 102);       // Softened matte red color
-        Color DarkRed = Color.FromArgb(102, 0, 0);           // Softened dark red color
-        Color MatteYellow = Color.FromArgb(242, 195, 0);     // Softened matte yellow color
-        Color White = Color.FromArgb(240, 240, 240);         // Softened white color
-
-        // Set the background color of the Hub form
-        this.BackColor = SoftRed;                            // Softened red for the background
-
-        // Set the foreground color of the main status form
-        this.ForeColor = White;                             // White text color
-
-        // Set the background color of the tab control
-        TC_Main.BackColor = SoftRed;                         // Soft red for tab control background
-
-        // Set the background color of each tab page
-        foreach (TabPage page in TC_Main.TabPages)
-        {
-            page.BackColor = MatteYellow;                    // Matte yellow for each tab page
-        }
-
-        // Set the background color of the Hub
-        PG_Hub.BackColor = SoftRed;                          // Softened red for Hub background
-        PG_Hub.LineColor = DarkRed;                          // Dark red for line color in Hub
-        PG_Hub.CategoryForeColor = White;                    // White font color for category text
-        PG_Hub.CategorySplitterColor = SoftRed;              // Softened red for category splitter color
-        PG_Hub.HelpBackColor = SoftRed;                     // Softened red for help background color
-        PG_Hub.HelpForeColor = White;                        // White font color for help text
-        PG_Hub.ViewBackColor = SoftRed;
-        PG_Hub.ViewForeColor = White;
-
-        // Set the colors of the Log tab
-        RTB_Logs.BackColor = SoftRed;                       // Softened red for log background
-        RTB_Logs.ForeColor = White;                          // White text color for logs
-
-        // Set the colors of the IP form
-        TB_IP.BackColor = SoftRed;                      // Dark red for IP form box background
-        TB_IP.ForeColor = White;                             // White text color for IP form box
-
-        CB_Routine.BackColor = SoftRed;                      // Softened red for combo box background
-        CB_Routine.ForeColor = White;                         // White text color for combo box
-
-        NUD_Port.BackColor = SoftRed;                    // Dark red for Port box background
-        NUD_Port.ForeColor = White;                          // White text color for Port box
-
-        B_New.BackColor = DarkRed;                       // Dark red for button background
-        B_New.ForeColor = White;                             // White text color for button
-
-        FLP_Bots.BackColor = DarkRed;                        // Dark red for panel behind trade type and status information
-
-        CB_Protocol.BackColor = SoftRed;                     // Softened red for protocol combo box background
-        CB_Protocol.ForeColor = White;                        // White text color for protocol combo box
-
-        comboBox1.BackColor = MatteYellow;                   // Matte yellow for combo box background
-        comboBox1.ForeColor = White;                         // White text color for combo box
-
-        B_Stop.BackColor = DarkRed;                      // Dark red for STOP button background
-        B_Stop.ForeColor = White;                            // White text color for STOP button font
-
-        B_Start.BackColor = DarkRed;                     // Dark red for START button background
-        B_Start.ForeColor = White;                           // White text color for START button font
-
-        B_RebootStop.BackColor = DarkRed;                // Dark red for REBOOT STOP button background
-        B_RebootStop.ForeColor = White;                      // White text color for REBOOT STOP button font
-
-        updater.BackColor = DarkRed;                     // Matte yellow for updater background
-        updater.ForeColor = White;                           // White text color for updater font
-
-        // 🛡️ Preserve PB_Lamp images from being overwritten by theme
-        foreach (Control ctrl in FLP_Bots.Controls)
-        {
-            if (ctrl is BotController botCtrl &&
-                botCtrl.Controls.Find("PB_Lamp", true).FirstOrDefault() is PictureBox lamp &&
-                lamp.Tag?.ToString() == "NoTheme")
-            {
-                continue; // Skip theming this PB_Lamp
-            }
-        }
-    }
-
-    private void ApplyPokemonVioletTheme()
-    {
-        // Define Pokémon Scarlet theme colors
-        Color SoftViolet = Color.FromArgb(153, 102, 204);       // Softened matte violet color
-        Color DarkViolet = Color.FromArgb(102, 0, 102);         // Softened dark violet color
-        Color MatteYellow = Color.FromArgb(242, 195, 0);        // Softened matte yellow color
-        Color White = Color.FromArgb(240, 240, 240);            // Softened white color
-
-        // Set the background color of the Hub form
-        this.BackColor = DarkViolet;                            // Softened violet for the background
-
-        // Set the foreground color of the main status form
-        this.ForeColor = White;                                 // White text color
-
-        // Set the background color of the tab control
-        TC_Main.BackColor = DarkViolet;                         // Soft violet for tab control background
-
-        // Set the background color of each tab page
-        foreach (TabPage page in TC_Main.TabPages)
-        {
-            page.BackColor = MatteYellow;                        // Matte yellow for each tab page
-        }
-
-        // Set the background color of the Hub
-        PG_Hub.BackColor = DarkViolet;                          // Softened violet for Hub background
-        PG_Hub.LineColor = DarkViolet;                          // Dark violet for line color in Hub
-        PG_Hub.CategoryForeColor = White;                       // White font color for category text
-        PG_Hub.CategorySplitterColor = SoftViolet;              // Softened violet for category splitter color
-        PG_Hub.HelpBackColor = SoftViolet;                     // Softened violet for help background color
-        PG_Hub.HelpForeColor = White;                           // White font color for help text
-        PG_Hub.ViewBackColor = SoftViolet;
-        PG_Hub.ViewForeColor = White;
-
-        // Set the colors of the Log tab
-        RTB_Logs.BackColor = SoftViolet;                        // Softened violet for log background
-        RTB_Logs.ForeColor = White;                              // White text color for logs
-
-        // Set the colors of the IP form
-        TB_IP.BackColor = DarkViolet;                           // Soft violet for IP form box background
-        TB_IP.ForeColor = White;                                 // White text color for IP form box
-
-        CB_Routine.BackColor = SoftViolet;                       // Softened violet for combo box background
-        CB_Routine.ForeColor = White;                            // White text color for combo box
-
-        NUD_Port.BackColor = DarkViolet;                         // Soft violet for Port box background
-        NUD_Port.ForeColor = White;                              // White text color for Port box
-
-        B_New.BackColor = DarkViolet;                            // Dark violet for button background
-        B_New.ForeColor = White;                                 // White text color for button
-
-        FLP_Bots.BackColor = DarkViolet;                         // Dark violet for panel behind trade type and status information
-
-        CB_Protocol.BackColor = SoftViolet;                      // Softened violet for protocol combo box background
-        CB_Protocol.ForeColor = White;                           // White text color for protocol combo box
-
-        comboBox1.BackColor = MatteYellow;                      // Matte yellow for combo box background
-        comboBox1.ForeColor = White;                            // White text color for combo box
-
-        B_Stop.BackColor = DarkViolet;                          // Dark violet for STOP button background
-        B_Stop.ForeColor = White;                                // White text color for STOP button font
-
-        B_Start.BackColor = DarkViolet;                         // Dark violet for START button background
-        B_Start.ForeColor = White;                               // White text color for START button font
-
-        B_RebootStop.BackColor = DarkViolet;                    // Dark violet for REBOOT STOP button background
-        B_RebootStop.ForeColor = White;                          // White text color for REBOOT STOP button font
-
-        updater.BackColor = DarkViolet;                         // Dark violet for updater background
-        updater.ForeColor = White;                               // White text color for updater font
-
-        // 🛡️ Preserve PB_Lamp images from being overwritten by theme
-        foreach (Control ctrl in FLP_Bots.Controls)
-        {
-            if (ctrl is BotController botCtrl &&
-                botCtrl.Controls.Find("PB_Lamp", true).FirstOrDefault() is PictureBox lamp &&
-                lamp.Tag?.ToString() == "NoTheme")
-            {
-                continue; // Skip theming this PB_Lamp
-            }
-        }
-    }
-
-    private void ApplyRainbowTheme()
-    {
-        // Define Rainbow theme colors
-        Color DarkRed = Color.FromArgb(102, 0, 0);          // Dark matte red color
-        Color DarkOrange = Color.FromArgb(204, 102, 0);     // Dark matte orange color
-        Color DarkYellow = Color.FromArgb(153, 153, 0);     // Dark matte yellow color
-        Color DarkGreen = Color.FromArgb(0, 102, 0);        // Dark matte green color
-        Color DarkBlue = Color.FromArgb(0, 51, 102);        // Dark matte blue color
-        Color DarkIndigo = Color.FromArgb(51, 0, 102);      // Dark matte indigo color
-        Color DarkViolet = Color.FromArgb(102, 0, 102);     // Dark matte violet color
-        Color White = Color.FromArgb(240, 240, 240);        // Softened white color
-
-        // Set the background color of the Hub form
-        this.BackColor = DarkRed;                            // Dark red for the background
-
-        // Set the foreground color of the main status form
-        this.ForeColor = White;                              // White text color
-
-        // Set the background color of the tab control
-        TC_Main.BackColor = DarkOrange;                      // Dark orange for tab control background
-
-        // Set the background color of each tab page
-        foreach (TabPage page in TC_Main.TabPages)
-        {
-            page.BackColor = DarkYellow;                     // Dark yellow for each tab page
-        }
-
-        // Set the background color of the Hub
-        PG_Hub.BackColor = DarkGreen;                       // Dark green for Hub background
-        PG_Hub.LineColor = DarkBlue;                        // Dark blue for line color in Hub
-        PG_Hub.CategoryForeColor = White;                   // White font color for category text
-        PG_Hub.CategorySplitterColor = DarkGreen;           // Dark green for category splitter color
-        PG_Hub.HelpBackColor = DarkIndigo;                 // Dark indigo for help background color
-        PG_Hub.HelpForeColor = White;                       // White font color for help text
-        PG_Hub.ViewBackColor = DarkViolet;
-        PG_Hub.ViewForeColor = White;
-
-        // Set the colors of the Log tab
-        RTB_Logs.BackColor = DarkRed;                       // Dark red for log background
-        RTB_Logs.ForeColor = White;                         // White text color for logs
-
-        // Set the colors of the IP form
-        TB_IP.BackColor = DarkOrange;                       // Dark orange for IP form box background
-        TB_IP.ForeColor = White;                             // White text color for IP form box
-
-        CB_Routine.BackColor = DarkYellow;                  // Dark yellow for combo box background
-        CB_Routine.ForeColor = White;                        // White text color for combo box
-
-        NUD_Port.BackColor = DarkGreen;                     // Dark green for Port box background
-        NUD_Port.ForeColor = White;                          // White text color for Port box
-
-        B_New.BackColor = DarkBlue;                         // Dark blue for button background
-        B_New.ForeColor = White;                             // White text color for button
-
-        FLP_Bots.BackColor = DarkIndigo;                    // Dark indigo for panel behind trade type and status information
-
-        CB_Protocol.BackColor = DarkViolet;                 // Dark violet for protocol combo box background
-        CB_Protocol.ForeColor = White;                       // White text color for protocol combo box
-
-        comboBox1.BackColor = DarkRed;                      // Dark red for combo box background
-        comboBox1.ForeColor = White;                         // White text color for combo box
-
-        B_Stop.BackColor = DarkOrange;                      // Dark orange for STOP button background
-        B_Stop.ForeColor = White;                            // White text color for STOP button font
-
-        B_Start.BackColor = DarkYellow;                     // Dark yellow for START button background
-        B_Start.ForeColor = White;                           // White text color for START button font
-
-        B_RebootStop.BackColor = DarkGreen;                 // Dark green for REBOOT STOP button background
-        B_RebootStop.ForeColor = White;                      // White text color for REBOOT STOP button font
-
-        updater.BackColor = DarkBlue;                      // Dark blue for updater background
-        updater.ForeColor = White;                           // White text color for updater font
-
-        // 🛡️ Preserve PB_Lamp images from being overwritten by theme
-        foreach (Control ctrl in FLP_Bots.Controls)
-        {
-            if (ctrl is BotController botCtrl &&
-                botCtrl.Controls.Find("PB_Lamp", true).FirstOrDefault() is PictureBox lamp &&
-                lamp.Tag?.ToString() == "NoTheme")
-            {
-                continue; // Skip theming this PB_Lamp
-            }
-        }
-    }
-
-    private void ApplyPitchBlackTheme()
-    {
-        // Set the background color of the Hub form
-        this.BackColor = Color.Black;               // Black background
-
-        // Set the foreground color of the main status form
-        this.ForeColor = Color.White;               // White text color
-
-        // Set the background color of the tab control
-        TC_Main.BackColor = Color.Black;            // Black background for tab control
-
-        // Set the background color of each tab page
-        foreach (TabPage page in TC_Main.TabPages)
-        {
-            page.BackColor = Color.Black;           // Black background for each tab page
-        }
-
-        // Set the background color of the Hub
-        PG_Hub.BackColor = Color.Black;            // Black background for Hub
-        PG_Hub.LineColor = Color.White;            // White line color in Hub
-        PG_Hub.CategoryForeColor = Color.Black;    // White font color for category text
-        PG_Hub.CategorySplitterColor = Color.Black; // Black category splitter color
-        PG_Hub.HelpBackColor = Color.Black;        // Black help background color
-        PG_Hub.HelpForeColor = Color.White;        // White help text color
-        PG_Hub.ViewBackColor = Color.Black;        // Black view background color
-        PG_Hub.ViewForeColor = Color.White;        // White view text color
-
-        // Set the colors of the Log tab
-        RTB_Logs.BackColor = Color.Black;          // Black log background
-        RTB_Logs.ForeColor = Color.White;          // White log text color
-
-        // Set the colors of the IP form
-        TB_IP.BackColor = Color.Black;             // Black IP form box background
-        TB_IP.ForeColor = Color.White;             // White IP form box text color
-
-        CB_Routine.BackColor = Color.Black;        // Black combo box background
-        CB_Routine.ForeColor = Color.White;        // White combo box text color
-
-        NUD_Port.BackColor = Color.Black;          // Black Port box background
-        NUD_Port.ForeColor = Color.White;          // White Port box text color
-
-        B_New.BackColor = Color.Black;             // Black button background
-        B_New.ForeColor = Color.White;             // White button text color
-
-        FLP_Bots.BackColor = Color.Black;          // Black panel background behind trade type and status information
-
-        CB_Protocol.BackColor = Color.Black;       // Black protocol combo box background
-        CB_Protocol.ForeColor = Color.White;       // White protocol combo box text color
-
-        comboBox1.BackColor = Color.Black;         // Black combo box background
-        comboBox1.ForeColor = Color.White;         // White combo box text color
-
-        B_Stop.BackColor = Color.Black;            // Black STOP button background
-        B_Stop.ForeColor = Color.White;            // White STOP button text color
-
-        B_Start.BackColor = Color.Black;           // Black START button background
-        B_Start.ForeColor = Color.White;           // White START button text color
-
-        B_RebootStop.BackColor = Color.Black;      // Black REBOOT STOP button background
-        B_RebootStop.ForeColor = Color.White;      // White REBOOT STOP button text color
-
-        updater.BackColor = Color.Black;           // Black updater background
-        updater.ForeColor = Color.White;           // White updater text color
-
-        // 🛡️ Preserve PB_Lamp images from being overwritten by theme
-        foreach (Control ctrl in FLP_Bots.Controls)
-        {
-            if (ctrl is BotController botCtrl &&
-                botCtrl.Controls.Find("PB_Lamp", true).FirstOrDefault() is PictureBox lamp &&
-                lamp.Tag?.ToString() == "NoTheme")
-            {
-                continue; // Skip theming this PB_Lamp
+                WinFormsUtil.Error($"Failed to save configuration:\n{ex.Message}");
             }
         }
     }
 }
-
-

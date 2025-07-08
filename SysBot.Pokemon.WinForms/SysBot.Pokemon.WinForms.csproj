@@ -33,11 +33,63 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Fonts\bahnschrift.ttf" />
+    <None Remove="Fonts\Bobbleboddy_light.ttf" />
+    <None Remove="Fonts\gadugi.ttf" />
+    <None Remove="Fonts\gadugib.ttf" />
+    <None Remove="Fonts\segoeui.ttf" />
+    <None Remove="Fonts\segoeuib.ttf" />
+    <None Remove="Fonts\segoeuii.ttf" />
+    <None Remove="Fonts\segoeuil.ttf" />
+    <None Remove="Fonts\segoeuisl.ttf" />
+    <None Remove="Fonts\segoeuiz.ttf" />
+    <None Remove="Fonts\seguibl.ttf" />
+    <None Remove="Fonts\seguibli.ttf" />
+    <None Remove="Fonts\seguili.ttf" />
+    <None Remove="Fonts\seguisb.ttf" />
+    <None Remove="Fonts\seguisbi.ttf" />
+    <None Remove="Fonts\seguisli.ttf" />
+    <None Remove="Fonts\SegUIVar.ttf" />
+    <None Remove="Fonts\UbuntuMono-B.ttf" />
+    <None Remove="Fonts\UbuntuMono-BI.ttf" />
+    <None Remove="Fonts\UbuntuMono-R.ttf" />
+    <None Remove="Fonts\UbuntuMono-RI.ttf" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Fonts\bahnschrift.ttf" />
+    <EmbeddedResource Include="Fonts\gadugi.ttf" />
+    <EmbeddedResource Include="Fonts\gadugib.ttf" />
+    <EmbeddedResource Include="Fonts\segoeui.ttf" />
+    <EmbeddedResource Include="Fonts\segoeuib.ttf" />
+    <EmbeddedResource Include="Fonts\segoeuii.ttf" />
+    <EmbeddedResource Include="Fonts\segoeuil.ttf" />
+    <EmbeddedResource Include="Fonts\segoeuisl.ttf" />
+    <EmbeddedResource Include="Fonts\segoeuiz.ttf" />
+    <EmbeddedResource Include="Fonts\seguibl.ttf" />
+    <EmbeddedResource Include="Fonts\seguibli.ttf" />
+    <EmbeddedResource Include="Fonts\seguili.ttf" />
+    <EmbeddedResource Include="Fonts\seguisb.ttf" />
+    <EmbeddedResource Include="Fonts\seguisbi.ttf" />
+    <EmbeddedResource Include="Fonts\seguisli.ttf" />
+    <EmbeddedResource Include="Fonts\SegUIVar.ttf" />
+    <EmbeddedResource Include="Fonts\UbuntuMono-B.ttf" />
+    <EmbeddedResource Include="Fonts\UbuntuMono-BI.ttf" />
+    <EmbeddedResource Include="Fonts\UbuntuMono-R.ttf" />
+    <EmbeddedResource Include="Fonts\UbuntuMono-RI.ttf" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FontAwesome.Sharp" Version="6.6.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.4" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.4" />
     <PackageReference Include="PKHeX.Core" Version="24.6.3" />
     <PackageReference Include="System.Drawing.Common" Version="9.0.4" />
     <PackageReference Include="System.Resources.Extensions" Version="9.0.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Fonts\Bobbleboddy_light.ttf" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,10 +1,13 @@
+using FontAwesome.Sharp;
 using PKHeX.Drawing.PokeSprite.Properties;
+using SysBot.Pokemon.Helpers;
 using SysBot.Pokemon.WinForms.Properties;
 using System.Drawing;
 using System.Windows.Forms;
 
 namespace SysBot.Pokemon.WinForms
 {
+
     partial class Main
     {
         /// <summary>
@@ -15,7 +18,12 @@ namespace SysBot.Pokemon.WinForms
         /// <summary>
         ///  Clean up any resources being used.
         /// </summary>
-        /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
+
+
+        private FontAwesome.Sharp.IconButton btnBots;
+        private FontAwesome.Sharp.IconButton btnHub;
+        private FontAwesome.Sharp.IconButton btnLogs;
+
         protected override void Dispose(bool disposing)
         {
             if (disposing && (components != null))
@@ -33,297 +41,376 @@ namespace SysBot.Pokemon.WinForms
         /// </summary>
         private void InitializeComponent()
         {
-            TC_Main = new TabControl();
-            Tab_Bots = new TabPage();
-            B_Stop = new Button();
-            comboBox2 = new ComboBox();
-            B_Start = new Button();
-            comboBox1 = new ComboBox();
-            CB_Protocol = new ComboBox();
-            FLP_Bots = new FlowLayoutPanel();
-            TB_IP = new TextBox();
-            CB_Routine = new ComboBox();
-            NUD_Port = new NumericUpDown();
-            B_New = new Button();
-            B_RebootStop = new Button();
-            updater = new Button();
-            Tab_Hub = new TabPage();
-            PG_Hub = new PropertyGrid();
-            Tab_Logs = new TabPage();
-            RTB_Logs = new RichTextBox();
-            TC_Main.SuspendLayout();
-            Tab_Bots.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)NUD_Port).BeginInit();
-            Tab_Hub.SuspendLayout();
-            Tab_Logs.SuspendLayout();
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Main));
+            panelLeftSide = new Panel();
+            btnLogs = new IconButton();
+            btnHub = new IconButton();
+            btnBots = new IconButton();
+            panelImageLogo = new Panel();
+            panel6 = new Panel();
+            panel5 = new Panel();
+            panel3 = new Panel();
+            pictureLogo = new PictureBox();
+            lblTitle = new Label();
+            panel4 = new Panel();
+            panelTitleBar = new Panel();
+            btnClose = new IconPictureBox();
+            btnMaximize = new IconPictureBox();
+            btnMinimize = new IconPictureBox();
+            childFormIcon = new IconPictureBox();
+            lblTitleChildForm = new Label();
+            shadowPanelTop = new Panel();
+            shadowPanelLeft = new Panel();
+            panelMain = new Panel();
+            panel2 = new Panel();
+            panel1 = new Panel();
+            panelLeftSide.SuspendLayout();
+            panelImageLogo.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)pictureLogo).BeginInit();
+            panelTitleBar.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)btnClose).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)btnMaximize).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)btnMinimize).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)childFormIcon).BeginInit();
+            panelMain.SuspendLayout();
             SuspendLayout();
             // 
-            // TC_Main
+            // panelLeftSide
             // 
-            TC_Main.Controls.Add(Tab_Bots);
-            TC_Main.Controls.Add(Tab_Hub);
-            TC_Main.Controls.Add(Tab_Logs);
-            TC_Main.Dock = DockStyle.Fill;
-            TC_Main.Location = new Point(0, 0);
-            TC_Main.Margin = new Padding(5, 4, 5, 4);
-            TC_Main.Name = "TC_Main";
-            TC_Main.SelectedIndex = 0;
-            TC_Main.Size = new Size(1092, 140);
-            TC_Main.TabIndex = 3;
+            panelLeftSide.BackColor = Color.FromArgb(31, 30, 68);
+            panelLeftSide.Controls.Add(btnLogs);
+            panelLeftSide.Controls.Add(btnHub);
+            panelLeftSide.Controls.Add(btnBots);
+            panelLeftSide.Controls.Add(panelImageLogo);
+            panelLeftSide.Controls.Add(lblTitle);
+            panelLeftSide.Dock = DockStyle.Left;
+            panelLeftSide.Location = new Point(0, 0);
+            panelLeftSide.Name = "panelLeftSide";
+            panelLeftSide.Size = new Size(220, 422);
+            panelLeftSide.TabIndex = 0;
             // 
-            // Tab_Bots
+            // btnLogs
             // 
-            Tab_Bots.Controls.Add(B_Stop);
-            Tab_Bots.Controls.Add(comboBox2);
-            Tab_Bots.Controls.Add(B_Start);
-            Tab_Bots.Controls.Add(comboBox1);
-            Tab_Bots.Controls.Add(CB_Protocol);
-            Tab_Bots.Controls.Add(FLP_Bots);
-            Tab_Bots.Controls.Add(TB_IP);
-            Tab_Bots.Controls.Add(CB_Routine);
-            Tab_Bots.Controls.Add(NUD_Port);
-            Tab_Bots.Controls.Add(B_New);
-            Tab_Bots.Controls.Add(B_RebootStop);
-            Tab_Bots.Controls.Add(updater);
-            Tab_Bots.Location = new Point(4, 29);
-            Tab_Bots.Margin = new Padding(5, 4, 5, 4);
-            Tab_Bots.Name = "Tab_Bots";
-            Tab_Bots.Size = new Size(1084, 107);
-            Tab_Bots.TabIndex = 0;
-            Tab_Bots.Text = "Bots";
-            Tab_Bots.UseVisualStyleBackColor = true;
+            btnLogs.Dock = DockStyle.Top;
+            btnLogs.FlatAppearance.BorderSize = 0;
+            btnLogs.FlatStyle = FlatStyle.Flat;
+            btnLogs.Font = new Font("Ubuntu Mono", 10.8F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            btnLogs.ForeColor = Color.White;
+            btnLogs.IconChar = IconChar.TextHeight;
+            btnLogs.IconColor = Color.White;
+            btnLogs.IconFont = IconFont.Auto;
+            btnLogs.ImageAlign = ContentAlignment.MiddleLeft;
+            btnLogs.Location = new Point(0, 245);
+            btnLogs.Name = "btnLogs";
+            btnLogs.Padding = new Padding(10, 0, 20, 0);
+            btnLogs.Size = new Size(220, 60);
+            btnLogs.TabIndex = 3;
+            btnLogs.Text = "Bot Logs";
+            btnLogs.TextAlign = ContentAlignment.MiddleLeft;
+            btnLogs.TextImageRelation = TextImageRelation.ImageBeforeText;
+            btnLogs.UseVisualStyleBackColor = true;
+            btnLogs.Click += Logs_Click;
             // 
-            // B_Stop
+            // btnHub
             // 
-            B_Stop.FlatStyle = FlatStyle.Flat;
-            B_Stop.Font = new Font("Gadugi", 7.8F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            B_Stop.Location = new Point(584, 9);
-            B_Stop.Margin = new Padding(5, 4, 5, 4);
-            B_Stop.Name = "B_Stop";
-            B_Stop.Size = new Size(77, 31);
-            B_Stop.TabIndex = 4;
-            B_Stop.Text = "STOP";
-            B_Stop.UseVisualStyleBackColor = true;
-            B_Stop.Click += B_Stop_Click;
+            btnHub.Dock = DockStyle.Top;
+            btnHub.FlatAppearance.BorderSize = 0;
+            btnHub.FlatStyle = FlatStyle.Flat;
+            btnHub.Font = new Font("Ubuntu Mono", 10.8F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            btnHub.ForeColor = Color.White;
+            btnHub.IconChar = IconChar.BarChart;
+            btnHub.IconColor = Color.White;
+            btnHub.IconFont = IconFont.Auto;
+            btnHub.ImageAlign = ContentAlignment.MiddleLeft;
+            btnHub.Location = new Point(0, 185);
+            btnHub.Name = "btnHub";
+            btnHub.Padding = new Padding(10, 0, 20, 0);
+            btnHub.Size = new Size(220, 60);
+            btnHub.TabIndex = 2;
+            btnHub.Text = "Bot Hub";
+            btnHub.TextAlign = ContentAlignment.MiddleLeft;
+            btnHub.TextImageRelation = TextImageRelation.ImageBeforeText;
+            btnHub.UseVisualStyleBackColor = true;
+            btnHub.Click += Hub_Click;
             // 
-            // comboBox2
+            // btnBots
             // 
-            comboBox2.DropDownStyle = ComboBoxStyle.DropDownList;
-            comboBox2.Font = new Font("Gadugi", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            comboBox2.FormattingEnabled = true;
-            comboBox2.Location = new Point(937, 11);
-            comboBox2.Margin = new Padding(5, 4, 5, 4);
-            comboBox2.Name = "comboBox2";
-            comboBox2.Size = new Size(130, 27);
-            comboBox2.TabIndex = 12;
-            comboBox2.SelectedIndexChanged += comboBox2_SelectedIndexChanged;
+            btnBots.Dock = DockStyle.Top;
+            btnBots.FlatAppearance.BorderSize = 0;
+            btnBots.FlatStyle = FlatStyle.Flat;
+            btnBots.Font = new Font("Ubuntu Mono", 10.8F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            btnBots.ForeColor = Color.White;
+            btnBots.IconChar = IconChar.AngleRight;
+            btnBots.IconColor = Color.White;
+            btnBots.IconFont = IconFont.Auto;
+            btnBots.ImageAlign = ContentAlignment.MiddleLeft;
+            btnBots.Location = new Point(0, 125);
+            btnBots.Name = "btnBots";
+            btnBots.Padding = new Padding(10, 0, 20, 0);
+            btnBots.Size = new Size(220, 60);
+            btnBots.TabIndex = 1;
+            btnBots.Text = "Bot Controls";
+            btnBots.TextAlign = ContentAlignment.MiddleLeft;
+            btnBots.TextImageRelation = TextImageRelation.ImageBeforeText;
+            btnBots.UseVisualStyleBackColor = true;
+            btnBots.Click += Bots_Click;
             // 
-            // B_Start
+            // panelImageLogo
             // 
-            B_Start.FlatStyle = FlatStyle.Flat;
-            B_Start.Font = new Font("Gadugi", 7.8F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            B_Start.Location = new Point(505, 9);
-            B_Start.Margin = new Padding(5, 4, 5, 4);
-            B_Start.Name = "B_Start";
-            B_Start.Size = new Size(77, 31);
-            B_Start.TabIndex = 3;
-            B_Start.Text = "START";
-            B_Start.UseVisualStyleBackColor = true;
-            B_Start.Click += B_Start_Click;
+            panelImageLogo.BackColor = Color.Transparent;
+            panelImageLogo.Controls.Add(panel6);
+            panelImageLogo.Controls.Add(panel5);
+            panelImageLogo.Controls.Add(panel3);
+            panelImageLogo.Controls.Add(pictureLogo);
+            panelImageLogo.Cursor = Cursors.Hand;
+            panelImageLogo.Dock = DockStyle.Top;
+            panelImageLogo.Location = new Point(0, 0);
+            panelImageLogo.Name = "panelImageLogo";
+            panelImageLogo.Size = new Size(220, 125);
+            panelImageLogo.TabIndex = 0;
             // 
-            // comboBox1
+            // panel6
             // 
-            comboBox1.DropDownStyle = ComboBoxStyle.DropDownList;
-            comboBox1.Font = new Font("Gadugi", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            comboBox1.FormattingEnabled = true;
-            comboBox1.Location = new Point(853, 11);
-            comboBox1.Margin = new Padding(5, 4, 5, 4);
-            comboBox1.Name = "comboBox1";
-            comboBox1.Size = new Size(76, 27);
-            comboBox1.TabIndex = 11;
-            comboBox1.SelectedIndexChanged += comboBox1_SelectedIndexChanged;
+            panel6.BackColor = Color.FromArgb(20, 19, 57);
+            panel6.Dock = DockStyle.Left;
+            panel6.Location = new Point(0, 12);
+            panel6.Name = "panel6";
+            panel6.Size = new Size(12, 101);
+            panel6.TabIndex = 5;
             // 
-            // CB_Protocol
+            // panel5
             // 
-            CB_Protocol.DropDownStyle = ComboBoxStyle.DropDownList;
-            CB_Protocol.Font = new Font("Gadugi", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            CB_Protocol.FormattingEnabled = true;
-            CB_Protocol.Location = new Point(246, 11);
-            CB_Protocol.Margin = new Padding(5, 4, 5, 4);
-            CB_Protocol.Name = "CB_Protocol";
-            CB_Protocol.Size = new Size(76, 27);
-            CB_Protocol.TabIndex = 10;
-            CB_Protocol.SelectedIndexChanged += CB_Protocol_SelectedIndexChanged;
+            panel5.BackColor = Color.FromArgb(20, 19, 57);
+            panel5.Dock = DockStyle.Top;
+            panel5.Location = new Point(0, 0);
+            panel5.Name = "panel5";
+            panel5.Size = new Size(220, 12);
+            panel5.TabIndex = 4;
             // 
-            // FLP_Bots
+            // panel3
             // 
-            FLP_Bots.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            FLP_Bots.BackgroundImageLayout = ImageLayout.Center;
-            FLP_Bots.BorderStyle = BorderStyle.FixedSingle;
-            FLP_Bots.Location = new Point(0, 49);
-            FLP_Bots.Margin = new Padding(0);
-            FLP_Bots.Name = "FLP_Bots";
-            FLP_Bots.Size = new Size(1081, 56);
-            FLP_Bots.TabIndex = 9;
-            FLP_Bots.Resize += FLP_Bots_Resize;
+            panel3.BackColor = Color.FromArgb(20, 19, 57);
+            panel3.Dock = DockStyle.Bottom;
+            panel3.Location = new Point(0, 113);
+            panel3.Name = "panel3";
+            panel3.Size = new Size(220, 12);
+            panel3.TabIndex = 3;
             // 
-            // TB_IP
+            // pictureLogo
             // 
-            TB_IP.Font = new Font("Gadugi", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            TB_IP.Location = new Point(10, 13);
-            TB_IP.Margin = new Padding(5, 4, 5, 4);
-            TB_IP.Name = "TB_IP";
-            TB_IP.Size = new Size(153, 27);
-            TB_IP.TabIndex = 8;
-            TB_IP.Text = "192.168.0.1";
+            pictureLogo.BackColor = Color.Transparent;
+            pictureLogo.BackgroundImageLayout = ImageLayout.Stretch;
+            pictureLogo.Image = (Image)resources.GetObject("pictureLogo.Image");
+            pictureLogo.Location = new Point(-4, 0);
+            pictureLogo.Name = "pictureLogo";
+            pictureLogo.Size = new Size(224, 205);
+            pictureLogo.SizeMode = PictureBoxSizeMode.StretchImage;
+            pictureLogo.TabIndex = 0;
+            pictureLogo.TabStop = false;
             // 
-            // CB_Routine
+            // lblTitle
             // 
-            CB_Routine.DropDownStyle = ComboBoxStyle.DropDownList;
-            CB_Routine.Font = new Font("Gadugi", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            CB_Routine.FormattingEnabled = true;
-            CB_Routine.Location = new Point(332, 11);
-            CB_Routine.Margin = new Padding(5, 4, 5, 4);
-            CB_Routine.Name = "CB_Routine";
-            CB_Routine.Size = new Size(115, 27);
-            CB_Routine.TabIndex = 7;
+            lblTitle.BackColor = Color.Transparent;
+            lblTitle.Font = new Font("Bahnschrift", 7.20000029F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            lblTitle.ForeColor = Color.Gainsboro;
+            lblTitle.Location = new Point(-1, 390);
+            lblTitle.Margin = new Padding(0);
+            lblTitle.Name = "lblTitle";
+            lblTitle.Size = new Size(220, 32);
+            lblTitle.TabIndex = 4;
+            lblTitle.Text = "ZE FusionBot | v0.0.0 | MODE: XXXX";
+            lblTitle.TextAlign = ContentAlignment.MiddleCenter;
             // 
-            // NUD_Port
+            // panel4
             // 
-            NUD_Port.Font = new Font("Gadugi", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            NUD_Port.Location = new Point(173, 13);
-            NUD_Port.Margin = new Padding(5, 4, 5, 4);
-            NUD_Port.Maximum = new decimal(new int[] { 65535, 0, 0, 0 });
-            NUD_Port.Name = "NUD_Port";
-            NUD_Port.Size = new Size(63, 27);
-            NUD_Port.TabIndex = 6;
-            NUD_Port.Value = new decimal(new int[] { 6000, 0, 0, 0 });
+            panel4.BackColor = Color.FromArgb(20, 19, 57);
+            panel4.Dock = DockStyle.Left;
+            panel4.Location = new Point(0, 0);
+            panel4.Name = "panel4";
+            panel4.Size = new Size(12, 58);
+            panel4.TabIndex = 4;
             // 
-            // B_New
+            // panelTitleBar
             // 
-            B_New.FlatStyle = FlatStyle.Flat;
-            B_New.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            B_New.Location = new Point(454, 9);
-            B_New.Margin = new Padding(5, 4, 5, 4);
-            B_New.Name = "B_New";
-            B_New.RightToLeft = RightToLeft.No;
-            B_New.Size = new Size(34, 31);
-            B_New.TabIndex = 0;
-            B_New.Text = "+";
-            B_New.UseVisualStyleBackColor = true;
-            B_New.Click += B_New_Click;
+            panelTitleBar.BackColor = Color.FromArgb(31, 30, 68);
+            panelTitleBar.Controls.Add(btnClose);
+            panelTitleBar.Controls.Add(btnMaximize);
+            panelTitleBar.Controls.Add(panel4);
+            panelTitleBar.Controls.Add(btnMinimize);
+            panelTitleBar.Controls.Add(childFormIcon);
+            panelTitleBar.Controls.Add(lblTitleChildForm);
+            panelTitleBar.Dock = DockStyle.Top;
+            panelTitleBar.Location = new Point(220, 0);
+            panelTitleBar.Name = "panelTitleBar";
+            panelTitleBar.Size = new Size(769, 58);
+            panelTitleBar.TabIndex = 1;
             // 
-            // B_RebootStop
+            // btnClose
             // 
-            B_RebootStop.FlatStyle = FlatStyle.Flat;
-            B_RebootStop.Font = new Font("Gadugi", 7.8F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            B_RebootStop.Location = new Point(679, 9);
-            B_RebootStop.Margin = new Padding(5, 4, 5, 4);
-            B_RebootStop.Name = "B_RebootStop";
-            B_RebootStop.Size = new Size(77, 31);
-            B_RebootStop.TabIndex = 9;
-            B_RebootStop.Text = "RESTART";
-            B_RebootStop.UseVisualStyleBackColor = true;
-            B_RebootStop.Click += B_RebootStop_Click;
+            btnClose.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            btnClose.BackColor = Color.FromArgb(31, 30, 68);
+            btnClose.ForeColor = Color.RosyBrown;
+            btnClose.IconChar = IconChar.Close;
+            btnClose.IconColor = Color.RosyBrown;
+            btnClose.IconFont = IconFont.Auto;
+            btnClose.IconSize = 20;
+            btnClose.Location = new Point(745, 6);
+            btnClose.Name = "btnClose";
+            btnClose.Size = new Size(20, 22);
+            btnClose.TabIndex = 4;
+            btnClose.TabStop = false;
             // 
-            // updater
+            // btnMaximize
             // 
-            updater.FlatStyle = FlatStyle.Flat;
-            updater.Font = new Font("Gadugi", 7.8F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            updater.Location = new Point(758, 9);
-            updater.Margin = new Padding(5, 4, 5, 4);
-            updater.Name = "updater";
-            updater.Size = new Size(77, 31);
-            updater.TabIndex = 10;
-            updater.Text = "UPDATE";
-            updater.UseVisualStyleBackColor = true;
-            updater.Click += Updater_Click;
+            btnMaximize.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            btnMaximize.BackColor = Color.FromArgb(31, 30, 68);
+            btnMaximize.IconChar = IconChar.WindowMaximize;
+            btnMaximize.IconColor = Color.White;
+            btnMaximize.IconFont = IconFont.Auto;
+            btnMaximize.IconSize = 20;
+            btnMaximize.Location = new Point(724, 6);
+            btnMaximize.Name = "btnMaximize";
+            btnMaximize.Size = new Size(20, 22);
+            btnMaximize.TabIndex = 3;
+            btnMaximize.TabStop = false;
             // 
-            // Tab_Hub
+            // btnMinimize
             // 
-            Tab_Hub.Controls.Add(PG_Hub);
-            Tab_Hub.Location = new Point(4, 29);
-            Tab_Hub.Margin = new Padding(5, 4, 5, 4);
-            Tab_Hub.Name = "Tab_Hub";
-            Tab_Hub.Padding = new Padding(5, 4, 5, 4);
-            Tab_Hub.Size = new Size(1084, 107);
-            Tab_Hub.TabIndex = 2;
-            Tab_Hub.Text = "Hub";
-            Tab_Hub.UseVisualStyleBackColor = true;
+            btnMinimize.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            btnMinimize.BackColor = Color.FromArgb(31, 30, 68);
+            btnMinimize.IconChar = IconChar.WindowMinimize;
+            btnMinimize.IconColor = Color.White;
+            btnMinimize.IconFont = IconFont.Auto;
+            btnMinimize.IconSize = 20;
+            btnMinimize.Location = new Point(703, 6);
+            btnMinimize.Name = "btnMinimize";
+            btnMinimize.Size = new Size(20, 22);
+            btnMinimize.TabIndex = 2;
+            btnMinimize.TabStop = false;
             // 
-            // PG_Hub
+            // childFormIcon
             // 
-            PG_Hub.BackColor = SystemColors.Control;
-            PG_Hub.Dock = DockStyle.Fill;
-            PG_Hub.Location = new Point(5, 4);
-            PG_Hub.Margin = new Padding(5, 4, 5, 4);
-            PG_Hub.Name = "PG_Hub";
-            PG_Hub.PropertySort = PropertySort.Categorized;
-            PG_Hub.Size = new Size(1074, 99);
-            PG_Hub.TabIndex = 0;
+            childFormIcon.BackColor = Color.FromArgb(31, 30, 68);
+            childFormIcon.ForeColor = Color.Thistle;
+            childFormIcon.IconChar = IconChar.House;
+            childFormIcon.IconColor = Color.Thistle;
+            childFormIcon.IconFont = IconFont.Auto;
+            childFormIcon.IconSize = 40;
+            childFormIcon.Location = new Point(12, 12);
+            childFormIcon.Name = "childFormIcon";
+            childFormIcon.Size = new Size(40, 40);
+            childFormIcon.TabIndex = 1;
+            childFormIcon.TabStop = false;
             // 
-            // Tab_Logs
+            // lblTitleChildForm
             // 
-            Tab_Logs.Controls.Add(RTB_Logs);
-            Tab_Logs.Location = new Point(4, 29);
-            Tab_Logs.Margin = new Padding(5, 4, 5, 4);
-            Tab_Logs.Name = "Tab_Logs";
-            Tab_Logs.Size = new Size(1084, 107);
-            Tab_Logs.TabIndex = 1;
-            Tab_Logs.Text = "Logs";
-            Tab_Logs.UseVisualStyleBackColor = true;
+            lblTitleChildForm.AutoSize = true;
+            lblTitleChildForm.Font = new Font("bubbleboddy light", 22.2F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            lblTitleChildForm.ForeColor = Color.White;
+            lblTitleChildForm.Location = new Point(58, 12);
+            lblTitleChildForm.Name = "lblTitleChildForm";
+            lblTitleChildForm.Size = new Size(172, 38);
+            lblTitleChildForm.TabIndex = 0;
+            lblTitleChildForm.Text = "LOADING ...";
             // 
-            // RTB_Logs
+            // shadowPanelTop
             // 
-            RTB_Logs.Dock = DockStyle.Fill;
-            RTB_Logs.Location = new Point(0, 0);
-            RTB_Logs.Margin = new Padding(5, 4, 5, 4);
-            RTB_Logs.Name = "RTB_Logs";
-            RTB_Logs.ReadOnly = true;
-            RTB_Logs.Size = new Size(1084, 107);
-            RTB_Logs.TabIndex = 0;
-            RTB_Logs.Text = "";
+            shadowPanelTop.BackColor = Color.FromArgb(20, 19, 57);
+            shadowPanelTop.Dock = DockStyle.Top;
+            shadowPanelTop.Location = new Point(220, 58);
+            shadowPanelTop.Name = "shadowPanelTop";
+            shadowPanelTop.Size = new Size(769, 12);
+            shadowPanelTop.TabIndex = 2;
+            // 
+            // shadowPanelLeft
+            // 
+            shadowPanelLeft.BackColor = Color.FromArgb(20, 19, 57);
+            shadowPanelLeft.Dock = DockStyle.Left;
+            shadowPanelLeft.Location = new Point(220, 70);
+            shadowPanelLeft.Name = "shadowPanelLeft";
+            shadowPanelLeft.Size = new Size(12, 352);
+            shadowPanelLeft.TabIndex = 3;
+            // 
+            // panelMain
+            // 
+            panelMain.BackColor = Color.FromArgb(10, 10, 40);
+            panelMain.Controls.Add(panel2);
+            panelMain.Controls.Add(panel1);
+            panelMain.Dock = DockStyle.Fill;
+            panelMain.Location = new Point(232, 70);
+            panelMain.Name = "panelMain";
+            panelMain.Size = new Size(757, 352);
+            panelMain.TabIndex = 4;
+            // 
+            // panel2
+            // 
+            panel2.BackColor = Color.FromArgb(20, 19, 57);
+            panel2.Dock = DockStyle.Bottom;
+            panel2.Location = new Point(0, 340);
+            panel2.Name = "panel2";
+            panel2.Size = new Size(745, 12);
+            panel2.TabIndex = 3;
+            // 
+            // panel1
+            // 
+            panel1.BackColor = Color.FromArgb(20, 19, 57);
+            panel1.Dock = DockStyle.Right;
+            panel1.Location = new Point(745, 0);
+            panel1.Name = "panel1";
+            panel1.Size = new Size(12, 352);
+            panel1.TabIndex = 4;
             // 
             // Main
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1092, 140);
-            Controls.Add(TC_Main);
+            ClientSize = new Size(989, 422);
+            Controls.Add(panelMain);
+            Controls.Add(shadowPanelLeft);
+            Controls.Add(shadowPanelTop);
+            Controls.Add(panelTitleBar);
+            Controls.Add(panelLeftSide);
+            FormBorderStyle = FormBorderStyle.None;
             Icon = Properties.Resources.icon;
             Margin = new Padding(5, 4, 5, 4);
+            MinimumSize = new Size(989, 422);
             Name = "Main";
             StartPosition = FormStartPosition.CenterScreen;
             Text = "ZE FusionBot";
-            FormClosing += Main_FormClosing;
-            TC_Main.ResumeLayout(false);
-            Tab_Bots.ResumeLayout(false);
-            Tab_Bots.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)NUD_Port).EndInit();
-            Tab_Hub.ResumeLayout(false);
-            Tab_Logs.ResumeLayout(false);
+            panelLeftSide.ResumeLayout(false);
+            panelImageLogo.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)pictureLogo).EndInit();
+            panelTitleBar.ResumeLayout(false);
+            panelTitleBar.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)btnClose).EndInit();
+            ((System.ComponentModel.ISupportInitialize)btnMaximize).EndInit();
+            ((System.ComponentModel.ISupportInitialize)btnMinimize).EndInit();
+            ((System.ComponentModel.ISupportInitialize)childFormIcon).EndInit();
+            panelMain.ResumeLayout(false);
             ResumeLayout(false);
         }
 
         #endregion
-        private System.Windows.Forms.TabControl TC_Main;
-        private System.Windows.Forms.TabPage Tab_Bots;
-        private System.Windows.Forms.TabPage Tab_Logs;
-        private System.Windows.Forms.RichTextBox RTB_Logs;
-        private System.Windows.Forms.TabPage Tab_Hub;
-        private System.Windows.Forms.PropertyGrid PG_Hub;
-        private System.Windows.Forms.Button B_Stop;
-        private System.Windows.Forms.Button B_Start;
-        private System.Windows.Forms.TextBox TB_IP;
-        private System.Windows.Forms.ComboBox CB_Routine;
-        private System.Windows.Forms.NumericUpDown NUD_Port;
-        private System.Windows.Forms.Button B_New;
-        private System.Windows.Forms.FlowLayoutPanel FLP_Bots;
-        private System.Windows.Forms.ComboBox CB_Protocol;
-        private System.Windows.Forms.ComboBox comboBox1;
-        private System.Windows.Forms.ComboBox comboBox2;
-        private System.Windows.Forms.Button B_RebootStop;
-        private Button updater;
+
+        private Panel panelLeftSide;
+        private Panel panelImageLogo;
+        private PictureBox pictureLogo;
+        private Panel panelTitleBar;
+        private Label lblTitleChildForm;
+        private FontAwesome.Sharp.IconPictureBox childFormIcon;
+        private FontAwesome.Sharp.IconPictureBox btnMaximize;
+        private FontAwesome.Sharp.IconPictureBox btnMinimize;
+        private FontAwesome.Sharp.IconPictureBox btnClose;
+        private Panel shadowPanelTop;
+        private Panel shadowPanelLeft;
+        private Panel panelMain;
+        private Label lblTitle;
+        private Panel panel2;
+        private Panel panel1;
+        private Panel panel4;
+        private Panel panel3;
+        private Panel panel6;
+        private Panel panel5;
     }
 }
 

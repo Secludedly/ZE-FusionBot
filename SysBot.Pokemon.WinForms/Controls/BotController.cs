@@ -19,11 +19,18 @@ public partial class BotController : UserControl
     private readonly Image RedImage = Image.FromStream(new System.IO.MemoryStream(Properties.Resources.status_red));
     private readonly Image AquaImage = Image.FromStream(new System.IO.MemoryStream(Properties.Resources.status_aqua));
     private readonly Image TransparentImage = Image.FromStream(new System.IO.MemoryStream(Properties.Resources.status_transparent));
+    public bool IsRunning()
+    {
+        if (Runner == null || State == null)
+            return false;
+
+        var activeBot = Runner.GetBot(State);
+        return activeBot?.IsRunning ?? false;
+    }
 
     public BotController()
     {
         InitializeComponent();
-        PB_Lamp.Tag = "NoTheme"; // Prevent theme from overriding this image
         var opt = (BotControlCommand[])Enum.GetValues(typeof(BotControlCommand));
 
         for (int i = 1; i < opt.Length; i++)
@@ -68,13 +75,15 @@ public partial class BotController : UserControl
         Runner = runner;
         State = cfg;
         ReloadStatus();
-        L_Description.Text = string.Empty;
+        if (PB_Lamp.Image == TransparentImage)
+            PB_Lamp.BackColor = Color.Gray; // or any placeholder
+
     }
 
     public void ReloadStatus()
     {
         var bot = GetBot().Bot;
-        L_Left.Text = $"{bot.Connection.Name}{Environment.NewLine}{State.InitialRoutine}";
+        RTB_Left.Text = $"{bot.Connection.Name}{Environment.NewLine}{State.InitialRoutine}";
     }
 
     private DateTime LastUpdateStatus = DateTime.Now;
@@ -83,8 +92,42 @@ public partial class BotController : UserControl
     {
         ReloadStatus();
         var bot = b.Bot;
-        L_Description.Text = $"[{bot.LastTime:hh\\:mm\\:ss}] {bot.Connection.Label}: {bot.LastLogged}";
-        L_Left.Text = $"{bot.Connection.Name}{Environment.NewLine}{State.InitialRoutine}";
+        // Update description with styled text
+        RTB_Description.Clear();
+        RTB_Description.SelectionFont = new Font("Ubuntu Mono", 9F, FontStyle.Bold);
+        RTB_Description.SelectionColor = Color.FromArgb(165, 137, 182);
+        RTB_Description.AppendText("BOT STATUS: ");
+
+        RTB_Description.SelectionFont = new Font("Ubuntu Mono", 9F, FontStyle.Regular);
+        RTB_Description.SelectionColor = Color.White;
+        RTB_Description.AppendText($"  {bot.LastLogged}\n");
+
+        RTB_Description.SelectionFont = new Font("Ubuntu Mono", 9F, FontStyle.Bold);
+        RTB_Description.SelectionColor = Color.FromArgb(165, 137, 182);
+        RTB_Description.AppendText("LAST LOG: ");
+
+        RTB_Description.SelectionFont = new Font("Ubuntu Mono", 9F, FontStyle.Regular);
+        RTB_Description.SelectionColor = Color.White;
+        RTB_Description.AppendText($"    {bot.LastTime:hh\\:mm\\:ss}");
+
+        // Update left section
+        RTB_Left.Clear();
+        RTB_Left.SelectionFont = new Font("Ubuntu Mono", 9F, FontStyle.Bold);
+        RTB_Left.SelectionColor = Color.FromArgb(165, 137, 182);
+        RTB_Left.AppendText("BOT ADDRESS: ");
+
+        RTB_Left.SelectionFont = new Font("Ubuntu Mono", 9F, FontStyle.Regular);
+        RTB_Left.SelectionColor = Color.White;
+        RTB_Left.AppendText($" {bot.Connection.Name}\n");
+
+        RTB_Left.SelectionFont = new Font("Ubuntu Mono", 9F, FontStyle.Bold);
+        RTB_Left.SelectionColor = Color.FromArgb(165, 137, 182);
+        RTB_Left.AppendText("TRADE TYPE: ");
+
+        RTB_Left.SelectionFont = new Font("Ubuntu Mono", 9F, FontStyle.Regular);
+        RTB_Left.SelectionColor = Color.White;
+        RTB_Left.AppendText($"  {State.InitialRoutine}");
+
 
         var lastTime = bot.LastTime;
         if (!b.IsRunning)
@@ -170,7 +213,7 @@ public partial class BotController : UserControl
         return bot;
     }
 
-    private void BotController_MouseEnter(object? sender, EventArgs e) => BackColor = Color.RebeccaPurple;
+    private void BotController_MouseEnter(object? sender, EventArgs e) => BackColor = Color.FromArgb(31, 30, 68);
     private void BotController_MouseLeave(object? sender, EventArgs e) => BackColor = Color.Transparent;
 
     public void ReadState()

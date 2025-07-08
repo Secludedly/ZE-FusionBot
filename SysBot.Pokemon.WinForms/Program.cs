@@ -28,26 +28,26 @@ static class Program
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
 
-        //        var splash = new SplashScreen();
-        //        splash.StartPosition = FormStartPosition.Manual;
-        //        splash.TopMost = true;
+        var splash = new SplashScreen();
+        splash.StartPosition = FormStartPosition.Manual;
+        splash.TopMost = true;
 
-        //        int screenWidth = Screen.PrimaryScreen.Bounds.Width;
-        //        int screenHeight = Screen.PrimaryScreen.Bounds.Height;
-        //        int splashWidth = splash.Width;
-        //        int splashHeight = splash.Height;
-        //        int splashLeft = (screenWidth - splashWidth) / 2;
-        //        int splashTop = (screenHeight - splashHeight) / 2;
+        int screenWidth = Screen.PrimaryScreen.Bounds.Width;
+        int screenHeight = Screen.PrimaryScreen.Bounds.Height;
+        int splashWidth = splash.Width;
+        int splashHeight = splash.Height;
+        int splashLeft = (screenWidth - splashWidth) / 2;
+        int splashTop = (screenHeight - splashHeight) / 2;
 
-        //        splash.Location = new Point(splashLeft, splashTop);
-        //        splash.Show();
-        //        var splashThread = new Thread(new ThreadStart(() =>
-       // {
-       //     Thread.Sleep(1500);
-            //            splash.Invoke(new Action(() => splash.Close()));
-            //        }));
-            //
-            //        splashThread.Start();
+        splash.Location = new Point(splashLeft, splashTop);
+        splash.Show();
+        var splashThread = new Thread(new ThreadStart(() =>
+ {
+     Thread.Sleep(2500);
+            splash.Invoke(new Action(() => splash.Close()));
+        }));
+
+        splashThread.Start();
 
             Application.Run(new Main());
         }
