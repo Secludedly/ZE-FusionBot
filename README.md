@@ -1,14 +1,14 @@
 <h1 align="center">
     <a href="https://amplication.com/#gh-light-mode-only">
-    <img src="https://i.imgur.com/43WJlCN.png">
+    <img src="https://i.imgur.com/0HWW0te.png">
     </a>
     <a href="https://amplication.com/#gh-dark-mode-only">
-    <img src="https://i.imgur.com/43WJlCN.png">
+    <img src="https://i.imgur.com/0HWW0te.png">
     </a>
 </h1>
 
 <p align="center">
-  <i align="center">A community-driven and inspired SysBot.NET project, uniting code from everyone!</i>
+  <i align="center">A community-driven and inspired SysBot.NET project with the most beautiful GUI that unites code from everyone!</i>
 </p>
 
 <h4 align="center">
@@ -23,43 +23,40 @@
 
 
 <p align="center">
-    <img src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/hub.gif">
+    <img src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/README_IntroGif.gif">
 </p>
 <p align="center">
-    <img src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/modes.gif">
-</p>
-<p align="center">
-    <img src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/themes.gif">
+    <img src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/README_IntroGif2.gif">
 </p>
 
 
 ## INTRODUCTION
 
-`ZE FusionBot` is a robust, open-source SysBot.NET fork originally meant specifically for the Discord server, Zeraora's Emporium, hence the 'ZE' in the name. It was originally meant to satisfy the personal needs of the bot owners running exclusively in the server, but it slowly evolved into the mess that it is today.
+`ZE FusionBot` is a robust, open-source SysBot.NET fork originally meant specifically for the Discord server, [Zeraora's Emporium](https://FreeMons.Org), hence the 'ZE' in the name. It was originally meant to satisfy the personal needs of the bot owners running exclusively in the server, but it slowly evolved into a beautiful custom GUI that mixes logic from many developers.
 
-This bot unites the forks of various other developers - some new, some old, some advanced, some only beginning, and it adds to it, making it now a massively combined community program. It started out humble, but now packs a plethora of features. It's evolved to where it's mostly based on [Gengar's](https://github.com/bdawg1989) [MergeBot](https://github.com/bdawg1989/MergeBot) project.
+This bot unites the forks of various other developers - some new, some old, some advanced, some only beginning, and it adds to it, making it now a massively combined community program. It started out humble, but now packs a plethora of features. It's evolved to where it's mostly based on [Gengar's](https://github.com/bdawg1989) [PokeBot](https://github.com/bdawg1989/PokeBot) project, with many custom additions to it and a brand new self-built GUI.
 
-**Some features include:**
+**FEATURES:**
 - *Restart button to reboot the game and load back in to trade with the bot again.*
 - *Update button to keep up-to-date with my personal releases.*
-- *Choose your own permanent Link Trade Code for all trades.*
-- *Batch trading, allowing up to 6 trades at once per person.*
+- *Choose your own permanent/static Link Trade Code for all trades.*
+- *Batch trading, allowing multiple trades at once, through Showdown Format or through a compressed zip file.*
 - *Trade via PokePaste URLs.*
 - *DM embeds for easier and less cluttered bot messages, with cute little gifs attached.*
 - *Hidden Trades, where only the species is shown. Sets and files get deleted instantly.*
-- *Custom text-only option in case embeds aren't your thing, but still has some flavor.*
+- *Custom text-only option for the bot's Discord messages in case embeds aren't your thing.*
 - *Generate and trade random VGC teams, or rent them in-game with a code.*
 - *Battle-Ready competitive Pokemon trade module, for competitive players.*
 - *HOME-Ready trade module to select and trade Pokemon with HOME trackers.*
-- *SysDVR integration, to view your Switch live on your PC.*
-- *SysBotRemote integration, allowing a GUI controller on PC to control your Switch.*
+- *[SysDVR](https://github.com/exelix11/SysDVR/releases/tag/v5.5.6) integration, to view your Switch live on your PC (5.5.6 and below support only).*
+- *[Switch Remote for PC](https://github.com/Secludedly/Switch-Remote-For-PC) integration, allowing a GUI controller on PC to control your Switch.*
 - *Event trade module to search and trade event/gift Pokemon.*
-- *Surprise trade module, which trades a Pokemon randomly, with random stats.*
-- *Mystery Egg module to generate an egg for all games with complete randomness.*
+- *Mystery Mon module, which trades a Pokemon randomly, with random info and stats.*
+- *Mystery Egg module to generate a random shiny 6IV egg.*
 - *Auto-Correct, which corrects misspellings and illegal formats to automatically become legal.*
-- *17 Custom UI themes.*
 - *Drop-down menu to select which game mode you want to use.*
-- *Bot Start & Stop embed that keeps bot channels active while displaying the bot's online status.*
+- *A hot reload button to instantly restart the program in a single click.*
+- *Bot Start & Stop embed that opens and closes channels with a notice while displaying the bot's status.*
 - *Announcement module, to send messages to multiple channels and servers at once.*
 - *Egg trade support for supported games.*
 - *AutoOT, which applies your game's trainer info automatically, unless otherwise specified.*
@@ -67,7 +64,42 @@ This bot unites the forks of various other developers - some new, some old, some
 - *Server Blacklist, to ban a server from using your bot.*
 - *Send messages using your bot as the speaker.*
 - *Ability to keep track of how many times a user traded with the bots.*
+- *[BatchNormalizer](https://github.com/Secludedly/ZE-FusionBot/commit/490ebca7ef8dc28084dce51b18e9dedfecccac04), which converts Batch Commands into standard Showdown Formats.*
+- *A LanguageHelper that allows users to use foreign names and keywords with multi-language support.*
+- *Bot replies to keywords that show thanks to it, such as a simple "Thank you."*
+- *Bot channel embeds, with custom images for specialized trades like Clone, FixOT, Dump, and Seed commands.*
+- *A notice in embeds about current HOME legality of a user's request.*
+- *An embed that shows who's next in queue in the channel.*
+- *Trade embed that displays Pokemon image, trainer info, moves, Pokemon info & stats, queue position, bot version, and total user trades to date.*
+- *A medals system, that awards a user medals for every 50 trades and logs them, showing awards you've earned upon command.*
+- *"Peak" command that allows an owner to see an image of their Switch right in the Discord channel.*
+- *"Video" command that allows an owner to see a short animated gif of their Switch right in the Discord channel.*
 
+
+
+**GUI DESIGN:**
+- *Animated panel buttons with effects take the place of the standard tabs for Bots/Hub/Logs.*
+- *Each panel button has its own color theme, effect, animation, with fades and color changes.*
+- *Custom icons to differentiate the panel button chosen.*
+- *Animated text on hover for the panel buttons.*
+- *Bot control buttons house a gradiant effect, change color, and shake side-to-side on hover.*
+- *All new fonts, redesigning the feel of the standard vanilla text.*
+- *New images and logos across the GUI.*
+- *Game mode images that appear on the left panel indicating which game environment the program is running.*
+- *Custom Minimize/Maximize/Exit icons in the top-right corner, with color-coded fade effects.*
+- *Text in the left panel to indicate the bot version and current mode environment.*
+- *New custom status icons for the bot controller.*
+- *A dark blue and purple theme in the flat UI style, with themes to soon come.*
+- *New bot controller is now RichTextBox, with custom fonts, colors, and style.*
+- *Bot controller is separated in sections: Bot Address, Trade Type, Bot Status, and Last Log time.*
+- *"Bot Controls" tab has a violet/light pink/white theme.*
+- *"Bot Hub" has a hot pink/violet/ice blue theme.*
+- *"Bot Logs" has an ice blue theme.*
+- *Logs can be right-clicked to copy the text.*
+- *Right-click menu appears on the bot controller when hovering over the status icon.*
+- *No more Windows titlebar or borders, simply drag the program by its top panel.*
+- *Upper-left corner of program contains a new logo image.*
+- *Sleek, clean, stylish, and beautiful. The most gorgeous SysBot you'll ever see.*
 
 
 
@@ -77,17 +109,19 @@ This bot unites the forks of various other developers - some new, some old, some
 </summary> <br />
 
 <p align="center">
-    <img width="49%" src="https://i.imgur.com/yLYCuAj.png" alt="img1"/>
+    <img width="49%" src="https://i.imgur.com/hsh43rt.png" alt="img1"/>
 &nbsp;
-    <img width="49%" src="https://i.imgur.com/ShpbwW5.png" alt="img2"/>
+    <img width="49%" src="https://i.imgur.com/lWkBXLi.png" alt="img2"/>
 </p>
 <p align="center">
-    <img width="49%" src="https://i.imgur.com/7qhL9Ys.png" alt="img3"/>
+    <img width="49%" src="https://i.imgur.com/pMdWfcT.png" alt="img3"/>
 &nbsp;
-    <img width="49%" src="https://i.imgur.com/N4QS3e8.png" alt="img4"/>
+    <img width="49%" src="https://i.imgur.com/rdOq4M7.png" alt="img4"/>
 </p>
 <p align="center">
-    <img width="80%" src="https://i.imgur.com/mHvBUcL.png" alt="img5"/>
+    <img width="49%" src="https://i.imgur.com/eWmTGCI.png" alt="img5"/>
+&nbsp;
+    <img width="49%" src="https://i.imgur.com/SPe1iOa.png" alt="img6"/>
 </p>
 </details>
 
@@ -101,30 +135,30 @@ This bot unites the forks of various other developers - some new, some old, some
 <table>
   <tr>
     <td align="center">
-      <p>SysBotRemote Feature</p>
-      <img width="100%" src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/sbremotestart.gif" alt="gif1"/>
+      <p>Switch Remote for PC</p>
+      <img width="100%" src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/README_SwitchRemoteForPC.gif alt="gif1"/>
     </td>
     <td align="center">
       <p>SysDVR Feature</p>
-      <img width="100%" src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/sdvrstart.gif" alt="gif2"/>
+      <img width="100%" src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/README_SysDVR.gif" alt="gif2"/>
     </td>
     <td align="center">
       <p>Batch Trading Archives</p>
-      <img width="100%" src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/batch.gif" alt="gif3"/>
+      <img width="100%" src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/README_BatchArchive.gif" alt="gif3"/>
     </td>
   </tr>
   <tr>
     <td align="center">
       <p>Batch Trading Showdown</p>
-      <img width="100%" src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/batch2.gif" alt="gif4"/>
+      <img width="100%" src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/README_BatchShowdown.gif" alt="gif4"/>
     </td>
     <td align="center">
-      <p>Video Feature</p>
-      <img width="100%" src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/video.gif" alt="gif5"/>
+      <p>Peak & Video Feature</p>
+      <img width="100%" src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/README_Peek+Video.gif" alt="gif5"/>
     </td>
     <td align="center">
       <p>Surprise Trading</p>
-      <img width="100%" src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/surprise.gif" alt="gif6"/>
+      <img width="100%" src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/README_MysteryMon.gif" alt="gif6"/>
     </td>
   </tr>
 </table>
@@ -170,7 +204,7 @@ Showdown Template
 `qs` // Checks position in the queue. <br />
 
 ## ENHANCED TRADE FEATURES
-`mm` // Get a surprise Pokémon! 50% shiny chance, 6IV, with random ability, ball, and level. <br />
+`mm` // Get a surprise Pokémon! Everything is totally random, literally. <br />
 `me` // Get a mystery egg! All shiny, 6IV, and have their Hidden Ability. <br />
 `brl <species name> <page number>` // List all pre-made Battle-Ready Pokemon for trade. <br />
 `le <species name> <page number>` // List all Event Pokemon for trade. <br />
@@ -218,9 +252,11 @@ Showdown Template
 
 ## SWITCH MANAGEMENT
 `screenon` // Turns your Switch screen on. <br />
+`screenonall` // Turns the screens of multiple Switch consoles on. <br />
 `screenoff` // Turns your Switch screen off. <br />
+`screenoffall` // Turns the screens of multiple Switch consoles off. <br />
 `sysdvr` // Opens <a href="https://github.com/exelix11/SysDVR">SysDVR</a> to view live video of your Switch, with setup instructions. <br />
-`sbr` // Opens <a href="https://github.com/Secludedly/Switch-Remote-For-PC">Switch Remote For PC</a>, a GUI that emulates buttons presses on the Switch, with instructions. <br />
+`startcontroller` // Opens <a href="https://github.com/Secludedly/Switch-Remote-For-PC">Switch Remote For PC</a>, a GUI that emulates buttons presses on the Switch, with instructions. <br />
 `video` // Shows a video gif of your current Switch screen. <br />
 `peek` // Shows an image of your current Switch screen. <br />
 `setStick <IP> <Coordinates>` // Sets the stick to the specified position. <br />
