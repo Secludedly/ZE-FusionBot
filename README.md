@@ -72,7 +72,7 @@ This bot unites the forks of various other developers - some new, some old, some
 - *An embed that shows who's next in queue in the channel.*
 - *Trade embed that displays Pokemon image, trainer info, moves, Pokemon info & stats, queue position, bot version, and total user trades to date.*
 - *A medals system, that awards a user medals for every 50 trades and logs them, showing awards you've earned upon command.*
-- *"Peak" command that allows an owner to see an image of their Switch right in the Discord channel.*
+- *"Peek" command that allows an owner to see an image of their Switch right in the Discord channel.*
 - *"Video" command that allows an owner to see a short animated gif of their Switch right in the Discord channel.*
 
 
@@ -123,6 +123,9 @@ This bot unites the forks of various other developers - some new, some old, some
 &nbsp;
     <img width="49%" src="https://i.imgur.com/SPe1iOa.png" alt="img6"/>
 </p>
+<p align="center">
+    <img width="100%" src="https://i.imgur.com/Xn1IMJ6.png" alt="img7"/>
+</p>
 </details>
 
 
@@ -139,7 +142,7 @@ This bot unites the forks of various other developers - some new, some old, some
       <img width="100%" src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/README_SwitchRemoteForPC.gif" alt="gif1"/>
     </td>
     <td align="center">
-      <p>SysDVR Feature</p>
+      <p>SysDVR</p>
       <img width="100%" src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/README_SysDVR.gif" alt="gif2"/>
     </td>
     <td align="center">
@@ -153,11 +156,11 @@ This bot unites the forks of various other developers - some new, some old, some
       <img width="100%" src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/README_BatchShowdown.gif" alt="gif4"/>
     </td>
     <td align="center">
-      <p>Peak & Video Feature</p>
+      <p>Peek & Video Feature</p>
       <img width="100%" src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/README_Peek+Video.gif" alt="gif5"/>
     </td>
     <td align="center">
-      <p>Surprise Trading</p>
+      <p>Mystery Mon</p>
       <img width="100%" src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/README_MysteryMon.gif" alt="gif6"/>
     </td>
   </tr>
