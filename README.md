@@ -261,4 +261,4 @@ Showdown Template
 
 ## 🤝 Supported Projects
 
-- **GenPKM** — Web-based alternative to Showdown for bot-ready sets.
+- [**GenPKM**](https://genpkm.com/pokecreator.php) — Web-based alternative to Showdown for bot-ready sets.
