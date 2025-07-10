@@ -37,6 +37,8 @@
     <None Remove="Fonts\Bobbleboddy_light.ttf" />
     <None Remove="Fonts\gadugi.ttf" />
     <None Remove="Fonts\gadugib.ttf" />
+    <None Remove="Fonts\Montserrat-Bold.ttf" />
+    <None Remove="Fonts\Montserrat-Regular.ttf" />
     <None Remove="Fonts\segoeui.ttf" />
     <None Remove="Fonts\segoeuib.ttf" />
     <None Remove="Fonts\segoeuii.ttf" />
@@ -60,6 +62,8 @@
     <EmbeddedResource Include="Fonts\bahnschrift.ttf" />
     <EmbeddedResource Include="Fonts\gadugi.ttf" />
     <EmbeddedResource Include="Fonts\gadugib.ttf" />
+    <EmbeddedResource Include="Fonts\Montserrat-Bold.ttf" />
+    <EmbeddedResource Include="Fonts\Montserrat-Regular.ttf" />
     <EmbeddedResource Include="Fonts\segoeui.ttf" />
     <EmbeddedResource Include="Fonts\segoeuib.ttf" />
     <EmbeddedResource Include="Fonts\segoeuii.ttf" />

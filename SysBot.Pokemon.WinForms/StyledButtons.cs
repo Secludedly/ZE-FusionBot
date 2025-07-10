@@ -27,97 +27,174 @@ public class FancyButton : Button
     private int shakeCounter = 0;
     private Point originalLocation;
 
+    // Animation fields for hover gradient
+    private Timer animationTimer;
+    private int animationOffset = 0;
+    private bool animationForward = true; // Direction flag for ping-pong
+    private const int animationSpeed = 2; // pixels per tick
+    private const int animationRange = 100; // width of animated gradient sweep
+
     public FancyButton()
     {
         FlatStyle = FlatStyle.Flat;
         FlatAppearance.BorderSize = 0;
         BackColor = Color.Transparent;
         ForeColor = Color.White;
-        Font = new Font("Segoe UI", 9, FontStyle.Regular);
+        Font = new Font("Montserrat-Regular", 8, FontStyle.Bold);
 
         DoubleBuffered = true;
+
+        // Shake timer setup
+        shakeTimer = new Timer();
+        shakeTimer.Interval = 120;
+        shakeTimer.Tick += ShakeTimer_Tick;
+
+        // Animation timer setup
+        animationTimer = new Timer();
+        animationTimer.Interval = 30; // ~33 FPS
+        animationTimer.Tick += AnimationTimer_Tick;
 
         MouseEnter += FancyButton_MouseEnter;
         MouseLeave += FancyButton_MouseLeave;
         MouseDown += (s, e) => { if (e.Button == MouseButtons.Left) { isClicked = true; Invalidate(); } };
         MouseUp += (s, e) => { if (e.Button == MouseButtons.Left) { isClicked = false; Invalidate(); } };
+    }
 
-        // Setup shake timer
-        shakeTimer = new Timer();
-        shakeTimer.Interval = 120; // milliseconds, controls shake speed
-        shakeTimer.Tick += ShakeTimer_Tick;
+    private void AnimationTimer_Tick(object? sender, EventArgs e)
+    {
+        if (animationForward)
+        {
+            animationOffset += animationSpeed;
+            if (animationOffset >= animationRange)
+            {
+                animationOffset = animationRange;
+                animationForward = false;
+            }
+        }
+        else
+        {
+            animationOffset -= animationSpeed;
+            if (animationOffset <= 0)
+            {
+                animationOffset = 0;
+                animationForward = true;
+            }
+        }
+        Invalidate();
     }
 
     private void FancyButton_MouseEnter(object sender, EventArgs e)
     {
         isHovered = true;
-        Invalidate();
+        animationOffset = 0;
+        animationForward = true;
+        animationTimer.Start();
 
         originalLocation = Location;
         shakeCounter = 0;
         shakeTimer.Start();
+
+        Invalidate();
     }
 
     private void FancyButton_MouseLeave(object sender, EventArgs e)
     {
         isHovered = false;
         isClicked = false;
-        Invalidate();
+        animationTimer.Stop();
+        animationOffset = 0;
+        animationForward = true;
 
         shakeTimer.Stop();
-        Location = originalLocation; // reset position when hover ends
+        Location = originalLocation;
+
+        Invalidate();
     }
 
     private void ShakeTimer_Tick(object? sender, EventArgs e)
     {
-        const int shakeAmount = 2; // how many pixels it shakes side to side
+        const int shakeAmount = 2;
         int offsetX = (shakeCounter % 2 == 0) ? shakeAmount : -shakeAmount;
 
         Location = new Point(originalLocation.X + offsetX, originalLocation.Y);
         shakeCounter++;
-
-        // shakes forever while hovered
     }
 
     protected override void OnPaint(PaintEventArgs e)
     {
         var g = e.Graphics;
-        g.SmoothingMode = SmoothingMode.AntiAlias;
+        g.SmoothingMode = SmoothingMode.None;
+        g.InterpolationMode = InterpolationMode.NearestNeighbor;
+        g.PixelOffsetMode = PixelOffsetMode.None;
 
-        int borderThickness = 4;
-        int borderRadius = 15;
+        g.Clear(Parent?.BackColor ?? SystemColors.Control);
 
-        // Draw thick white border first
-        using (var whitePen = new Pen(Color.White, borderThickness))
+        int borderThickness = 2;
+
+        // Fill rectangle inset to avoid overlap with borders
+        Rectangle fillRect = new Rectangle(
+            borderThickness,
+            borderThickness,
+            Width - (2 * borderThickness),
+            Height - (2 * borderThickness)
+        );
+
+        if (isHovered && !isClicked)
         {
-            var borderRect = new Rectangle(borderThickness / 2, borderThickness / 2, Width - borderThickness, Height - borderThickness);
-            g.DrawRectangle(whitePen, borderRect);
+            // Animated gradient fill on hover: midnight blue to purple moving horizontally ping-pong style
+            Rectangle animatedRect = new Rectangle(
+                fillRect.X - animationOffset,
+                fillRect.Y,
+                fillRect.Width + animationRange,
+                fillRect.Height
+            );
+
+            using (var brush = new LinearGradientBrush(
+                animatedRect,
+                Color.FromArgb(20, 30, 90),     // Midnight Blue
+                Color.FromArgb(160, 90, 200),   // Purple
+                LinearGradientMode.Horizontal))
+            {
+                g.FillRectangle(brush, fillRect);
+            }
+        }
+        else
+        {
+            // Static gradient fill
+            Color start = isClicked ? ClickColor : StartColor;
+            Color end = isClicked ? ClickColor : EndColor;
+
+            using (var brush = new LinearGradientBrush(fillRect, start, end, 45f))
+            {
+                g.FillRectangle(brush, fillRect);
+            }
         }
 
-        // Calculate inner rectangle for button fill (inside the border)
-        var fillRect = new Rectangle(borderThickness, borderThickness, Width - 2 * borderThickness, Height - 2 * borderThickness);
+        // Border colors
+        Color topLeft = Color.FromArgb(60, 80, 150);          // Soft indigo-blue shadow
+        Color bottomRight = Color.FromArgb(190, 200, 255);    // Light icy purple
 
-        // Choose gradient colors based on state
-        Color start = StartColor;
-        Color end = EndColor;
-
-        if (isClicked)
+        // Draw borders with thickness 2, avoiding corner overlap
+        using (var pen = new Pen(topLeft, borderThickness))
         {
-            start = ClickColor;
-            end = ClickColor;
-        }
-        else if (isHovered)
-        {
-            start = HoverColor;
-            end = HoverColor;
+            g.DrawLine(pen, 0, 0, Width - 1, 0);           // Top border
+            g.DrawLine(pen, 0, 0, 0, Height - 1);          // Left border
         }
 
-        using (var brush = new LinearGradientBrush(fillRect, start, end, 45f))
+        using (var pen = new Pen(bottomRight, borderThickness))
         {
-            g.FillRectangle(brush, fillRect);
+            g.DrawLine(pen, 0, Height - borderThickness, Width - borderThickness, Height - borderThickness);  // Bottom border
+            g.DrawLine(pen, Width - borderThickness, 0, Width - borderThickness, Height - borderThickness);   // Right border
         }
 
         // Draw text centered
-        TextRenderer.DrawText(g, Text, Font, ClientRectangle, ForeColor, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+        TextRenderer.DrawText(
+            g,
+            Text,
+            Font,
+            ClientRectangle,
+            ForeColor,
+            TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis
+        );
     }
 }

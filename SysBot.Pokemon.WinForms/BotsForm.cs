@@ -62,12 +62,13 @@ namespace SysBot.Pokemon.WinForms
         private void InitializeControls()
         {
             // Buttons
-            _B_Start = new FancyButton { Text = "Start", Location = new Point(10, 7), Size = new Size(100, 40) };
-            _B_Stop = new FancyButton { Text = "Stop", Location = new Point(120, 7), Size = new Size(100, 40) };
-            _B_RebootStop = new FancyButton { Text = "Restart", Location = new Point(230, 7), Size = new Size(100, 40) };
-            _updater = new FancyButton { Text = "Update", Location = new Point(340, 7), Size = new Size(100, 40) };
-            _B_New = new FancyButton { Text = "Add", Location = new Point(424, 55), Size = new Size(54, 30) };
-            _B_Reload = new FancyButton { Text = "Reload", Location = new Point(625, 40), Size = new Size(100, 40) };
+            _B_Start = new FancyButton { Text = "START", Location = new Point(10, 7), Size = new Size(100, 40) };
+            _B_Stop = new FancyButton { Text = "STOP", Location = new Point(120, 7), Size = new Size(100, 40) };
+            _B_RebootStop = new FancyButton { Text = "RESTART", Location = new Point(230, 7), Size = new Size(100, 40) };
+            _updater = new FancyButton { Text = "UPDATE", Location = new Point(340, 7), Size = new Size(100, 40) };
+            _B_New = new FancyButton { Text = "+", Location = new Point(424, 55), Size = new Size(54, 30) };
+            _B_New.Font = new Font(_B_New.Font.FontFamily, 16, FontStyle.Bold);
+            _B_Reload = new FancyButton { Text = "RELOAD", Location = new Point(625, 40), Size = new Size(100, 40) };
             _B_Reload.Click += (_, _) => RestartApplication();
 
 
