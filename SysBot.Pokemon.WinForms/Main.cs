@@ -504,45 +504,31 @@ namespace SysBot.Pokemon.WinForms
         private void LoadLogoImage(string logoPath)
         {
             if (string.IsNullOrWhiteSpace(logoPath))
-            {
-                Console.WriteLine("[Logo Load] No logo path provided.");
                 return;
-            }
 
             try
             {
                 if (Uri.IsWellFormedUriString(logoPath, UriKind.Absolute))
                 {
-                    Console.WriteLine($"[Logo Load] Loading from URL: {logoPath}");
                     using var client = new WebClient();
                     using var stream = client.OpenRead(logoPath);
                     if (stream != null)
-                        leftSideImage.Image = Image.FromStream(stream);
+                        pictureLogo.Image = Image.FromStream(stream);
                 }
                 else
                 {
-                    string exeDir = Path.GetDirectoryName(Application.ExecutablePath)!;
-                    string filename = Path.GetExtension(logoPath) == string.Empty ? logoPath + ".png" : logoPath;
-                    string fullPath = Path.Combine(exeDir, filename);
-
-                    Console.WriteLine($"[Logo Load] Attempting to load local file: {fullPath}");
-
+                    string exeDir = AppDomain.CurrentDomain.BaseDirectory;
+                    string fullPath = Path.Combine(exeDir, logoPath);
                     if (File.Exists(fullPath))
-                    {
-                        leftSideImage.Image = Image.FromFile(fullPath);
-                        Console.WriteLine($"[Logo Load] Loaded image from local file: {fullPath}");
-                    }
-                    else
-                    {
-                        Console.WriteLine($"[Logo Load] File not found at path: {fullPath}");
-                    }
+                        pictureLogo.Image = Image.FromFile(fullPath);
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[Logo Load] Failed to load image: {ex.Message}");
+                Console.WriteLine($"[Logo Load] Failed to load logo: {ex.Message}");
             }
         }
+
 
         // Update the background image based on the current game mode
         private void UpdateBackgroundImage(ProgramMode mode)
