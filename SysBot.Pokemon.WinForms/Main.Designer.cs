@@ -201,9 +201,9 @@ namespace SysBot.Pokemon.WinForms
             pictureLogo.BackColor = Color.Transparent;
             pictureLogo.BackgroundImageLayout = ImageLayout.Stretch;
             pictureLogo.Image = (Image)resources.GetObject("pictureLogo.Image");
-            pictureLogo.Location = new Point(-4, 0);
+            pictureLogo.Location = new Point(12, 12);
             pictureLogo.Name = "pictureLogo";
-            pictureLogo.Size = new Size(224, 205);
+            pictureLogo.Size = new Size(208, 101);
             pictureLogo.SizeMode = PictureBoxSizeMode.StretchImage;
             pictureLogo.TabIndex = 0;
             pictureLogo.TabStop = false;

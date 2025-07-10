@@ -11,6 +11,7 @@ using System.ComponentModel;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -32,6 +33,10 @@ namespace SysBot.Pokemon.WinForms
         // Static properties for update state
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] // Do not serialize in the designer
         public static bool IsUpdating { get; set; } = false;
+
+        // Singleton instance of Main form
+        [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        public static Main? Instance { get; private set; }
 
         // Program has update flag
         internal bool hasUpdate = false;
@@ -63,6 +68,7 @@ namespace SysBot.Pokemon.WinForms
         {
             Task.Run(BotMonitor);      // Start the bot monitor
             InitializeComponent();     // Initialize all the form components before program
+            Instance = this;
             InitializeLeftSideImage(); // Initialize the left side BG image in panelLeftSide
 
             // Wait for the form crap to load before initializing
@@ -90,7 +96,9 @@ namespace SysBot.Pokemon.WinForms
                 "seguisb.ttf",
                 "seguisbi.ttf",
                 "seguisli.ttf",
-                "SegUIVar.ttf"
+                "SegUIVar.ttf",
+                "Montserrat-Bold.ttf",
+                "Montserrat-Regular.ttf"
                 );
 
             // Set up left‑panel buttons & effects
@@ -183,6 +191,7 @@ namespace SysBot.Pokemon.WinForms
             LoadControls();
             Text = $"{(string.IsNullOrEmpty(Config.Hub.BotName) ? "ZE FusionBot |" : Config.Hub.BotName)} {TradeBot.Version} | Mode: {Config.Mode}";
             UpdateBackgroundImage(Config.Mode);        // Call the method to update image in leftSidePanel
+            LoadLogoImage(Config.Hub.BotLogoImageURL); // Load a URL image to replace logo
             InitUtil.InitializeStubs(Config.Mode);     // Stubby McStubbinson will set environment based on config mode
             _isFormLoading = false;                    // ...but is it loading?
             ActivateButton(btnBots, RGBColors.color4); // We gonna start this party off right with the Bots Control panel and set its button color
@@ -492,6 +501,49 @@ namespace SysBot.Pokemon.WinForms
             leftSideImage.Location = new Point(x, y);
         }
 
+        private void LoadLogoImage(string logoPath)
+        {
+            if (string.IsNullOrWhiteSpace(logoPath))
+            {
+                Console.WriteLine("[Logo Load] No logo path provided.");
+                return;
+            }
+
+            try
+            {
+                if (Uri.IsWellFormedUriString(logoPath, UriKind.Absolute))
+                {
+                    Console.WriteLine($"[Logo Load] Loading from URL: {logoPath}");
+                    using var client = new WebClient();
+                    using var stream = client.OpenRead(logoPath);
+                    if (stream != null)
+                        leftSideImage.Image = Image.FromStream(stream);
+                }
+                else
+                {
+                    string exeDir = Path.GetDirectoryName(Application.ExecutablePath)!;
+                    string filename = Path.GetExtension(logoPath) == string.Empty ? logoPath + ".png" : logoPath;
+                    string fullPath = Path.Combine(exeDir, filename);
+
+                    Console.WriteLine($"[Logo Load] Attempting to load local file: {fullPath}");
+
+                    if (File.Exists(fullPath))
+                    {
+                        leftSideImage.Image = Image.FromFile(fullPath);
+                        Console.WriteLine($"[Logo Load] Loaded image from local file: {fullPath}");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"[Logo Load] File not found at path: {fullPath}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Logo Load] Failed to load image: {ex.Message}");
+            }
+        }
+
         // Update the background image based on the current game mode
         private void UpdateBackgroundImage(ProgramMode mode)
         {
@@ -560,8 +612,8 @@ namespace SysBot.Pokemon.WinForms
             leftBorderBtn.Refresh();                  // Refresh the left border to match the active button
 
             // If the HubForm is not initialized, create a new instance
-            if (_hubForm == null)
-                _hubForm = new HubForm(RunningEnvironment.Config);
+            if (_hubForm == null || _hubForm.IsDisposed)
+                _hubForm = new HubForm(Config.Hub);
 
             OpenChildForm(_hubForm); // Load the HubForm in the main panel
         }
@@ -842,7 +894,7 @@ namespace SysBot.Pokemon.WinForms
         }
 
         // Config save method
-        private void SaveCurrentConfig()
+        public void SaveCurrentConfig()
         {
             try
             {

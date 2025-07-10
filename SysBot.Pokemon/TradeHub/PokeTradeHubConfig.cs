@@ -26,9 +26,10 @@ public sealed class PokeTradeHubConfig : BaseConfig
     [Category(BotTrade), Description("Name of the Discord Bot the Program is Running. This will Title the window for easier recognition. Requires program restart.")]
     public string BotName { get; set; } = string.Empty;
 
-    [Browsable(false)]
-    [Category(Integration), Description("Users Theme Option Choice.")]
-    public string ThemeOption { get; set; } = string.Empty;
+    [Category(BotTrade)]
+    [Description("208x101 logo image URL to display in the top left corner. Requires a program restart.")]
+    public string BotLogoImageURL { get; set; } = string.Empty;
+
     // Trade Bots
 
     [Category(BotTrade)]

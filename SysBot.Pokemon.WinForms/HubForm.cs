@@ -1,22 +1,26 @@
 using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace SysBot.Pokemon.WinForms
 {
     public partial class HubForm : Form
     {
+        private readonly object _hubConfig;
+
         public HubForm(object selectedObject)
         {
             InitializeComponent();
 
-            PG_Hub.SelectedObject = selectedObject;
+            _hubConfig = selectedObject;
+            PG_Hub.SelectedObject = _hubConfig;
+
+            // Optional: Auto-save on close
+            this.FormClosed += (_, _) =>
+            {
+                PG_Hub.Refresh(); // Apply changes
+                Main.Instance?.SaveCurrentConfig();
+            };
         }
     }
 }
+
