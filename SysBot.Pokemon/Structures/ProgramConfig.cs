@@ -6,7 +6,7 @@ public class ProgramConfig : BotList<PokeBotState>
 {
     public ProgramMode Mode { get; set; } = ProgramMode.SV;
     public PokeTradeHubConfig Hub { get; set; } = new();
-    public DiscordSettings Discord { get; set; }
+    public string Theme { get; set; } = "";
 }
 
 public enum ProgramMode

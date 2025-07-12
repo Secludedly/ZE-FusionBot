@@ -20,9 +20,9 @@ namespace SysBot.Pokemon.WinForms
         /// </summary>
 
 
-        private FontAwesome.Sharp.IconButton btnBots;
-        private FontAwesome.Sharp.IconButton btnHub;
-        private FontAwesome.Sharp.IconButton btnLogs;
+        internal FontAwesome.Sharp.IconButton btnBots;
+        internal FontAwesome.Sharp.IconButton btnHub;
+        internal FontAwesome.Sharp.IconButton btnLogs;
 
         protected override void Dispose(bool disposing)
         {
@@ -45,6 +45,7 @@ namespace SysBot.Pokemon.WinForms
             panelLeftSide = new Panel();
             btnLogs = new IconButton();
             btnHub = new IconButton();
+            CB_Themes = new ComboBox();
             btnBots = new IconButton();
             panelImageLogo = new Panel();
             panel6 = new Panel();
@@ -80,6 +81,7 @@ namespace SysBot.Pokemon.WinForms
             panelLeftSide.BackColor = Color.FromArgb(31, 30, 68);
             panelLeftSide.Controls.Add(btnLogs);
             panelLeftSide.Controls.Add(btnHub);
+            panelLeftSide.Controls.Add(CB_Themes);
             panelLeftSide.Controls.Add(btnBots);
             panelLeftSide.Controls.Add(panelImageLogo);
             panelLeftSide.Controls.Add(lblTitle);
@@ -132,6 +134,14 @@ namespace SysBot.Pokemon.WinForms
             btnHub.TextImageRelation = TextImageRelation.ImageBeforeText;
             btnHub.UseVisualStyleBackColor = true;
             btnHub.Click += Hub_Click;
+            // 
+            // CB_Themes
+            // 
+            CB_Themes.FormattingEnabled = true;
+            CB_Themes.Location = new Point(38, 322);
+            CB_Themes.Name = "CB_Themes";
+            CB_Themes.Size = new Size(144, 28);
+            CB_Themes.TabIndex = 5;
             // 
             // btnBots
             // 
@@ -392,25 +402,26 @@ namespace SysBot.Pokemon.WinForms
 
         #endregion
 
-        private Panel panelLeftSide;
-        private Panel panelImageLogo;
-        private PictureBox pictureLogo;
-        private Panel panelTitleBar;
-        private Label lblTitleChildForm;
-        private FontAwesome.Sharp.IconPictureBox childFormIcon;
-        private FontAwesome.Sharp.IconPictureBox btnMaximize;
-        private FontAwesome.Sharp.IconPictureBox btnMinimize;
-        private FontAwesome.Sharp.IconPictureBox btnClose;
-        private Panel shadowPanelTop;
-        private Panel shadowPanelLeft;
-        private Panel panelMain;
-        private Label lblTitle;
-        private Panel panel2;
-        private Panel panel1;
-        private Panel panel4;
-        private Panel panel3;
-        private Panel panel6;
-        private Panel panel5;
+        internal Panel panelLeftSide;
+        internal Panel panelImageLogo;
+        internal PictureBox pictureLogo;
+        internal Panel panelTitleBar;
+        internal Label lblTitleChildForm;
+        internal FontAwesome.Sharp.IconPictureBox childFormIcon;
+        internal FontAwesome.Sharp.IconPictureBox btnMaximize;
+        internal FontAwesome.Sharp.IconPictureBox btnMinimize;
+        internal FontAwesome.Sharp.IconPictureBox btnClose;
+        internal Panel shadowPanelTop;
+        internal Panel shadowPanelLeft;
+        internal Panel panelMain;
+        internal Label lblTitle;
+        internal Panel panel2;
+        internal Panel panel1;
+        internal Panel panel4;
+        internal Panel panel3;
+        internal Panel panel6;
+        internal Panel panel5;
+        private ComboBox CB_Themes;
     }
 }
 

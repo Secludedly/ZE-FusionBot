@@ -103,9 +103,11 @@ namespace SysBot.Pokemon.WinForms
 
             // Set up left‑panel buttons & effects
             ApplyButtonEffects();
-            SetupHoverAnimation(btnBots);                         // Bots button
-            SetupHoverAnimation(btnHub);                          // Hub button
-            SetupHoverAnimation(btnLogs);                         // Logs button
+            var baseColor = ThemeManager.CurrentColors.PanelBase; // Base color for buttons according to themes
+            var hoverColor = ThemeManager.CurrentColors.Hover;    // Hover color for buttons according to themes
+            SetupHoverAnimation(btnBots, baseColor, hoverColor);  // Bots button
+            SetupHoverAnimation(btnHub, baseColor, hoverColor);   // Hub button
+            SetupHoverAnimation(btnLogs, baseColor, hoverColor);  // Logs button
             leftBorderBtn = new Panel { Size = new Size(7, 60) }; // Left border for active button
             panelLeftSide.Controls.Add(leftBorderBtn);            // Add left border to the panel
             panelTitleBar.MouseDown += panelTitleBar_MouseDown;   // Allow dragging the window from the title bar
@@ -133,7 +135,7 @@ namespace SysBot.Pokemon.WinForms
         // Runs once when Main form first loads
         private async Task InitializeAsync()
         {
-            if (IsUpdating) 
+            if (IsUpdating)
                 return;
 
             PokeTradeBotSWSH.SeedChecker = new Z3SeedSearchHandler<PK8>(); // Initialize the seed checker for SWSH mode
@@ -191,6 +193,8 @@ namespace SysBot.Pokemon.WinForms
             LoadControls();
             Text = $"{(string.IsNullOrEmpty(Config.Hub.BotName) ? "ZE FusionBot |" : Config.Hub.BotName)} {TradeBot.Version} | Mode: {Config.Mode}";
             UpdateBackgroundImage(Config.Mode);        // Call the method to update image in leftSidePanel
+            LoadThemeOptions();
+            CB_Themes.SelectedIndexChanged += CB_Themes_SelectedIndexChanged;
             LoadLogoImage(Config.Hub.BotLogoImageURL); // Load a URL image to replace logo
             InitUtil.InitializeStubs(Config.Mode);     // Stubby McStubbinson will set environment based on config mode
             _isFormLoading = false;                    // ...but is it loading?
@@ -430,6 +434,28 @@ namespace SysBot.Pokemon.WinForms
             };
         }
 
+        private void CB_Themes_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (CB_Themes.SelectedItem is not string selected)
+                return;
+
+            Config.Theme = selected;
+            SaveCurrentConfig();
+            ThemeManager.ApplyTheme(this, selected);
+        }
+
+
+        private void LoadThemeOptions()
+        {
+            CB_Themes.Items.Clear();
+            foreach (var key in ThemeManager.ThemePresets.Keys)
+                CB_Themes.Items.Add(key);
+
+            CB_Themes.SelectedItem = Config.Theme;
+            ThemeManager.ApplyTheme(this, Config.Theme);
+        }
+
+
 
         // Creates a new bot config based on current settings in BotsForm class
         private PokeBotState CreateNewBotConfig() // Create a new bot configuration based on the current settings in the BotsForm
@@ -546,7 +572,7 @@ namespace SysBot.Pokemon.WinForms
                 case ProgramMode.BDSP:
                     leftSideImage.Image = Resources.bdsp_mode_image; // Set the image for BDSP mode
                     break;
-                case ProgramMode.LA: 
+                case ProgramMode.LA:
                     leftSideImage.Image = Resources.pla_mode_image;  // Set the image for PLA mode
                     break;
                 case ProgramMode.LGPE:
@@ -721,14 +747,22 @@ namespace SysBot.Pokemon.WinForms
                 await Task.Delay(10);                                                               // Delay for 10 milliseconds for smoother animation
             }
         }
+        public void SetupThemeAwareButtons()
+        {
+            // Use the current theme colors
+            var baseColor = ThemeManager.CurrentColors.PanelBase;
+            var hoverColor = ThemeManager.CurrentColors.Hover;
+
+            SetupHoverAnimation(btnBots, baseColor, hoverColor);
+            SetupHoverAnimation(btnHub, baseColor, hoverColor);
+            SetupHoverAnimation(btnLogs, baseColor, hoverColor);
+        }
 
         // Method to set up hover animation for Bots, Hub, and Logs button
-        private void SetupHoverAnimation(IconButton button)
+        private void SetupHoverAnimation(IconButton button, Color baseColor, Color hoverColor)
         {
             Timer fadeTimer = new Timer();                  // Create a new timer for the hover animation
             fadeTimer.Interval = 15;                        // Lower value = smoother effect
-            Color baseColor = Color.FromArgb(31, 30, 68);   // Default color for the buttons
-            Color hoverColor = Color.FromArgb(60, 40, 100); // Color of the buttons when hovered over
             float t = 0f;                                   // Current interpolation value (0 to 1)
             float speed = 0.03f;                            // Lower value = slower fade
             bool hovering = false;                          // Whether the mouse is hovering over the button
@@ -754,10 +788,10 @@ namespace SysBot.Pokemon.WinForms
             };
 
             // Assign the hover state to the button
-            button.MouseEnter += (s, e) => StartColorFade(button, Color.FromArgb(60, 40, 100)); // Hover color
-            button.MouseLeave += (s, e) => StartColorFade(button, Color.FromArgb(31, 30, 68));  // Default color
-            button.UseVisualStyleBackColor = false;                                             // Set UseVisualStyleBackColor to false to allow custom colors
-            button.BackColor = baseColor;                                                       // Set the initial background color of the button
+            button.MouseEnter += (s, e) => StartColorFade(button, ThemeManager.CurrentColors.PanelBase); // Hover color
+            button.MouseLeave += (s, e) => StartColorFade(button, ThemeManager.CurrentColors.Hover);     // Default color
+            button.UseVisualStyleBackColor = false;      // Set UseVisualStyleBackColor to false to allow custom colors
+            button.BackColor = baseColor;                // Set the initial background color of the button
         }
 
         // Method to set up hover animation for the top buttons (Close, Minimize, Maximize)
@@ -799,7 +833,7 @@ namespace SysBot.Pokemon.WinForms
             }
 
             Timer t = new Timer();            // Create a new timer for the hover animation
-            Color startColor = btn.BackColor; // Current color of the button
+            Color startColor = ThemeManager.CurrentColors.PanelBase; // Current color of the button
             float fadeSpeed = 0.02f;          // 0.02 = 750ms fade, higher values = slower fade
             float step = 0.0f;                // Current step in the fade animation, higher values = slower fade
             t.Interval = 15;                  // Around 60fps, lower value = smoother effect
@@ -810,7 +844,7 @@ namespace SysBot.Pokemon.WinForms
                 step += fadeSpeed;
                 if (step >= 1.0f) // Fade speed step reached 100%
                 {
-                    btn.BackColor = endColor; // Set the button's background color to the end color
+                    btn.BackColor = ThemeManager.CurrentColors.Hover; // Set the button's background color to the end color
                     t.Stop();                 // Stop the timer when the fade is complete
                     t.Dispose();              // Dispose of the timer to free resources
                     hoverTimers.Remove(btn);  // Remove the button from the hover timers dictionary
@@ -870,7 +904,7 @@ namespace SysBot.Pokemon.WinForms
         {
             if (currentBtn != null)
             {
-                currentBtn.BackColor = Color.FromArgb(31, 30, 68);                // Default background color
+                currentBtn.BackColor = ThemeManager.CurrentColors.PanelBase;      // Default background color
                 currentBtn.ForeColor = Color.Gainsboro;                           // Default text color
                 currentBtn.TextAlign = ContentAlignment.MiddleLeft;               // Center the text in the button
                 currentBtn.IconColor = Color.Gainsboro;                           // Default icon color
@@ -895,5 +929,7 @@ namespace SysBot.Pokemon.WinForms
                 WinFormsUtil.Error($"Failed to save configuration:\n{ex.Message}");
             }
         }
+
+
     }
 }
