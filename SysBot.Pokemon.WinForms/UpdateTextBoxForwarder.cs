@@ -7,7 +7,7 @@ namespace SysBot.Pokemon.WinForms;
 /// <summary>
 /// Forward logs to a TextBox.
 /// </summary>
-public sealed class TextBoxForwarder(TextBoxBase Box) : ILogForwarder
+public sealed class UpdateTextBoxForwarder(TextBoxBase Box) : ILogForwarder
 {
     /// <summary>
     /// Synchronize access to the TextBox. Only the GUI thread should be writing to it.

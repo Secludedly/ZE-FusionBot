@@ -12,7 +12,7 @@ namespace SysBot.Pokemon.WinForms
     {
         private Button buttonDownload;
         private Label labelUpdateInfo;
-        private readonly Label labelChangelogTitle = new();
+        private Label labelChangelogTitle;
         private TextBox textBoxChangelog;
         private readonly bool isUpdateRequired;
         private readonly bool isUpdateAvailable;
@@ -23,23 +23,17 @@ namespace SysBot.Pokemon.WinForms
             isUpdateRequired = updateRequired;
             this.newVersion = newVersion;
             isUpdateAvailable = updateAvailable;
+
             InitializeComponent();
+            ConfigureDynamicUpdateInfo();
+            labelChangelogTitle.Text = $"Changelog ({newVersion}):";
             Load += async (sender, e) => await FetchAndDisplayChangelog();
             UpdateFormText();
         }
 
-        private void InitializeComponent()
+
+        private void ConfigureDynamicUpdateInfo()
         {
-            labelUpdateInfo = new Label();
-            buttonDownload = new Button();
-
-            // Update the size of the form
-            ClientSize = new Size(500, 300);
-
-            // labelUpdateInfo
-            labelUpdateInfo.AutoSize = true;
-            labelUpdateInfo.Location = new Point(12, 20);
-            labelUpdateInfo.Size = new Size(460, 60);
             if (isUpdateRequired)
             {
                 labelUpdateInfo.Text = "A required update is available. You must update to continue using this application.";
@@ -54,57 +48,89 @@ namespace SysBot.Pokemon.WinForms
                 labelUpdateInfo.Text = "You are on the latest version. You can re-download if needed.";
                 buttonDownload.Text = "Re-Download Latest Version";
             }
-            buttonDownload.Size = new Size(130, 23);
-            int buttonX = (ClientSize.Width - buttonDownload.Size.Width) / 2;
-            int buttonY = ClientSize.Height - buttonDownload.Size.Height - 20;
-            buttonDownload.Location = new Point(buttonX, buttonY);
-            if (string.IsNullOrEmpty(buttonDownload.Text))
-            {
+
+            if (string.IsNullOrWhiteSpace(buttonDownload.Text))
                 buttonDownload.Text = "Download Update";
-            }
-            buttonDownload.Click += ButtonDownload_Click;
+        }
 
+        private void InitializeComponent()
+        {
+            labelUpdateInfo = new Label();
+            buttonDownload = new Button();
+            textBoxChangelog = new TextBox();
+            SuspendLayout();
+            // 
+            // labelUpdateInfo
+            // 
+            labelUpdateInfo.AutoSize = true;
+            labelUpdateInfo.ForeColor = Color.White;
+            labelUpdateInfo.Location = new Point(12, 8);
+            labelUpdateInfo.Name = "labelUpdateInfo";
+            labelUpdateInfo.Size = new Size(158, 20);
+            labelUpdateInfo.TabIndex = 0;
+            labelUpdateInfo.Text = "Checking for updates...";
+            // 
             // labelChangelogTitle
+            //
+            labelChangelogTitle = new Label();
             labelChangelogTitle.AutoSize = true;
-            labelChangelogTitle.Location = new Point(10, 60);
-            labelChangelogTitle.Size = new Size(70, 15);
-            labelChangelogTitle.Font = new Font(labelChangelogTitle.Font.FontFamily, 11, FontStyle.Bold);
-            labelChangelogTitle.Text = $"Changelog ({newVersion}):";
-
+            labelChangelogTitle.ForeColor = Color.White;
+            labelChangelogTitle.Font = new Font("Segoe UI", 10F, FontStyle.Bold, GraphicsUnit.Point);
+            labelChangelogTitle.Location = new Point(10, 48); // Moved higher
+            labelChangelogTitle.Name = "labelChangelogTitle";
+            labelChangelogTitle.Size = new Size(85, 20);
+            labelChangelogTitle.TabIndex = 3;
+            labelChangelogTitle.Text = $"Changelog:";
+            // 
+            // buttonDownload
+            // 
+            buttonDownload.BackColor = Color.FromArgb(20, 19, 57);
+            buttonDownload.Dock = DockStyle.Bottom;
+            buttonDownload.FlatStyle = FlatStyle.Flat;
+            buttonDownload.ForeColor = Color.White;
+            buttonDownload.Location = new Point(0, 275);
+            buttonDownload.Name = "buttonDownload";
+            buttonDownload.Size = new Size(708, 40);
+            buttonDownload.TabIndex = 1;
+            buttonDownload.Text = "Download Update";
+            buttonDownload.UseVisualStyleBackColor = false;
+            buttonDownload.Click += ButtonDownload_Click;
+            // 
             // textBoxChangelog
-            // Adjust the size and position to fit the new form dimensions
-            textBoxChangelog = new TextBox
-            {
-                Multiline = true,
-                ReadOnly = true,
-                ScrollBars = ScrollBars.Vertical,
-                Location = new Point(10, 90),
-                Size = new Size(480, 150),
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Bottom | AnchorStyles.Right
-            };
-
+            // 
+            textBoxChangelog.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            textBoxChangelog.BackColor = Color.FromArgb(20, 19, 57);
+            textBoxChangelog.BorderStyle = BorderStyle.FixedSingle;
+            textBoxChangelog.ForeColor = Color.White;
+            textBoxChangelog.Location = new Point(10, 71);
+            textBoxChangelog.Multiline = true;
+            textBoxChangelog.Name = "textBoxChangelog";
+            textBoxChangelog.ReadOnly = true;
+            textBoxChangelog.ScrollBars = ScrollBars.Vertical;
+            textBoxChangelog.Size = new Size(688, 187);
+            textBoxChangelog.TabIndex = 2;
+            // 
             // UpdateForm
+            // 
+            BackColor = Color.FromArgb(31, 30, 68);
+            ClientSize = new Size(708, 300);
             Controls.Add(labelUpdateInfo);
             Controls.Add(buttonDownload);
-            Controls.Add(labelChangelogTitle);
             Controls.Add(textBoxChangelog);
+            Controls.Add(labelChangelogTitle);
+            ForeColor = Color.White;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             MinimizeBox = false;
             Name = "UpdateForm";
             StartPosition = FormStartPosition.CenterScreen;
-            UpdateFormText();
+            ResumeLayout(false);
+            PerformLayout();
         }
+
         private void UpdateFormText()
         {
-            if (isUpdateAvailable)
-            {
-                Text = $"Update Available ({newVersion})";
-            }
-            else
-            {
-                Text = "Re-Download Latest Version";
-            }
+            Text = isUpdateAvailable ? $"Update Available ({newVersion})" : "Re-Download Latest Version";
         }
 
         private async Task FetchAndDisplayChangelog()
@@ -125,9 +151,7 @@ namespace SysBot.Pokemon.WinForms
                 {
                     string downloadedFilePath = await StartDownloadProcessAsync(downloadUrl);
                     if (!string.IsNullOrEmpty(downloadedFilePath))
-                    {
                         InstallUpdate(downloadedFilePath);
-                    }
                 }
                 else
                 {
