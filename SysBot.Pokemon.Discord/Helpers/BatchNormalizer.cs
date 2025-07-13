@@ -29,6 +29,8 @@ public static class BatchNormalizer
         { "Mark", "Mark" },
         { "Ribbon", "Ribbon" },
         { "GVs", "GVs" },
+        { "OT Friendship", "OriginalTrainerFriendship" },
+        { "HT Friendship", "HandlingTrainerFriendship" },
 
         // Backwards compatibility to fall back on, if needed. //
         { "Scale", "Scale" },
@@ -36,10 +38,11 @@ public static class BatchNormalizer
         { "HeightScalar", "HeightScalar" },
         { "MetDate", "MetDate" },
         { "MetLocation", "MetLocation" },
-        { "Version", "Version" },
         { "HyperTrainFlags", "HyperTrainFlags" },
         { "EggMetDate", "EggMetDate" },
         { "MetLevel", "MetLevel" },
+        { "OriginalTrainerFriendship", "OriginalTrainerFriendship" },
+        { "HandlingTrainerFriendship", "HandlingTrainerFriendship" }
     };
 
     // New Showdown format inputs to override Batch commands that start with an equals(=) //
@@ -48,7 +51,8 @@ public static class BatchNormalizer
         "Generation",
         "Gen",
         "WasEgg",
-        "Hatched"
+        "Hatched",
+        "Version"
 };
 
 
@@ -154,6 +158,38 @@ public static class BatchNormalizer
     /// </summary>
     public static string NormalizeBatchCommands(string content)
     {
+        // Alcremie forms can now add a topping to the flavor without batch command //
+        // For example, it accepts: Alcremie-Caramel-Swirl-Ribbon //
+        // Just affix the topping name to the end of Alcremie's name after its flavor //
+        // This code injects FormArgument/Topping for Alcremie based on Showdown Format nickname //
+        if (content.Contains("Alcremie", StringComparison.OrdinalIgnoreCase))
+        {
+            var match = Regex.Match(content, @"Alcremie[-\s]?([a-zA-Z]+[-]?[a-zA-Z]+)?[-]?(Strawberry|Berry|Love|Star|Clover|Flower|Ribbon)", RegexOptions.IgnoreCase);
+
+            if (match.Success)
+            {
+                string topping = match.Groups[2].Value.ToLowerInvariant();
+
+                var toppingMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+            {
+                { "Strawberry", 0 },
+                { "Berry", 1 },
+                { "Love", 2 },
+                { "Star", 3 },
+                { "Clover", 4 },
+                { "Flower", 5 },
+                { "Ribbon", 6 }
+            };
+
+                if (toppingMap.TryGetValue(topping, out int formArg))
+                {
+                    if (!content.Contains(".FormArgument=", StringComparison.OrdinalIgnoreCase))
+                        content += $"\n.FormArgument={formArg}";
+                }
+            }
+        }
+
+        // Logic for interpreting batch commands to showdown format //
         var lines = content.Split('\n');
         for (int i = 0; i < lines.Length; i++)
         {
@@ -181,16 +217,25 @@ public static class BatchNormalizer
                     lines[i] = $".{key}={random}";
                 }
 
+                // .OriginalTrainerFriendship= & .HandlingTrainerFriendship= → OT Friendship: & HT Friendship: // Value is between 1-255 //
+                else if (key == "OriginalTrainerFriendship" || key == "HandlingTrainerFriendship")
+                {
+                    if (int.TryParse(value, out int friendship) && friendship >= 1 && friendship <= 255)
+                    {
+                        lines[i] = $".{key}={friendship}";
+                    }
+                }
+
                 // .MetDate= or .EggMetDate= → Met Date: or Egg Date: // Value can be in various formats //
                 else if ((key == "MetDate" || key == "EggMetDate") && TryParseFlexibleDate(value, out string formatted))
                 {
                     lines[i] = $".{key}={formatted}";
                 }
 
-                // .Version= → Game: or Version: // Value is game name or game abbreviation //
+                // ~=Version= → Game: or Version: // Value is game name or game abbreviation //
                 else if (key == "Version" && GameKeywords.TryGetValue(value.Replace(" ", ""), out int version))
                 {
-                    lines[i] = $".{key}={version}";
+                    lines[i] = $"~={key}={version}";
                 }
 
                 // .HyperTrainFlags= → HyperTrain: or HyperTrainFlags: // Value is "true" or "false" //
@@ -233,8 +278,7 @@ public static class BatchNormalizer
                     {
                         string statVal = stat.Groups[1].Value;
                         string statKey = stat.Groups[2].Value.ToUpper();
-#pragma warning disable CS8600 // Converting null literal or possible null value to non-nullable type.
-                        string normalizedKey = statKey switch
+                        string? normalizedKey = statKey switch
                         {
                             "HP" => ".GV_HP",
                             "ATK" => ".GV_ATK",
@@ -244,7 +288,6 @@ public static class BatchNormalizer
                             "SPE" => ".GV_SPE",
                             _ => null
                         };
-#pragma warning restore CS8600 // Converting null literal or possible null value to non-nullable type.
 
                         if (normalizedKey != null)
                         {
@@ -261,7 +304,7 @@ public static class BatchNormalizer
             }
         }
 
-        // Convert "Key: Value" to "=Key=Value" if Batch starts with = prefix //
+        // Convert "Key: Value" to "~=Key=Value" if Batch starts with = prefix //
         for (int i = 0; i < lines.Length; i++)
         {
             string line = lines[i].Trim();
@@ -279,7 +322,7 @@ public static class BatchNormalizer
                 key = "WasEgg";
 
             if (EqualCommandKeys.Contains(key))
-                lines[i] = $"={key}={val}";
+                lines[i] = $"~={key}={val}";
         }
         return string.Join('\n', lines);
 
