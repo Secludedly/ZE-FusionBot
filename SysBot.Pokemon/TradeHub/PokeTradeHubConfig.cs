@@ -27,8 +27,8 @@ public sealed class PokeTradeHubConfig : BaseConfig
     public string BotName { get; set; } = string.Empty;
 
     [Category(BotTrade)]
-    [Description("208x101 logo image URL to display in the top left corner. Requires a program restart.")]
-    public string BotLogoImageURL { get; set; } = string.Empty;
+    [Description("208x101 logo image URL or file directory to display in the top left corner. Requires a program restart.")]
+    public string BotLogoImage { get; set; } = string.Empty;
 
     // Trade Bots
 

@@ -195,7 +195,7 @@ namespace SysBot.Pokemon.WinForms
             UpdateBackgroundImage(Config.Mode);        // Call the method to update image in leftSidePanel
             LoadThemeOptions();
             CB_Themes.SelectedIndexChanged += CB_Themes_SelectedIndexChanged;
-            LoadLogoImage(Config.Hub.BotLogoImageURL); // Load a URL image to replace logo
+            LoadLogoImage(Config.Hub.BotLogoImage); // Load a URL image to replace logo
             InitUtil.InitializeStubs(Config.Mode);     // Stubby McStubbinson will set environment based on config mode
             _isFormLoading = false;                    // ...but is it loading?
             ActivateButton(btnBots, RGBColors.color4); // We gonna start this party off right with the Bots Control panel and set its button color

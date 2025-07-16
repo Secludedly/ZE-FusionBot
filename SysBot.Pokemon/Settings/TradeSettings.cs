@@ -91,6 +91,9 @@ public class TradeSettings : IBotStateSettings, ICountSettings
         [Category(TradeConfig), Description("Dump Trade: Dumping routine will stop after spending x seconds in trade."), DisplayName("Maximum Dump Trade Time (seconds)")]
         public int MaxDumpTradeTime { get; set; } = 180;
 
+        [Category(TradeConfig), Description("Toggle to give users the option to use the BatchNormalizer, which utilizes Showdown in place of batch commands. See https://shorter.me/62oaO for details."), DisplayName("Batch Commands to Showdown")]
+        public bool BatchNormalizer { get; set; } = true;
+
         [Category(TradeConfig), Description("Dump Trade: If enabled, Dumping routine will output legality check information to the user."), DisplayName("Dump Trade Legality Check")]
         public bool DumpTradeLegalityCheck { get; set; } = true;
         public bool EnableSpamCheck { get; set; }
