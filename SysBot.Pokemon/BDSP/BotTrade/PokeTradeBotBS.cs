@@ -1231,7 +1231,7 @@ public class PokeTradeBotBS : PokeRoutineExecutor8BS, ICountBot, ITradeBot, IDis
                 foreach (var pokemon in allReceived)
                 {
                     Log($"  - Returning: {pokemon.Species} (Checksum: {pokemon.Checksum:X8})");
-                    poke.TradeFinished(this, pokemon); 
+                    poke.TradeFinished(this, pokemon);
                 }
 
                 // Mark the batch as fully completed and clean up

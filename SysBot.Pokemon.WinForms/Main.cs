@@ -148,7 +148,7 @@ namespace SysBot.Pokemon.WinForms
             catch { }
             _botsForm = new BotsForm(); // Initialize the BotsForm instance
             _logsForm = new LogsForm(); // Initialize the LogsForm instance
-            LogUtil.Forwarders.Add(new UIRichTextBoxForwarder(_logsForm.LogsBox)); // Add a log forwarder to the LogsForm's LogsBox
+            LogUtil.Forwarders.Add(new LogTextBoxForwarder(_logsForm.LogsBox)); // Add a log forwarder to the LogsForm's LogsBox
             _logsForm.LogsBox.MaxLength = 32767; // Set the maximum length of the LogsBox to 32767 characters (why this number though?)
 
             // If it knows a config file exists in root folder then load that shit up

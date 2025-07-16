@@ -4,11 +4,11 @@ using PKHeX.Core; // or wherever ILogForwarder is defined
 
 namespace SysBot.Base
 {
-    public class UIRichTextBoxForwarder : ILogForwarder
+    public class LogTextBoxForwarder : ILogForwarder
     {
         private readonly RichTextBox _rtb;
 
-        public UIRichTextBoxForwarder(RichTextBox rtb)
+        public LogTextBoxForwarder(RichTextBox rtb)
         {
             _rtb = rtb;
         }
