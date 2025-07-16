@@ -228,7 +228,7 @@ namespace SysBot.Pokemon.Helpers
                 pb8.HandlingTrainerMemory = 0;
                 pb8.HandlingTrainerMemoryFeeling = 0;
                 pb8.HandlingTrainerMemoryIntensity = 0;
-                pb8.DynamaxLevel = pb8.GetSuggestedDynamaxLevel(pb8, 0);
+                pb8.DynamaxLevel = 0;
                 ClearNicknameTrash(pk);
             }
             else if (pk is PK9 pk9)
@@ -244,22 +244,27 @@ namespace SysBot.Pokemon.Helpers
                 pk9.TeraTypeOverride = (PKHeX.Core.MoveType)19;
             }
 
+            // Set moves and relearn moves
+            pk.RefreshChecksum();
             var la = new LegalityAnalysis(pk);
             var enc = la.EncounterMatch;
-            pk.MaximizeFriendship();
 
+            // Set egg moves
             Span<ushort> relearn = stackalloc ushort[4];
             la.GetSuggestedRelearnMoves(relearn, enc);
             pk.SetRelearnMoves(relearn);
-            if (pk is ITechRecord t)
-            {
-                t.ClearRecordFlags();
-            }
-            pk.SetSuggestedMoves();
 
+            // Clear tech records
+            if (pk is ITechRecord t)
+                t.ClearRecordFlags();
+
+            // Set level-up moves appropriate for level 1
+            pk.SetSuggestedMoves();
             pk.Move1_PPUps = pk.Move2_PPUps = pk.Move3_PPUps = pk.Move4_PPUps = 0;
             pk.SetMaximumPPCurrent(pk.Moves);
-            pk.SetSuggestedHyperTrainingData();
+            pk.MaximizeFriendship(); // Hatch Egg Faster
+                                     // Final checksum refresh
+            pk.RefreshChecksum();
         }
 
         public static string FormOutput(ushort species, byte form, out string[] formString)
@@ -547,6 +552,7 @@ namespace SysBot.Pokemon.Helpers
             // Generation 4
             [(int)Species.Empoleon] = [(new(2024, 02, 02), new(2024, 02, 04)), (new(2024, 02, 09), new(2024, 02, 11))], // Empoleon
             [(int)Species.Infernape] = [(new(2024, 10, 04), new(2024, 10, 06)), (new(2024, 10, 11), new(2024, 10, 13))],  // Infernape
+            [(int)Species.Torterra] = [(new(2024, 11, 15), new(2024, 11, 17)), (new(2024, 11, 22), new(2024, 11, 24))],  // Torterra
 
             // Generation 5
             [(int)Species.Emboar] = [(new(2024, 06, 14), new(2024, 06, 16)), (new(2024, 06, 21), new(2024, 06, 23))], // Emboar

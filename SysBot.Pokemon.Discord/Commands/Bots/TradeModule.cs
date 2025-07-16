@@ -296,6 +296,11 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             {
                 var sav = AutoLegalityWrapper.GetTrainerInfo<T>();
                 var pkm = sav.GetLegal(template, out var result);
+                if (pkm == null)
+                {
+                    var response = await ReplyAsync("Set took too long to legalize.");
+                    return;
+                }
                 pkm = EntityConverter.ConvertToType(pkm, typeof(T), out _) ?? pkm;
 
                 if (pkm is not T pk)
@@ -304,8 +309,19 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
                     return;
                 }
 
-                // Use the EggTrade method without setting the nickname
-                pk.IsNicknamed = false; // Make sure we don't set a nickname
+                bool versionSpecified = content.Contains(".Version=", StringComparison.OrdinalIgnoreCase);
+                if (!versionSpecified)
+                {
+                    if (pk is PB8 pb8)
+                    {
+                        pb8.Version = (GameVersion)GameVersion.BD;
+                    }
+                    else if (pk is PK8 pk8)
+                    {
+                        pk8.Version = (GameVersion)GameVersion.SW;
+                    }
+                }
+                pk.IsNicknamed = false;
                 AbstractTrade<T>.EggTrade(pk, template);
 
                 var sig = Context.User.GetFavor();
@@ -608,6 +624,18 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
 
                 if (isEgg && pkm is T eggPk)
                 {
+                    bool versionSpecified = content.Contains(".Version=", StringComparison.OrdinalIgnoreCase);
+                    if (!versionSpecified)
+                    {
+                        if (eggPk is PB8 pb8)
+                        {
+                            pb8.Version = (GameVersion)GameVersion.BD;
+                        }
+                        else if (eggPk is PK8 pk8)
+                        {
+                            pk8.Version = (GameVersion)GameVersion.SW;
+                        }
+                    }
                     eggPk.IsNicknamed = false;
                     AbstractTrade<T>.EggTrade(eggPk, template);
                     pkm = eggPk;
