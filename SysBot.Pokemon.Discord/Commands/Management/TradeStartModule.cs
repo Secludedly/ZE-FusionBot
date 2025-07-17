@@ -131,7 +131,7 @@ public class TradeStartModule<T> : ModuleBase<SocketCommandContext> where T : PK
 
                     if (BallFileMap.TryGetValue(rawBallName, out string fileName))
                     {
-                        ballImgUrl = $"https://raw.githack.com/Secludedly/ZE-FusionBot-Sprite-Images/main/AltBallImg/28x28/{fileName}.png";
+                        ballImgUrl = $"https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/AltBallImg/28x28/{fileName}.png";
                         Console.WriteLine($"Resolved ball icon: {ballImgUrl}");
                     }
                     else

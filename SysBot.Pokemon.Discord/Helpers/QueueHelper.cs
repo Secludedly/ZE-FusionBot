@@ -291,8 +291,18 @@ public static class QueueHelper<T> where T : PKM, new()
             embedImageUrl = speciesImageUrl;
         }
 
-        var strings = GameInfo.GetStrings(1);
+        var lang = (LanguageID)pk.Language;
+        if (lang == LanguageID.None)
+            lang = LanguageID.English;
+
+        var strings = GameInfo.GetStrings((int)lang);
         string ballName = strings.balllist[pk.Ball];
+
+        // Fallback: try English if localized ball name is blank or missing (failsafe)
+        if (string.IsNullOrWhiteSpace(ballName))
+            ballName = GameInfo.GetStrings((int)LanguageID.English).balllist[pk.Ball];
+
+        // Handle LA balls — this string only appears in English
         if (ballName.Contains("(LA)"))
         {
             ballName = "la" + ballName.Replace(" ", "").Replace("(LA)", "").ToLower();
@@ -302,7 +312,8 @@ public static class QueueHelper<T> where T : PKM, new()
             ballName = ballName.Replace(" ", "").ToLower();
         }
 
-        string ballImgUrl = $"https://raw.githack.com/Secludedly/ZE-FusionBot-Sprite-Images/main/AltBallImg/28x28/{ballName}.png";
+        string ballImgUrl = $"https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/AltBallImg/28x28/{ballName}.png";
+
 
         // Check if embedImageUrl is a local file or a web URL
         if (Uri.TryCreate(embedImageUrl, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeFile)

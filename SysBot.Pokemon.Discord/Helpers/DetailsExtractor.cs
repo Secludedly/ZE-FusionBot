@@ -35,8 +35,8 @@ public class DetailsExtractor<T> where T : PKM, new()
         embedData.SpecialSymbols = GetSpecialSymbols(pk);
         embedData.FormName = ShowdownParsing.GetStringFromForm(pk.Form, strings, pk.Species, pk.Context);
         embedData.HeldItem = strings.itemlist[pk.HeldItem];
-        embedData.Ball = strings.balllist[pk.Ball];
-
+        var englishStrings = GameInfo.GetStrings((int)LanguageID.English);
+        embedData.Ball = englishStrings.balllist[pk.Ball];
 
         // Display elements
         Span<int> ivs = stackalloc int[6];
