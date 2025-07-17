@@ -140,6 +140,8 @@ namespace SysBot.Pokemon.WinForms
             CB_Themes.FormattingEnabled = true;
             CB_Themes.Location = new Point(38, 322);
             CB_Themes.Name = "CB_Themes";
+            CB_Themes.ForeColor = Color.White;
+            CB_Themes.BackColor = Color.FromArgb(20, 19, 57);
             CB_Themes.Size = new Size(144, 28);
             CB_Themes.TabIndex = 5;
             // 

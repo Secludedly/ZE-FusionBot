@@ -77,10 +77,10 @@ namespace SysBot.Pokemon.WinForms
             Color whiteText = Color.White;
 
             // Controls
-            _TB_IP = new TextBox { Location = new Point(12, 57), Width = 120, BackColor = darkBG, ForeColor = whiteText };
-            _NUD_Port = new NumericUpDown { Location = new Point(144, 57), Width = 65, Maximum = 65535, Minimum = 0, Value = 6000, BackColor = darkBG, ForeColor = whiteText };
+            _TB_IP = new TextBox { Location = new Point(12, 57), Width = 120, BackColor = Color.FromArgb(20, 19, 57), ForeColor = whiteText };
+            _NUD_Port = new NumericUpDown { Location = new Point(144, 57), Width = 65, Maximum = 65535, Minimum = 0, Value = 6000, BackColor = Color.FromArgb(20, 19, 57), ForeColor = whiteText };
 
-            _CB_Protocol = new ComboBox { Location = new Point(221, 57), Width = 60, DropDownStyle = ComboBoxStyle.DropDownList, BackColor = darkBG, ForeColor = whiteText };
+            _CB_Protocol = new ComboBox { Location = new Point(221, 57), Width = 60, DropDownStyle = ComboBoxStyle.DropDownList, BackColor = Color.FromArgb(20, 19, 57), ForeColor = whiteText };
             var protocols = ((SwitchProtocol[])Enum.GetValues(typeof(SwitchProtocol)))
                 .Select(z => new { Text = z.ToString(), Value = (int)z }).ToArray();
             _CB_Protocol.DisplayMember = "Text";
@@ -88,7 +88,7 @@ namespace SysBot.Pokemon.WinForms
             _CB_Protocol.DataSource = protocols;
             _CB_Protocol.SelectedValue = (int)SwitchProtocol.WiFi;
 
-            _CB_Routine = new ComboBox { Location = new Point(292, 57), Width = 120, DropDownStyle = ComboBoxStyle.DropDownList, BackColor = darkBG, ForeColor = whiteText };
+            _CB_Routine = new ComboBox { Location = new Point(292, 57), Width = 120, DropDownStyle = ComboBoxStyle.DropDownList, BackColor = Color.FromArgb(20, 19, 57), ForeColor = whiteText };
             var routines = ((PokeRoutineType[])Enum.GetValues(typeof(PokeRoutineType)))
                 .Select(z => new { Text = z.ToString(), Value = (int)z }).ToArray();
             _CB_Routine.DisplayMember = "Text";
@@ -96,7 +96,7 @@ namespace SysBot.Pokemon.WinForms
             _CB_Routine.DataSource = routines;
             _CB_Routine.SelectedValue = (int)PokeRoutineType.FlexTrade;
 
-            _CB_GameMode = new ComboBox { Location = new Point(625, 5), Size = new Size(100, 40), DropDownStyle = ComboBoxStyle.DropDownList, BackColor = darkBG, ForeColor = whiteText };
+            _CB_GameMode = new ComboBox { Location = new Point(625, 5), Size = new Size(100, 40), DropDownStyle = ComboBoxStyle.DropDownList, BackColor = Color.FromArgb(20, 19, 57), ForeColor = whiteText };
             _CB_GameMode.Items.AddRange(new object[] { "SWSH", "BDSP", "PLA", "SV", "LGPE" });
             _CB_GameMode.SelectedIndex = -1;
             _CB_GameMode.DrawItem += (s, e) =>

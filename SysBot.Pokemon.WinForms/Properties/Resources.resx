@@ -139,16 +139,16 @@
   <data name="status_aqua" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\status_aqua.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
-  <data name="status_green" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\status_green.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
   <data name="status_red" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\status_red.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="status_transparent" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\status_transparent.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
   <data name="status_yellow" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\status_yellow.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
-  <data name="status_transparent" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\status_transparent.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  <data name="status_green" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\status_green.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
 </root>

@@ -2,6 +2,8 @@ using SysBot.Base;
 using System;
 using System.ComponentModel;
 using System.Drawing;
+using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 
@@ -19,6 +21,7 @@ public partial class BotController : UserControl
     private readonly Image RedImage = Image.FromStream(new System.IO.MemoryStream(Properties.Resources.status_red));
     private readonly Image AquaImage = Image.FromStream(new System.IO.MemoryStream(Properties.Resources.status_aqua));
     private readonly Image TransparentImage = Image.FromStream(new System.IO.MemoryStream(Properties.Resources.status_transparent));
+
     public bool IsRunning()
     {
         if (Runner == null || State == null)
@@ -94,37 +97,39 @@ public partial class BotController : UserControl
         var bot = b.Bot;
         // Update description with styled text
         RTB_Description.Clear();
-        RTB_Description.SelectionFont = new Font("Ubuntu Mono", 9F, FontStyle.Bold);
+        RTB_Description.SelectionFont = new Font("Ubuntu Mono", 10F, FontStyle.Bold);
         RTB_Description.SelectionColor = Color.FromArgb(165, 137, 182);
         RTB_Description.AppendText("BOT STATUS: ");
 
-        RTB_Description.SelectionFont = new Font("Ubuntu Mono", 9F, FontStyle.Regular);
+        RTB_Description.SelectionFont = new Font("Ubuntu Mono", 10F, FontStyle.Regular);
         RTB_Description.SelectionColor = Color.White;
         RTB_Description.AppendText($"  {bot.LastLogged}\n");
 
-        RTB_Description.SelectionFont = new Font("Ubuntu Mono", 9F, FontStyle.Bold);
+        RTB_Description.SelectionFont = new Font("Ubuntu Mono", 10F, FontStyle.Bold);
         RTB_Description.SelectionColor = Color.FromArgb(165, 137, 182);
         RTB_Description.AppendText("LAST LOG: ");
 
-        RTB_Description.SelectionFont = new Font("Ubuntu Mono", 9F, FontStyle.Regular);
+        RTB_Description.SelectionFont = new Font("Ubuntu Mono", 10F, FontStyle.Regular);
         RTB_Description.SelectionColor = Color.White;
-        RTB_Description.AppendText($"    {bot.LastTime:hh\\:mm\\:ss}");
+        DateTime time = bot.LastTime;
+        string formattedTime = time.ToString("h:mm:ss tt", CultureInfo.InvariantCulture);
+        RTB_Description.AppendText($"    {formattedTime}");
 
         // Update left section
         RTB_Left.Clear();
-        RTB_Left.SelectionFont = new Font("Ubuntu Mono", 9F, FontStyle.Bold);
+        RTB_Left.SelectionFont = new Font("Ubuntu Mono", 10F, FontStyle.Bold);
         RTB_Left.SelectionColor = Color.FromArgb(165, 137, 182);
         RTB_Left.AppendText("BOT ADDRESS: ");
 
-        RTB_Left.SelectionFont = new Font("Ubuntu Mono", 9F, FontStyle.Regular);
+        RTB_Left.SelectionFont = new Font("Ubuntu Mono", 10F, FontStyle.Regular);
         RTB_Left.SelectionColor = Color.White;
         RTB_Left.AppendText($" {bot.Connection.Name}\n");
 
-        RTB_Left.SelectionFont = new Font("Ubuntu Mono", 9F, FontStyle.Bold);
+        RTB_Left.SelectionFont = new Font("Ubuntu Mono", 10F, FontStyle.Bold);
         RTB_Left.SelectionColor = Color.FromArgb(165, 137, 182);
         RTB_Left.AppendText("TRADE TYPE: ");
 
-        RTB_Left.SelectionFont = new Font("Ubuntu Mono", 9F, FontStyle.Regular);
+        RTB_Left.SelectionFont = new Font("Ubuntu Mono", 10F, FontStyle.Regular);
         RTB_Left.SelectionColor = Color.White;
         RTB_Left.AppendText($"  {State.InitialRoutine}");
 
@@ -158,7 +163,7 @@ public partial class BotController : UserControl
         if (seconds > 2 * threshold)
             return;
 
-        PB_Lamp.Image = seconds > threshold ? RedImage : GreenImage;
+        PB_Lamp.Image = seconds > threshold ? RedImage : GreenImage; ;
     }
 
     public void TryRemove()
