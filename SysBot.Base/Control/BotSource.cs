@@ -8,13 +8,13 @@ public class BotSource<T>(RoutineExecutor<T> Bot)
 {
     public readonly RoutineExecutor<T> Bot = Bot;
 
-    private CancellationTokenSource Source = new();
+    public CancellationTokenSource Source = new();
 
     public bool IsPaused { get; private set; }
 
     public bool IsRunning { get; private set; }
 
-    private bool IsStopping { get; set; }
+    public bool IsStopping { get; set; }
 
     public void Pause()
     {

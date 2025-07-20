@@ -142,6 +142,11 @@ namespace SysBot.Pokemon.WinForms
 
         private async void ButtonDownload_Click(object sender, EventArgs e)
         {
+            await PerformUpdateAsync();
+        }
+
+        public async Task PerformUpdateAsync()
+        {
             buttonDownload.Enabled = false;
             buttonDownload.Text = "Downloading...";
             try
@@ -169,6 +174,7 @@ namespace SysBot.Pokemon.WinForms
                 buttonDownload.Text = isUpdateAvailable ? "Download Update" : "Re-Download Latest Version";
             }
         }
+
 
         private static async Task<string> StartDownloadProcessAsync(string downloadUrl)
         {

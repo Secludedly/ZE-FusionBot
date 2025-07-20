@@ -291,18 +291,8 @@ public static class QueueHelper<T> where T : PKM, new()
             embedImageUrl = speciesImageUrl;
         }
 
-        var lang = (LanguageID)pk.Language;
-        if (lang == LanguageID.None)
-            lang = LanguageID.English;
-
-        var strings = GameInfo.GetStrings((int)lang);
+        var strings = GameInfo.GetStrings("en");
         string ballName = strings.balllist[pk.Ball];
-
-        // Fallback: try English if localized ball name is blank or missing (failsafe)
-        if (string.IsNullOrWhiteSpace(ballName))
-            ballName = GameInfo.GetStrings((int)LanguageID.English).balllist[pk.Ball];
-
-        // Handle LA balls — this string only appears in English
         if (ballName.Contains("(LA)"))
         {
             ballName = "la" + ballName.Replace(" ", "").Replace("(LA)", "").ToLower();
