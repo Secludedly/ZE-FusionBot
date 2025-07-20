@@ -8,6 +8,7 @@ using static SysBot.Base.SwitchButton;
 using System.Threading;
 using System.Threading.Tasks;
 using SysBot.Pokemon.Helpers;
+using System.Security.Cryptography;
 using System.Xml;
 
 namespace SysBot.Pokemon;
@@ -22,16 +23,54 @@ public abstract class PokeRoutineExecutor<T>(IConsoleBotManaged<IConsoleConnecti
     // Check if either Tesla or dmnt are active if the sanity check for Trainer Data fails, as these are common culprits.
     private const ulong ovlloaderID = 0x420000000007e51a;
 
-    public static void DumpPokemon(string folder, string subfolder, T pk)
+    // Get the first 12 characters of the SHA1 hash of the data, in uppercase.
+    public static string GetSHA1Hex(byte[] data)
+    {
+        using var sha1 = SHA1.Create();
+        byte[] hashBytes = sha1.ComputeHash(data);
+        return BitConverter.ToString(hashBytes).Replace("-", "").Substring(0, 12).ToUpperInvariant();
+    }
+
+    // Dumps a PKM to a file in the specified folder in the format: OT - Species (Localized) Shiny[SHA1].pkx
+    public static void DumpPokemon<T>(string folder, string subfolder, T pk) where T : PKM
     {
         if (!Directory.Exists(folder))
             return;
+
         var dir = Path.Combine(folder, subfolder);
         Directory.CreateDirectory(dir);
-        var fn = Path.Combine(dir, PathUtil.CleanFileName(pk.FileName));
-        File.WriteAllBytes(fn, pk.DecryptedPartyData);
-        LogUtil.LogInfo($"Saved file: {fn}", "Dump");
+
+        // Get OT Name
+        string ot = pk.OriginalTrainerName ?? "Unknown";
+
+        // Get names
+        int species = pk.Species;
+        var langID = (LanguageID)pk.Language;
+
+        string english = LanguageHelper.GetLocalizedSpeciesName(species, LanguageID.English);
+        string localized = LanguageHelper.GetLocalizedSpeciesName(species, langID);
+
+        // Only show localized if it's different than English and the language isn't English
+        bool showLocalized = langID != LanguageID.English && !string.Equals(english, localized, StringComparison.OrdinalIgnoreCase);
+        string speciesName = showLocalized ? $"{english} ({localized})" : english;
+
+        // Shiny marker
+        string shiny = pk.IsShiny ? "★ " : "";
+
+        // SHA1 hash - 12 characters
+        string hash = GetSHA1Hex(pk.DecryptedPartyData);
+
+        // Final filename
+        string fileName = $"{ot} - {speciesName} {shiny}[{hash}].{pk.Extension}";
+        string cleaned = PathUtil.CleanFileName(fileName);
+
+        // Save the file
+        string finalPath = Path.Combine(dir, cleaned);
+        File.WriteAllBytes(finalPath, pk.DecryptedPartyData);
+
+        LogUtil.LogInfo($"Saved file: {finalPath}", "Dump");
     }
+
 
     public static void LogSuccessfulTrades(PokeTradeDetail<T> poke, ulong TrainerNID, string TrainerName)
     {

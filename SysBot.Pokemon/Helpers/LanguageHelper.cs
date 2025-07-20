@@ -6,6 +6,22 @@ namespace SysBot.Pokemon.Helpers;
 
 public static class LanguageHelper
 {
+    public static string GetLocalizedSpeciesName(int speciesIndex, LanguageID lang)
+    {
+        try
+        {
+            var strings = GameInfo.GetStrings((int)lang);
+            if (strings?.Species == null || speciesIndex < 0 || speciesIndex >= strings.Species.Count)
+                return "???";
+
+            return strings.Species[speciesIndex];
+        }
+        catch
+        {
+            return "???";
+        }
+    }
+
     public static string GetLocalizedSpeciesLog(PKM pkm)
     {
         if (pkm == null)
