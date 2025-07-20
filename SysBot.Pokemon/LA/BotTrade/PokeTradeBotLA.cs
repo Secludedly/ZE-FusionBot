@@ -367,7 +367,8 @@ public class PokeTradeBotLA(PokeTradeHub<PA8> Hub, PokeBotState Config) : PokeRo
                 Log($"Returning {allReceived.Count} Pokémon to trainer {originalTrainerID}.");
                 foreach (var pokemon in allReceived)
                 {
-                    Log($"  - Returning: {pokemon.Species} (Checksum: {pokemon.Checksum:X8})");
+                    string speciesName = LanguageHelper.GetLocalizedSpeciesLog(pokemon);
+                    Log($"  - Returning: {speciesName} (Checksum: {pokemon.Checksum:X8})");
                     poke.TradeFinished(this, pokemon);
                 }
             }
@@ -587,7 +588,8 @@ public class PokeTradeBotLA(PokeTradeHub<PA8> Hub, PokeBotState Config) : PokeRo
             completedTrades++;
 
             _batchTracker.AddReceivedPokemon(originalTrainerID, received);
-            Log($"Added received Pokémon {received.Species} (Checksum: {received.Checksum:X8}) to batch tracker for trainer {originalTrainerID} (Trade {completedTrades}/{startingDetail.TotalBatchTrades})");
+            string speciesName = LanguageHelper.GetLocalizedSpeciesLog(received);
+            Log($"Added received Pokémon {speciesName} (Checksum: {received.Checksum:X8}) to batch tracker for trainer {originalTrainerID} (Trade {completedTrades}/{startingDetail.TotalBatchTrades})");
 
             if (completedTrades == startingDetail.TotalBatchTrades)
             {
@@ -601,7 +603,7 @@ public class PokeTradeBotLA(PokeTradeHub<PA8> Hub, PokeBotState Config) : PokeRo
                 // Then finish each trade with the corresponding received Pokemon
                 foreach (var pokemon in allReceived)
                 {
-                    Log($"  - Returning: {pokemon.Species} (Checksum: {pokemon.Checksum:X8})");
+                    Log($"  - Returning: {speciesName} (Checksum: {pokemon.Checksum:X8})");
                     poke.TradeFinished(this, pokemon);
                 }
 
@@ -1084,7 +1086,8 @@ public class PokeTradeBotLA(PokeTradeHub<PA8> Hub, PokeBotState Config) : PokeRo
         var la = new LegalityAnalysis(offered);
         if (!la.Valid)
         {
-            Log($"Clone request (from {poke.Trainer.TrainerName}) has detected an invalid Pokémon: {GameInfo.GetStrings(1).Species[offered.Species]}.");
+            var strings = GameInfo.GetStrings((int)LanguageID.English);
+            Log($"Clone request (from {poke.Trainer.TrainerName}) has detected an invalid Pokémon: {LanguageHelper.GetLocalizedSpeciesLog(offered)}.");
             if (DumpSetting.Dump)
                 DumpPokemon(DumpSetting.DumpFolder, "hacked", offered);
 
@@ -1101,7 +1104,7 @@ public class PokeTradeBotLA(PokeTradeHub<PA8> Hub, PokeBotState Config) : PokeRo
             clone.Tracker = 0;
 
         poke.SendNotification(this, $"**Cloned your {GameInfo.GetStrings(1).Species[clone.Species]}!**\nNow press B to cancel your offer and trade me a Pokémon you don't want.");
-        Log($"Cloned a {(Species)clone.Species}. Waiting for user to change their Pokémon...");
+        Log($"Cloned a {LanguageHelper.GetLocalizedSpeciesLog(clone)}. Waiting for user to change their Pokémon...");
 
         if (!await CheckCloneChangedOffer(token).ConfigureAwait(false))
         {
@@ -1256,7 +1259,7 @@ public class PokeTradeBotLA(PokeTradeHub<PA8> Hub, PokeBotState Config) : PokeRo
 
         if (!laInit.Valid)
         {
-            Log($"FixOT request has detected an illegal Pokémon from {name}: {(Species)offered.Species}");
+            Log($"FixOT request has detected an illegal Pokémon from {name}: {LanguageHelper.GetLocalizedSpeciesLog(offered)}");
             var report = laInit.Report();
             Log(laInit.Report());
             poke.SendNotification(this, $"**Shown Pokémon is not legal. Attempting to regenerate...**\n\n```{report}```");
@@ -1289,7 +1292,7 @@ public class PokeTradeBotLA(PokeTradeHub<PA8> Hub, PokeBotState Config) : PokeRo
         }
 
         poke.SendNotification(this, $"{(!laInit.Valid ? "**Legalized" : "**Fixed Nickname/OT for")} {(Species)clone.Species}**! Now confirm the trade!");
-        Log($"{(!laInit.Valid ? "Legalized" : "Fixed Nickname/OT for")} {(Species)clone.Species}!");
+        Log($"{(!laInit.Valid ? "Legalized" : "Fixed Nickname/OT for")} {LanguageHelper.GetLocalizedSpeciesLog(clone)}!");
 
         if (await CheckCloneChangedOffer(token).ConfigureAwait(false))
         {

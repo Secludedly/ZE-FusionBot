@@ -298,7 +298,8 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState config) : Poke
                 Log($"Returning {allReceived.Count} Pokémon to trainer {originalTrainerID}.");
                 foreach (var pokemon in allReceived)
                 {
-                    Log($"  - Returning: {pokemon.Species} (Checksum: {pokemon.Checksum:X8})");
+                    Log($"  - Returning: {LanguageHelper.GetLocalizedSpeciesLog(pokemon)} (Checksum: {pokemon.Checksum:X8})");
+
                     poke.TradeFinished(this, pokemon);
                 }
             }
@@ -857,7 +858,10 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState config) : Poke
             poke.SendNotification(this, "Shinify success! Thanks for being part of the community!");
 
         // Continue with the rest of the successful trade logic
-        Log($"Trade completed. Received {GameInfo.GetStrings(1).Species[received.Species]} from user, sent {GameInfo.GetStrings(1).Species[toSend.Species]}.");
+        var receivedLang = (LanguageID)received.Language;
+        var sentLang = (LanguageID)toSend.Language;
+        Log($"Trade completed. Received {LanguageHelper.GetLocalizedSpeciesLog(received)} from the user and sent them {LanguageHelper.GetLocalizedSpeciesLog(toSend)}.");
+
         poke.TradeFinished(this, received);
         RecordUtil<PokeTradeBotSWSH>.Record($"Finished\t{trainerNID:X16}\t{trainerName}\t{poke.Trainer.TrainerName}\t{poke.ID}\t{toSend.Species}\t{toSend.EncryptionConstant:X8}\t{received.Species}\t{received.EncryptionConstant:X8}");
 
@@ -963,7 +967,8 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState config) : Poke
         var la = new LegalityAnalysis(offered);
         if (!la.Valid)
         {
-            Log($"Clone request (from {poke.Trainer.TrainerName}) has detected an invalid Pokémon: {GameInfo.GetStrings(1).Species[offered.Species]}.");
+            Log($"Clone request (from {poke.Trainer.TrainerName}) has detected an invalid Pokémon: {LanguageHelper.GetLocalizedSpeciesLog(offered)}.");
+
             if (DumpSetting.Dump)
                 DumpPokemon(DumpSetting.DumpFolder, "hacked", offered);
 
@@ -980,7 +985,7 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState config) : Poke
             clone.Tracker = 0;
 
         poke.SendNotification(this, $"**Cloned your {GameInfo.GetStrings(1).Species[clone.Species]}!**\nNow press B to cancel your offer and trade me a Pokémon you don't want.");
-        Log($"Cloned a {(Species)clone.Species}. Waiting for user to change their Pokémon...");
+        Log($"Cloned a {LanguageHelper.GetLocalizedSpeciesLog(clone)}. Waiting for user to change their Pokémon...");
 
         // Separate this out from WaitForPokemonChanged since we compare to old EC from original read.
         var partnerFound = await ReadUntilChanged(LinkTradePartnerPokemonOffset, oldEC, 15_000, 0_200, false, token).ConfigureAwait(false);
@@ -1226,7 +1231,7 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState config) : Poke
         var TrainerTID = await GetTradePartnerTID7(TradeMethod.SurpriseTrade, token).ConfigureAwait(false);
         var SurprisePoke = await ReadSurpriseTradePokemon(token).ConfigureAwait(false);
 
-        Log($"Found Surprise Trade partner: {TrainerName}-{TrainerTID}, Pokémon: {(Species)SurprisePoke.Species}");
+        Log($"Found Surprise Trade partner: {TrainerName}-{TrainerTID}, Pokémon: {LanguageHelper.GetLocalizedSpeciesLog(SurprisePoke)}");
 
         // Clear out the received trade data; we want to skip the trade animation.
         // The box slot locks have been removed prior to searching.
@@ -1504,7 +1509,7 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState config) : Poke
 
         if (!laInit.Valid)
         {
-            Log($"FixOT request has detected an illegal Pokémon from {name}: {(Species)offered.Species}");
+            Log($"FixOT request has detected an illegal Pokémon from {name}: {LanguageHelper.GetLocalizedSpeciesLog(offered)}");
             var report = laInit.Report();
             Log(laInit.Report());
             poke.SendNotification(this, $"**Shown Pokémon is not legal. Attempting to regenerate...**\n\n```{report}```");
@@ -1537,7 +1542,7 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState config) : Poke
 
         AbstractTrade<PK8>.HasAdName(offered, out string detectedAd);
         poke.SendNotification(this, $"{(!laInit.Valid ? "**Legalized" : "**Fixed Nickname/OT for")} {(Species)clone.Species}** (found ad: {detectedAd})! Now confirm the trade!");
-        Log($"{(!laInit.Valid ? "Legalized" : "Fixed Nickname/OT for")} {(Species)clone.Species}!");
+        Log($"{(!laInit.Valid ? "Legalized" : "Fixed Nickname/OT for")} {LanguageHelper.GetLocalizedSpeciesLog(clone)}!");
 
         await Click(A, 0_800, token).ConfigureAwait(false);
         await SetBoxPokemon(clone, 0, 0, token, sav).ConfigureAwait(false);
@@ -1549,7 +1554,7 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState config) : Poke
         bool changed = pk2 == null || clone.Species != pk2.Species || offered.OriginalTrainerName != pk2.OriginalTrainerName;
         if (changed)
         {
-            Log($"{name} changed the shown Pokémon ({(Species)clone.Species}){(pk2 != null ? $" to {(Species)pk2.Species}" : "")}");
+            Log($"{name} changed the shown Pokémon ({LanguageHelper.GetLocalizedSpeciesLog(clone)}){(pk2 != null ? $" to {LanguageHelper.GetLocalizedSpeciesLog(pk2)}" : "")}");
             poke.SendNotification(this, "**Send away the originally shown Pokémon, please!**");
             var timer = 10_000;
             while (changed)

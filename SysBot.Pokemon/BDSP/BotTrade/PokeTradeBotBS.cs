@@ -584,7 +584,7 @@ public class PokeTradeBotBS : PokeRoutineExecutor8BS, ICountBot, ITradeBot, IDis
 
         if (!laInit.Valid)
         {
-            Log($"FixOT request has detected an illegal Pokémon from {name}: {(Species)offered.Species}");
+            Log($"FixOT request detected an illegal Pokémon from {name}: {LanguageHelper.GetLocalizedSpeciesLog(offered)}");
             var report = laInit.Report();
             Log(laInit.Report());
             poke.SendNotification(this, $"**Shown Pokémon is not legal. Attempting to regenerate...**\n\n```{report}```");
@@ -617,7 +617,7 @@ public class PokeTradeBotBS : PokeRoutineExecutor8BS, ICountBot, ITradeBot, IDis
 
         AbstractTrade<PB8>.HasAdName(offered, out string detectedAd);
         poke.SendNotification(this, $"{(!laInit.Valid ? "**Legalized" : "**Fixed Nickname/OT for")} {(Species)clone.Species}** (found ad: {detectedAd})! Now confirm the trade!");
-        Log($"{(!laInit.Valid ? "Legalized" : "Fixed Nickname/OT for")} {(Species)clone.Species}!");
+        Log($"{(!laInit.Valid ? "Legalized" : "Fixed Nickname/OT for")} {LanguageHelper.GetLocalizedSpeciesLog(clone)}!");
 
         await SetBoxPokemonAbsolute(BoxStartOffset, clone, token, sav).ConfigureAwait(false);
         poke.SendNotification(this, "Now confirm the trade!");
@@ -629,7 +629,10 @@ public class PokeTradeBotBS : PokeRoutineExecutor8BS, ICountBot, ITradeBot, IDis
         bool changed = pk2 == null || !comp.SequenceEqual(lastOffered) || clone.Species != pk2.Species || offered.OriginalTrainerName != pk2.OriginalTrainerName;
         if (changed)
         {
-            Log($"{name} changed the shown Pokémon ({(Species)clone.Species}){(pk2 != null ? $" to {(Species)pk2.Species}" : "")}");
+            string oldName = LanguageHelper.GetLocalizedSpeciesLog(clone);
+            string newName = pk2 != null ? LanguageHelper.GetLocalizedSpeciesLog(pk2) : null;
+            Log($"{name} changed the shown Pokémon ({oldName}){(newName != null ? $" to {newName}" : "")}");
+
             poke.SendNotification(this, "**Send away the originally shown Pokémon, please!**");
 
             bool verify = await ReadUntilChanged(LinkTradePokemonOffset, comp, 10_000, 0_200, false, true, token).ConfigureAwait(false);
@@ -1014,7 +1017,8 @@ public class PokeTradeBotBS : PokeRoutineExecutor8BS, ICountBot, ITradeBot, IDis
                 Log($"Returning {allReceived.Count} Pokémon to trainer {originalTrainerID}.");
                 foreach (var pokemon in allReceived)
                 {
-                    Log($"  - Returning: {pokemon.Species} (Checksum: {pokemon.Checksum:X8})");
+                    string speciesName = LanguageHelper.GetLocalizedSpeciesLog(pokemon);
+                    Log($"  - Returning: {speciesName} (Checksum: {pokemon.Checksum:X8})");
                     poke.TradeFinished(this, pokemon);
                 }
             }
@@ -1216,7 +1220,8 @@ public class PokeTradeBotBS : PokeRoutineExecutor8BS, ICountBot, ITradeBot, IDis
 
             // Store received Pokemon using original trainer ID
             _batchTracker.AddReceivedPokemon(originalTrainerID, received);
-            Log($"Added received Pokémon {received.Species} (Checksum: {received.Checksum:X8}) to batch tracker for trainer {originalTrainerID} (Trade {completedTrades}/{startingDetail.TotalBatchTrades})");
+            string speciesName = LanguageHelper.GetLocalizedSpeciesLog(received);
+            Log($"Added received Pokémon {speciesName} (Checksum: {received.Checksum:X8}) to batch tracker for trainer {originalTrainerID} (Trade {completedTrades}/{startingDetail.TotalBatchTrades})");
 
             if (completedTrades == startingDetail.TotalBatchTrades)
             {
@@ -1230,7 +1235,7 @@ public class PokeTradeBotBS : PokeRoutineExecutor8BS, ICountBot, ITradeBot, IDis
                 // Then finish each trade with the corresponding received Pokemon
                 foreach (var pokemon in allReceived)
                 {
-                    Log($"  - Returning: {pokemon.Species} (Checksum: {pokemon.Checksum:X8})");
+                    Log($"  - Returning: {speciesName} (Checksum: {pokemon.Checksum:X8})");
                     poke.TradeFinished(this, pokemon);
                 }
 
