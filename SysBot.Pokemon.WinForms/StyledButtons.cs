@@ -17,6 +17,12 @@ public class FancyButton : Button
     public Color HoverColor { get; set; } = Color.FromArgb(180, 210, 250);  // lighter blue on hover
     [Browsable(false)]
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public Color HoverStartColor { get; set; } = Color.FromArgb(20, 30, 90);
+    [Browsable(false)]
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public Color HoverEndColor { get; set; } = Color.FromArgb(160, 90, 200);
+    [Browsable(false)]
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public Color ClickColor { get; set; } = Color.FromArgb(60, 30, 90);     // dark purple on click
 
     private bool isHovered = false;
@@ -43,6 +49,26 @@ public class FancyButton : Button
         Font = new Font("Montserrat-Regular", 8, FontStyle.Bold);
 
         DoubleBuffered = true;
+
+        // Check for LogsForm container and override colors
+        this.HandleCreated += (s, e) =>
+        {
+            if (FindForm() is SysBot.Pokemon.WinForms.LogsForm)
+            {
+                ForeColor = Color.FromArgb(255, 255, 255);
+                StartColor = Color.FromArgb(10, 10, 40);
+                EndColor = Color.FromArgb(50, 50, 90);
+                HoverColor = Color.FromArgb(51, 255, 255);
+                ClickColor = Color.FromArgb(10, 10, 40);
+                HoverStartColor = Color.FromArgb(31, 225, 225);
+                HoverEndColor = Color.FromArgb(50, 50, 90);
+            }
+            else
+            {
+                // fallback default text color
+                ForeColor = Color.White;
+            }
+        };
 
         // Shake timer setup
         shakeTimer = new Timer();
@@ -151,8 +177,8 @@ public class FancyButton : Button
 
             using (var brush = new LinearGradientBrush(
                 animatedRect,
-                Color.FromArgb(20, 30, 90),     // Midnight Blue
-                Color.FromArgb(160, 90, 200),   // Purple
+                HoverStartColor,
+                HoverEndColor,
                 LinearGradientMode.Horizontal))
             {
                 g.FillRectangle(brush, fillRect);
