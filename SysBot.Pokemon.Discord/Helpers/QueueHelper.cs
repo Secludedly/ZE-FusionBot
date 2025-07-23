@@ -266,8 +266,16 @@ public static class QueueHelper<T> where T : PKM, new()
         // Create a unique filename for the image
         string filePath = Path.Combine(imagesFolderPath, $"image_{Guid.NewGuid()}.png");
 
-        // Save the image to the specified path
-        image.Save(filePath, System.Drawing.Imaging.ImageFormat.Png);
+        // Check if the platform supports the required functionality
+        if (OperatingSystem.IsWindowsVersionAtLeast(6, 1))
+        {
+            // Save the image to the specified path
+            image.Save(filePath, System.Drawing.Imaging.ImageFormat.Png);
+        }
+        else
+        {
+            throw new PlatformNotSupportedException("Image saving is only supported on Windows 6.1 or later.");
+        }
 
         return filePath;
     }
@@ -281,7 +289,13 @@ public static class QueueHelper<T> where T : PKM, new()
         {
             string eggImageUrl = "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/egg2.png";
             speciesImageUrl = AbstractTrade<T>.PokeImg(pk, false, true, null);
-            System.Drawing.Image combinedImage = await OverlaySpeciesOnEgg(eggImageUrl, speciesImageUrl);
+            System.Drawing.Image? combinedImage = await OverlaySpeciesOnEgg(eggImageUrl, speciesImageUrl);
+
+            if (combinedImage == null)
+            {
+                throw new InvalidOperationException("Failed to create combined image for egg.");
+            }
+
             embedImageUrl = SaveImageLocally(combinedImage);
         }
         else
@@ -304,11 +318,14 @@ public static class QueueHelper<T> where T : PKM, new()
 
         string ballImgUrl = $"https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/AltBallImg/28x28/{ballName}.png";
 
-
         // Check if embedImageUrl is a local file or a web URL
         if (Uri.TryCreate(embedImageUrl, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeFile)
         {
-            // Load local image directly
+            if (!OperatingSystem.IsWindowsVersionAtLeast(6, 1))
+            {
+                throw new PlatformNotSupportedException("This functionality is only supported on Windows 6.1 or later.");
+            }
+
             using var localImage = System.Drawing.Image.FromFile(uri.LocalPath);
             using var ballImage = await LoadImageFromUrl(ballImgUrl);
             if (ballImage != null)
@@ -323,13 +340,18 @@ public static class QueueHelper<T> where T : PKM, new()
         }
         else
         {
-            (System.Drawing.Image finalCombinedImage, bool ballImageLoaded) = await OverlayBallOnSpecies(speciesImageUrl, ballImgUrl);
+            (System.Drawing.Image? finalCombinedImage, bool ballImageLoaded) = await OverlayBallOnSpecies(speciesImageUrl, ballImgUrl);
+
+            if (finalCombinedImage == null)
+            {
+                throw new InvalidOperationException("Failed to create combined image for species and ball.");
+            }
+
             embedImageUrl = SaveImageLocally(finalCombinedImage);
 
             if (!ballImageLoaded)
             {
                 Console.WriteLine($"Ball image could not be loaded: {ballImgUrl}");
-                // await context.Channel.SendMessageAsync($"Ball image could not be loaded: {ballImgUrl}"); // for debugging purposes
             }
         }
 
@@ -339,74 +361,108 @@ public static class QueueHelper<T> where T : PKM, new()
 
     private static async Task<(System.Drawing.Image, bool)> OverlayBallOnSpecies(string speciesImageUrl, string ballImageUrl)
     {
-        using (var speciesImage = await LoadImageFromUrl(speciesImageUrl))
+        var speciesImage = await LoadImageFromUrl(speciesImageUrl);
+        if (speciesImage == null)
         {
-            if (speciesImage == null)
-            {
-                Console.WriteLine("Species image could not be loaded.");
-                return (null!, false); // Use null! to explicitly indicate that null is not expected
-            }
+            Console.WriteLine("Species image could not be loaded.");
+            return (null!, false); // Use null! to explicitly indicate that null is not expected
+        }
 
-            var ballImage = await LoadImageFromUrl(ballImageUrl);
-            if (ballImage == null)
-            {
-                Console.WriteLine($"Ball image could not be loaded: {ballImageUrl}");
-                return ((System.Drawing.Image)speciesImage.Clone(), false);
-            }
+        var ballImage = await LoadImageFromUrl(ballImageUrl);
+        if (ballImage == null)
+        {
+            Console.WriteLine($"Ball image could not be loaded: {ballImageUrl}");
+            return (speciesImage, false);
+        }
 
+        try
+        {
+            using (speciesImage)
             using (ballImage)
             {
-                using (var graphics = Graphics.FromImage(speciesImage))
+                // Ensure compatibility with supported platforms
+                if (!OperatingSystem.IsWindowsVersionAtLeast(6, 1))
                 {
-                    var ballPosition = new Point(speciesImage.Width - ballImage.Width, speciesImage.Height - ballImage.Height);
-                    graphics.DrawImage(ballImage, ballPosition);
+                    throw new PlatformNotSupportedException("This functionality is only supported on Windows 6.1 or later.");
                 }
 
-                return ((System.Drawing.Image)speciesImage.Clone(), true);
+                var ballPosition = new System.Drawing.Point(
+                    Math.Max(0, speciesImage.Width - ballImage.Width),
+                    Math.Max(0, speciesImage.Height - ballImage.Height)
+                );
+
+                using (var graphics = System.Drawing.Graphics.FromImage(speciesImage))
+                {
+                    // Replace the problematic method with a platform-agnostic alternative
+                    graphics.DrawImage(ballImage, new Rectangle(ballPosition.X, ballPosition.Y, ballImage.Width, ballImage.Height));
+                }
+
+                return (speciesImage, true);
             }
         }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error while overlaying ball on species: {ex.Message}");
+            return (speciesImage, false);
+        }
     }
-    private static async Task<System.Drawing.Image> OverlaySpeciesOnEgg(string eggImageUrl, string speciesImageUrl)
+    private static async Task<System.Drawing.Image?> OverlaySpeciesOnEgg(string eggImageUrl, string speciesImageUrl)
     {
-        System.Drawing.Image eggImage = await LoadImageFromUrl(eggImageUrl);
-        System.Drawing.Image speciesImage = await LoadImageFromUrl(speciesImageUrl);
+        System.Drawing.Image? eggImage = await LoadImageFromUrl(eggImageUrl);
+        if (eggImage == null)
+        {
+            throw new InvalidOperationException($"Failed to load egg image from URL: {eggImageUrl}");
+        }
+
+        System.Drawing.Image? speciesImage = await LoadImageFromUrl(speciesImageUrl);
+        if (speciesImage == null)
+        {
+            if (OperatingSystem.IsWindowsVersionAtLeast(6, 1))
+            {
+                eggImage.Dispose(); // Dispose eggImage if speciesImage fails to load
+            }
+            throw new InvalidOperationException($"Failed to load species image from URL: {speciesImageUrl}");
+        }
+
+        if (!OperatingSystem.IsWindowsVersionAtLeast(6, 1))
+        {
+            throw new PlatformNotSupportedException("This functionality is only supported on Windows 6.1 or later.");
+        }
+
         double scaleRatio = Math.Min((double)eggImage.Width / speciesImage.Width, (double)eggImage.Height / speciesImage.Height);
-        Size newSize = new Size((int)(speciesImage.Width * scaleRatio), (int)(speciesImage.Height * scaleRatio));
-        System.Drawing.Image resizedSpeciesImage = new Bitmap(speciesImage, newSize);
+        Size newSize = new((int)(speciesImage.Width * scaleRatio), (int)(speciesImage.Height * scaleRatio));
+
+        using System.Drawing.Image resizedSpeciesImage = new Bitmap(speciesImage, newSize);
+
         using (Graphics g = Graphics.FromImage(eggImage))
         {
-            // Calculate the position to center the species image on the egg image
             int speciesX = (eggImage.Width - resizedSpeciesImage.Width) / 2;
             int speciesY = (eggImage.Height - resizedSpeciesImage.Height) / 2;
-
-            // Draw the resized and centered species image over the egg image
             g.DrawImage(resizedSpeciesImage, speciesX, speciesY, resizedSpeciesImage.Width, resizedSpeciesImage.Height);
         }
 
-        // Dispose of the species image and the resized species image if they're no longer needed
-        speciesImage.Dispose();
-        resizedSpeciesImage.Dispose();
+        if (OperatingSystem.IsWindowsVersionAtLeast(6, 1))
+        {
+            speciesImage.Dispose();
+        }
 
-        // Calculate scale factor for resizing while maintaining aspect ratio
         double scale = Math.Min(128.0 / eggImage.Width, 128.0 / eggImage.Height);
-
-        // Calculate new dimensions
         int newWidth = (int)(eggImage.Width * scale);
         int newHeight = (int)(eggImage.Height * scale);
 
-        Bitmap finalImage = new Bitmap(128, 128);
-
-        // Draw the resized egg image onto the new bitmap, centered
+        Bitmap finalImage = new(128, 128);
         using (Graphics g = Graphics.FromImage(finalImage))
         {
-            // Calculate centering position
             int x = (128 - newWidth) / 2;
             int y = (128 - newHeight) / 2;
-
-            // Draw the image
             g.DrawImage(eggImage, x, y, newWidth, newHeight);
         }
-        eggImage.Dispose();
+
+        if (OperatingSystem.IsWindowsVersionAtLeast(6, 1))
+        {
+            eggImage.Dispose();
+        }
+
         return finalImage;
     }
 
@@ -429,12 +485,23 @@ public static class QueueHelper<T> where T : PKM, new()
 
         try
         {
-            return System.Drawing.Image.FromStream(stream);
+            if (OperatingSystem.IsWindowsVersionAtLeast(6, 1))
+            {
+                return System.Drawing.Image.FromStream(stream);
+            }
+            else
+            {
+                throw new PlatformNotSupportedException("Image loading is only supported on Windows 6.1 or later.");
+            }
         }
         catch (ArgumentException ex)
         {
             Console.WriteLine($"Failed to create image from stream. URL: {url}, Exception: {ex}");
             return null;
+        }
+        finally
+        {
+            stream.Dispose();
         }
     }
 
@@ -607,8 +674,13 @@ public static class QueueHelper<T> where T : PKM, new()
 
     public static (string, Embed) CreateLGLinkCodeSpriteEmbed(List<Pictocodes> lgcode)
     {
+        if (!OperatingSystem.IsWindowsVersionAtLeast(6, 1))
+        {
+            throw new PlatformNotSupportedException("This functionality is only supported on Windows 6.1 or later.");
+        }
+
         int codecount = 0;
-        List<System.Drawing.Image> spritearray = [];
+        List<System.Drawing.Image> spritearray = new List<System.Drawing.Image>();
         foreach (Pictocodes cd in lgcode)
         {
             var showdown = new ShowdownSet(cd.ToString());
@@ -628,14 +700,13 @@ public static class QueueHelper<T> where T : PKM, new()
                 graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
                 graphics.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
                 graphics.DrawImage(png, destRect, 0, 0, png.Width, png.Height, GraphicsUnit.Pixel);
-
             }
             png = destImage;
             spritearray.Add(png);
             codecount++;
         }
-        int outputImageWidth = spritearray[0].Width + 20;
 
+        int outputImageWidth = spritearray[0].Width + 20;
         int outputImageHeight = spritearray[0].Height - 65;
 
         Bitmap outputImage = new Bitmap(outputImageWidth, outputImageHeight, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
@@ -649,6 +720,7 @@ public static class QueueHelper<T> where T : PKM, new()
             graphics.DrawImage(spritearray[2], new Rectangle(100, 0, spritearray[2].Width, spritearray[2].Height),
                 new Rectangle(new Point(), spritearray[2].Size), GraphicsUnit.Pixel);
         }
+
         System.Drawing.Image finalembedpic = outputImage;
         var filename = $"{Directory.GetCurrentDirectory()}//finalcode.png";
         finalembedpic.Save(filename);

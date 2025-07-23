@@ -31,8 +31,8 @@ public abstract class PokeRoutineExecutor<T>(IConsoleBotManaged<IConsoleConnecti
         return BitConverter.ToString(hashBytes).Replace("-", "").Substring(0, 12).ToUpperInvariant();
     }
 
-    // Dumps a PKM to a file in the specified folder in the format: OT - Species (Localized) Shiny[SHA1].pkx
-    public static void DumpPokemon<T>(string folder, string subfolder, T pk) where T : PKM
+    // Fix for CS0693: Renaming the inner type parameter to avoid conflict with the outer type parameter.
+    public static void DumpPokemon<TPKM>(string folder, string subfolder, TPKM pk) where TPKM : PKM
     {
         if (!Directory.Exists(folder))
             return;

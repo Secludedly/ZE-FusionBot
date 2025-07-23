@@ -72,10 +72,20 @@ namespace SysBot.Pokemon.Discord
         [RequireOwner]
         public async Task AnnounceAsync([Remainder] string announcement)
         {
+            if (Settings?.AnnouncementSettings == null)
+            {
+                await ReplyAsync("Announcement settings are not configured.").ConfigureAwait(false);
+                return;
+            }
+
             var unixTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             var formattedTimestamp = $"<t:{unixTimestamp}:F>";
-            var embedColor = Settings.AnnouncementSettings.RandomAnnouncementColor ? GetRandomColor() : Settings.AnnouncementSettings.AnnouncementEmbedColor.ToDiscordColor();
-            var thumbnailUrl = Settings.AnnouncementSettings.RandomAnnouncementThumbnail ? GetRandomThumbnail() : GetSelectedThumbnail();
+            var embedColor = Settings.AnnouncementSettings.RandomAnnouncementColor
+                ? GetRandomColor()
+                : Settings.AnnouncementSettings.AnnouncementEmbedColor.ToDiscordColor();
+            var thumbnailUrl = Settings.AnnouncementSettings.RandomAnnouncementThumbnail
+                ? GetRandomThumbnail()
+                : GetSelectedThumbnail();
 
             var embedDescription = $"## {announcement}\n\n**Sent: {formattedTimestamp}**";
 
@@ -138,13 +148,18 @@ namespace SysBot.Pokemon.Discord
 
         private static string GetSelectedThumbnail()
         {
-            if (!string.IsNullOrEmpty(Settings.AnnouncementSettings.CustomAnnouncementThumbnailUrl))
+            if (Settings?.AnnouncementSettings != null &&
+                !string.IsNullOrEmpty(Settings.AnnouncementSettings.CustomAnnouncementThumbnailUrl))
             {
                 return Settings.AnnouncementSettings.CustomAnnouncementThumbnailUrl;
             }
-            else
+            else if (Settings?.AnnouncementSettings != null)
             {
                 return GetUrlFromThumbnailOption(Settings.AnnouncementSettings.AnnouncementThumbnailOption);
+            }
+            else
+            {
+                throw new InvalidOperationException("AnnouncementSettings is not configured.");
             }
         }
 

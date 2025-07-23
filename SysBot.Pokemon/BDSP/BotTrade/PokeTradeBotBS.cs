@@ -524,7 +524,7 @@ public class PokeTradeBotBS : PokeRoutineExecutor8BS, ICountBot, ITradeBot, IDis
         return true;
     }
 
-    private async Task<TradePartnerBS> GetTradePartnerInfo(CancellationToken token)
+    private async Task<TradePartnerBS?> GetTradePartnerInfo(CancellationToken token)
     {
         if (token.IsCancellationRequested) return null;
 
@@ -630,7 +630,7 @@ public class PokeTradeBotBS : PokeRoutineExecutor8BS, ICountBot, ITradeBot, IDis
         if (changed)
         {
             string oldName = LanguageHelper.GetLocalizedSpeciesLog(clone);
-            string newName = pk2 != null ? LanguageHelper.GetLocalizedSpeciesLog(pk2) : null;
+            string newName = pk2 != null ? LanguageHelper.GetLocalizedSpeciesLog(pk2) : string.Empty;
             Log($"{name} changed the shown Pokémon ({oldName}){(newName != null ? $" to {newName}" : "")}");
 
             poke.SendNotification(this, "**Send away the originally shown Pokémon, please!**");

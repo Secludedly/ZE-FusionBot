@@ -47,7 +47,7 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
             }
         }
 
-        private static async Task<string> GetSmogonSet(string pokemon, string game)
+        private static async Task<string?> GetSmogonSet(string pokemon, string game)
         {
             var url = $"https://www.smogon.com/dex/{game}/pokemon/{pokemon}/";
             try
@@ -76,7 +76,7 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
             }
         }
 
-        private static PKM GeneratePKMFromSmogonSet(string set, string game)
+        private static PKM? GeneratePKMFromSmogonSet(string set, string game)
         {
             var species = ExtractSpeciesFromSet(set);
             if (string.IsNullOrEmpty(species))
@@ -114,7 +114,7 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
             return pk;
         }
 
-        private static string ExtractSpeciesFromSet(string set)
+        private static string? ExtractSpeciesFromSet(string set)
         {
             var lines = set.Split('\n');
             return lines.Length > 0 ? lines[0].Split('@')[0].Trim() : null;

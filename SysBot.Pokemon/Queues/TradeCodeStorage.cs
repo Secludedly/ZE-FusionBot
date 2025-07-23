@@ -45,7 +45,7 @@ namespace SysBot.Pokemon
         public bool DeleteTradeCode(ulong trainerID)
         {
             LoadFromFile();
-            if (_tradeCodeDetails!.Remove(trainerID))
+            if (_tradeCodeDetails != null && _tradeCodeDetails.Remove(trainerID))
             {
                 SaveToFile();
                 return true;
@@ -56,7 +56,7 @@ namespace SysBot.Pokemon
         public int GetTradeCode(ulong trainerID, ISocketMessageChannel channel, SocketUser user)
         {
             LoadFromFile();
-            if (_tradeCodeDetails!.TryGetValue(trainerID, out var details))
+            if (_tradeCodeDetails != null && _tradeCodeDetails.TryGetValue(trainerID, out var details))
             {
                 details.TradeCount++;
                 SaveToFile();
@@ -66,7 +66,11 @@ namespace SysBot.Pokemon
                 return details.Code;
             }
             var code = GenerateRandomTradeCode();
-            _tradeCodeDetails![trainerID] = new TradeCodeDetails { Code = code, TradeCount = 1 };
+            if (_tradeCodeDetails == null)
+            {
+                _tradeCodeDetails = new Dictionary<ulong, TradeCodeDetails>();
+            }
+            _tradeCodeDetails[trainerID] = new TradeCodeDetails { Code = code, TradeCount = 1 };
             SaveToFile();
 
             // Check for first trade milestone
@@ -77,19 +81,19 @@ namespace SysBot.Pokemon
         public int GetTradeCount(ulong trainerID)
         {
             LoadFromFile();
-            return _tradeCodeDetails!.TryGetValue(trainerID, out var details) ? details.TradeCount : 0;
+            return _tradeCodeDetails != null && _tradeCodeDetails.TryGetValue(trainerID, out var details) ? details.TradeCount : 0;
         }
 
         public TradeCodeDetails? GetTradeDetails(ulong trainerID)
         {
             LoadFromFile();
-            return _tradeCodeDetails!.TryGetValue(trainerID, out var details) ? details : null;
+            return _tradeCodeDetails != null && _tradeCodeDetails.TryGetValue(trainerID, out var details) ? details : null;
         }
 
         public void UpdateTradeDetails(ulong trainerID, string ot, int tid, int sid)
         {
             LoadFromFile();
-            if (_tradeCodeDetails!.TryGetValue(trainerID, out var details))
+            if (_tradeCodeDetails != null && _tradeCodeDetails.TryGetValue(trainerID, out var details))
             {
                 details.OT = ot;
                 details.TID = tid;
@@ -101,7 +105,7 @@ namespace SysBot.Pokemon
         public bool UpdateTradeCode(ulong trainerID, int newCode)
         {
             LoadFromFile();
-            if (_tradeCodeDetails!.TryGetValue(trainerID, out var details))
+            if (_tradeCodeDetails != null && _tradeCodeDetails.TryGetValue(trainerID, out var details))
             {
                 details.Code = newCode;
                 SaveToFile();
@@ -178,7 +182,7 @@ namespace SysBot.Pokemon
             LoadFromFile();
 
             // Check if user exists and retrieve their trade details
-            if (_tradeCodeDetails.TryGetValue(trainerID, out var details))
+            if (_tradeCodeDetails != null && _tradeCodeDetails.TryGetValue(trainerID, out var details))
             {
                 var earnedMedals = new List<string>();
                 foreach (var milestone in _milestoneImages.Keys)

@@ -87,7 +87,7 @@ namespace SysBot.Pokemon
                         break;
                 }
 
-                pk.SetRecordFlags(Array.Empty<ushort>());
+                pk.SetRecordFlags([]);
                 pk.HeldItem = heldItemNew; //free master
 
                 LegalizeIfNotLegal(ref pk, caller, detail, TrainerName);
@@ -133,7 +133,7 @@ namespace SysBot.Pokemon
                 if (!pk.IsEgg)
                 {
                     pk.HeldItem = heldItemNew; //free master
-                    pk.SetRecordFlags(Array.Empty<ushort>());
+                    pk.SetRecordFlags([]);
                 }
                 sst = SpecialTradeType.Shinify;
             }
@@ -160,7 +160,7 @@ namespace SysBot.Pokemon
                 if (pk is IHyperTrain iht)
                     iht.HyperTrainClear();
 
-                pk.SetRecordFlags(Array.Empty<ushort>());
+                pk.SetRecordFlags([]);
                 pk.HeldItem = heldItemNew; //free master
 
                 LegalizeIfNotLegal(ref pk, caller, detail, TrainerName);
@@ -241,10 +241,13 @@ namespace SysBot.Pokemon
 
                 sst = SpecialTradeType.TeraChange;
             }
-            else if (pk.HeldItem >= 55 && pk.HeldItem <= 62) // guard spec <> x sp.def
+            else if (pk.HeldItem >= 51 && pk.HeldItem <= 62) // pp up <> x sp.def
             {
                 switch (pk.HeldItem)
                 {
+                    case 51: // pp up
+                        pk.Language = (int)LanguageID.Italian;
+                        break;
                     case 55: // guard spec
                         pk.Language = (int)LanguageID.Japanese;
                         break;
@@ -275,7 +278,7 @@ namespace SysBot.Pokemon
 
                 LegalizeIfNotLegal(ref pk, caller, detail, TrainerName);
 
-                pk.SetRecordFlags(Array.Empty<ushort>());
+                pk.SetRecordFlags([]);
                 pk.HeldItem = heldItemNew; //free master
                 sst = SpecialTradeType.SanitizeReq;
             }
@@ -297,7 +300,7 @@ namespace SysBot.Pokemon
                     return sst;
                 }
 
-                pk.SetRecordFlags(Array.Empty<ushort>());
+                pk.SetRecordFlags([]);
                 pk.HeldItem = heldItemNew; //free master
 
                 LegalizeIfNotLegal(ref pk, caller, detail, TrainerName);

@@ -108,7 +108,7 @@ public class TradeStartModule<T> : ModuleBase<SocketCommandContext> where T : PK
             if (detail.Type == PokeTradeType.Random)
                 return;
 
-            var user = _discordClient.GetUser(detail.Trainer.ID);
+            var user = _discordClient?.GetUser(detail.Trainer.ID);
             if (user == null)
             {
                 Console.WriteLine($"User not found for ID {detail.Trainer.ID}.");
@@ -129,7 +129,7 @@ public class TradeStartModule<T> : ModuleBase<SocketCommandContext> where T : PK
                 {
                     string rawBallName = GameInfo.GetStrings(1).balllist[detail.TradeData.Ball].Trim();
 
-                    if (BallFileMap.TryGetValue(rawBallName, out string fileName))
+                        if (!string.IsNullOrEmpty(rawBallName) && BallFileMap.TryGetValue(rawBallName, out string? fileName) && fileName != null)
                     {
                         ballImgUrl = $"https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/AltBallImg/28x28/{fileName}.png";
                         Console.WriteLine($"Resolved ball icon: {ballImgUrl}");

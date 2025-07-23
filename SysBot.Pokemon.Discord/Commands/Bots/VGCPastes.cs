@@ -30,11 +30,11 @@ namespace SysBot.Pokemon.Discord
             return csvData;
         }
 
-        private async Task<List<List<string>>> FetchSpreadsheetData()
+        private async Task<List<List<string?>>> FetchSpreadsheetData()
         {
             var csvData = await DownloadSpreadsheetAsCsv();
             var rows = csvData.Split('\n');
-            var data = rows.Select(row => row.Split(',').Select(cell => cell.Trim('"')).ToList()).ToList();
+            var data = rows.Select(row => row.Split(',').Select(cell => (string?)cell.Trim('"')).ToList()).ToList();
             return data;
         }
 
@@ -50,15 +50,15 @@ namespace SysBot.Pokemon.Discord
                     var pokePasteUrl = row[24]?.Trim('"');
                     if (string.IsNullOrWhiteSpace(pokePasteUrl) || !Uri.IsWellFormedUriString(pokePasteUrl, UriKind.Absolute))
                     {
-                        continue; 
+                        continue;
                     }
 
                     if (pokemonName != null)
                     {
-                        var pokemonColumns = row.GetRange(37, 5); 
-                        if (!pokemonColumns.Any(cell => cell.Equals(pokemonName, StringComparison.OrdinalIgnoreCase)))
+                        var pokemonColumns = row.GetRange(37, 5);
+                        if (!pokemonColumns.Any(cell => cell != null && cell.Equals(pokemonName, StringComparison.OrdinalIgnoreCase)))
                         {
-                            continue; 
+                            continue;
                         }
                     }
 

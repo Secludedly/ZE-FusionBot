@@ -70,7 +70,7 @@ namespace SysBot.Pokemon
             Type = type;
             Time = DateTime.Now;
             IsFavored = favored;
-            LGPETradeCode = lgcode;
+            LGPETradeCode = lgcode ?? new List<Pictocodes>(); // Fixes CS8601 and CS8618
             BatchTradeNumber = batchTradeNumber;
             TotalBatchTrades = totalBatchTrades;
             IsMysteryEgg = isMysteryEgg;

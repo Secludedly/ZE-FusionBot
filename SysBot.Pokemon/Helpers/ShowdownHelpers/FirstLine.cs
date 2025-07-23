@@ -77,7 +77,7 @@ namespace SysBot.Pokemon.Helpers.ShowdownHelpers
         {
             if (!string.IsNullOrEmpty(heldItem))
             {
-                string correctedHeldItem = GetClosestItem(heldItem, itemlist);
+                string? correctedHeldItem = GetClosestItem(heldItem, itemlist);
                 if (correctedHeldItem != null)
                 {
                     int itemIndex = Array.IndexOf(itemlist, correctedHeldItem);

@@ -315,7 +315,7 @@ public class OwnerModule<T> : SudoModule<T> where T : PKM, new()
                     byte[] bytes;
                     try
                     {
-                        bytes = await bot.Bot.Connection.PixelPeek(token).ConfigureAwait(false) ?? Array.Empty<byte>();
+                        bytes = await bot.Bot.Connection.PixelPeek(token).ConfigureAwait(false) ?? [];
                     }
                     catch (Exception ex)
                     {
@@ -503,7 +503,7 @@ public class OwnerModule<T> : SudoModule<T> where T : PKM, new()
         };
 
         [Command("startsysdvr")]
-        [Alias("dvrstart", "startdvr", "sysdvrstart")]
+        [Alias("dvrstart", "startdvr", "sysdvrstart", "dvr", "stream")]
         [Summary("Makes the bot open SysDVR to stream your Switch on the current PC.")]
         [RequireOwner]
         public async Task StartSysDvr()
@@ -528,13 +528,12 @@ public class OwnerModule<T> : SudoModule<T> where T : PKM, new()
         }
 
         [Command("sysdvr")]
-        [Alias("stream")]
         [Summary("Displays instructions on how to use SysDVR.")]
         [RequireOwner]
         public async Task SysDVRInstructionsAsync()
         {
             var embed0 = new EmbedBuilder()
-                .WithTitle("-----------SYSDVR SETUP INSTRUCTIONS-----------");
+                .WithTitle("//////SYSDVR SETUP INSTRUCTIONS//////");
 
             embed0.WithImageUrl("https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/homereadybreak.png");
             var message0 = await ReplyAsync(embed: embed0.Build());
@@ -542,7 +541,7 @@ public class OwnerModule<T> : SudoModule<T> where T : PKM, new()
 
             var embed1 = new EmbedBuilder()
                 .AddField("01) SETTING UP THE SYSBOT WITH SYSDVR",
-                          "- [Click here](https://github.com/exelix11/SysDVR/releases) to download **SysDVR-Client-Windows-x64.7z**.\n" +
+                          "- [Click here](https://github.com/exelix11/SysDVR/releases/tag/v5.5.6) to download **SysDVR-Client-Windows-x64.7z**.\n" +
                           "- Unpack the archive and place the extracted folder anywhere you want.\n" +
                           "- Inside the folder, open **SysDVR-ClientGUI.exe.**\n" +
                           "- Select either *Video* or *Both* under the channels to stream.\n" +
@@ -559,7 +558,7 @@ public class OwnerModule<T> : SudoModule<T> where T : PKM, new()
 
             var embed2 = new EmbedBuilder()
                 .AddField("02) SETTING UP SYSDVR ON THE SWITCH",
-                          "- [Click here](https://github.com/exelix11/SysDVR/releases) to download **SysDVR.zip**.\n" +
+                          "- [Click here](https://github.com/exelix11/SysDVR/releases/tag/v5.5.6) to download **SysDVR.zip**.\n" +
                           "- Unpack the archive and place the extracted folders on the Switch SD card.\n" +
                           "- Reboot your Switch.\n" +
                           "- Open the SysDVR program in the Switch.\n" +
@@ -581,7 +580,7 @@ public class OwnerModule<T> : SudoModule<T> where T : PKM, new()
         }
 
     [Command("startcontroller")]
-    [Alias("controllerstart", "startcontrol", "controlstart", "startremote", "remotestart", "sbr")]
+    [Alias("controllerstart", "startcontrol", "controlstart", "startremote", "remotestart", "sbr", "controller")]
     [Summary("Makes the bot open Switch Remote for PC - a GUI game controller for your Switch.")]
     [RequireOwner]
     public async Task StartSysRemote()
