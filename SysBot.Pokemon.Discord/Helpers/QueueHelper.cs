@@ -684,7 +684,7 @@ public static class QueueHelper<T> where T : PKM, new()
         string typeName = (typeIndex >= 0 && typeIndex < typeNames.Length)
         ? typeNames[typeIndex]
         : "Normal";
-        return $"https://raw.githubusercontent.com/hexbyt3/HomeImages/ebd562941ff77b1889a297ee50eacfa8cb3589de/128x128/Egg_{typeName}.png";
+        return $"https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/Eggs/Egg_{typeName}.png";
     }
 
     public static (string, Embed) CreateLGLinkCodeSpriteEmbed(List<Pictocodes> lgcode)
