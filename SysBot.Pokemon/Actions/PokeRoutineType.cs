@@ -18,19 +18,19 @@ public enum PokeRoutineType
     LinkTrade = 3,
 
     /// <summary> Performs batch link trades. </summary>
-    Batch = 3, 
+    Batch = 4, 
 
     /// <summary> Performs a seed check without transferring data from the bot. </summary>
-    SeedCheck = 4,
+    SeedCheck = 5,
 
     /// <summary> Performs a clone operation on the partner's data, sending them a copy of what they show. </summary>
-    Clone = 5,
+    Clone = 6,
 
     /// <summary> Exports files for all data shown to the bot. </summary>
-    Dump = 6,
+    Dump = 7,
 
     /// <summary> Performs group battles as a host. </summary>
-    RaidBot = 7,
+    RaidBot = 8,
 
     /// <summary> Triggers walking encounters until the criteria is satisfied. </summary>
     EncounterLine = 1_000,

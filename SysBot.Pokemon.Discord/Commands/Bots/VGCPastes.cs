@@ -143,7 +143,7 @@ namespace SysBot.Pokemon.Discord
                     return;
                 }
 
-                var namer = new GengarNamer();
+                var namer = new DefaultPKMFileNamer();
                 var pokemonImages = new List<System.Drawing.Image>();
 
                 var sanitizedTeamDescription = SanitizeFileName(teamDescription);

@@ -23,10 +23,6 @@ public static class QueueHelper<T> where T : PKM, new()
 {
     private const uint MaxTradeCode = 9999_9999;
 
-    // A dictionary to hold batch trade file paths and their deletion status
-    private static readonly Dictionary<int, List<string>> batchTradeFiles = [];
-    private static readonly Dictionary<ulong, int> userBatchTradeMaxDetailId = [];
-
     public static async Task AddToQueueAsync(SocketCommandContext context, int code, string trainer, RequestSignificance sig, T trade, PokeRoutineType routine, PokeTradeType type, SocketUser trader, bool isBatchTrade = false, int batchTradeNumber = 1, int totalBatchTrades = 1, bool isHiddenTrade = false, bool isMysteryEgg = false, List<Pictocodes>? lgcode = null, bool ignoreAutoOT = false, bool setEdited = false, bool isNonNative = false)
     {
         if ((uint)code > MaxTradeCode)
@@ -37,7 +33,8 @@ public static class QueueHelper<T> where T : PKM, new()
 
         try
         {
-            if (!isBatchTrade || batchTradeNumber == 1)
+            // Only send trade code for non-batch trades (batch container will handle its own)
+            if (!isBatchTrade)
             {
                 if (trade is PB7 && lgcode != null)
                 {
@@ -50,7 +47,7 @@ public static class QueueHelper<T> where T : PKM, new()
                 }
             }
 
-            var result = await AddToTradeQueue(context, trade, code, trainer, sig, routine, isBatchTrade ? PokeTradeType.Batch : type, trader, isBatchTrade, batchTradeNumber, totalBatchTrades, isHiddenTrade, isMysteryEgg, lgcode, ignoreAutoOT, setEdited, isNonNative).ConfigureAwait(false);
+            var result = await AddToTradeQueue(context, trade, code, trainer, sig, routine, type, trader, isBatchTrade, batchTradeNumber, totalBatchTrades, isHiddenTrade, isMysteryEgg, lgcode, ignoreAutoOT, setEdited, isNonNative).ConfigureAwait(false);
         }
         catch (HttpException ex)
         {
@@ -63,23 +60,29 @@ public static class QueueHelper<T> where T : PKM, new()
         return AddToQueueAsync(context, code, trainer, sig, trade, routine, type, context.User, ignoreAutoOT: ignoreAutoOT);
     }
 
-    private static async Task<TradeQueueResult> AddToTradeQueue(SocketCommandContext context, T pk, int code, string trainerName, RequestSignificance sig, PokeRoutineType type, PokeTradeType t, SocketUser trader, bool isBatchTrade, int batchTradeNumber, int totalBatchTrades, bool isHiddenTrade, bool isMysteryEgg = false, List<Pictocodes>? lgcode = null, bool ignoreAutoOT = false, bool setEdited = false, bool isNonNative = false)
+    private static async Task<TradeQueueResult> AddToTradeQueue(SocketCommandContext context, T pk, int code, string trainerName, RequestSignificance sig, PokeRoutineType type, PokeTradeType t, SocketUser trader, bool isBatchTrade, int batchTradeNumber, int totalBatchTrades, bool isHiddenTrade, bool isMysteryEgg = false,
+
+        List<Pictocodes>? lgcode = null, bool ignoreAutoOT = false, bool setEdited = false, bool isNonNative = false)
     {
         var user = trader;
         var userID = user.Id;
         var name = user.Username;
 
         var trainer = new PokeTradeTrainerInfo(trainerName, userID);
-        var notifier = new DiscordTradeNotifier<T>(pk, trainer, code, trader, batchTradeNumber, totalBatchTrades, isMysteryEgg, lgcode ?? new List<Pictocodes>());
-        var uniqueTradeID = GenerateUniqueTradeID();
+        var notifier = new DiscordTradeNotifier<T>(pk, trainer, code, trader, batchTradeNumber, totalBatchTrades, isMysteryEgg, lgcode: lgcode);
+        int uniqueTradeID = GenerateUniqueTradeID();
         var detail = new PokeTradeDetail<T>(pk, trainer, notifier, t, code, sig == RequestSignificance.Favored, lgcode, batchTradeNumber, totalBatchTrades, isMysteryEgg, uniqueTradeID, ignoreAutoOT, setEdited);
         var trade = new TradeEntry<T>(detail, userID, PokeRoutineType.LinkTrade, name, uniqueTradeID);
         var hub = SysCord<T>.Runner.Hub;
         var Info = hub.Queues.Info;
-        var allowMultiple = isBatchTrade;
         var isSudo = sig == RequestSignificance.Owner;
-        var added = Info.AddToTradeQueue(trade, userID, allowMultiple, isSudo);
+        var added = Info.AddToTradeQueue(trade, userID, false, isSudo);
 
+        // Start queue position updates for Discord notification
+        if (added != QueueResultAdd.AlreadyInQueue && notifier is DiscordTradeNotifier<T> discordNotifier)
+        {
+            await discordNotifier.SendInitialQueueUpdate().ConfigureAwait(false);
+        }
         int totalTradeCount = 0;
         TradeCodeStorage.TradeCodeDetails? tradeDetails = null;
         if (SysCord<T>.Runner.Config.Trade.TradeConfiguration.StoreTradeCodes)
@@ -93,9 +96,10 @@ public static class QueueHelper<T> where T : PKM, new()
             return new TradeQueueResult(false);
         }
         var embedData = DetailsExtractor<T>.ExtractPokemonDetails(
-         pk, trader, isMysteryEgg, type == PokeRoutineType.Clone, type == PokeRoutineType.Dump,
-         type == PokeRoutineType.FixOT, type == PokeRoutineType.SeedCheck, isBatchTrade, batchTradeNumber, totalBatchTrades
+        pk, trader, isMysteryEgg, type == PokeRoutineType.Clone, type == PokeRoutineType.Dump,
+        type == PokeRoutineType.FixOT, type == PokeRoutineType.SeedCheck, false, 1, 1
         );
+
         try
         {
             (string embedImageUrl, DiscordColor embedColor) = await PrepareEmbedDetails(pk);
@@ -193,25 +197,13 @@ public static class QueueHelper<T> where T : PKM, new()
                 if (embedData.IsLocalFile)
                 {
                     await context.Channel.SendFileAsync(embedData.EmbedImageUrl, embed: embed);
-                    if (isBatchTrade)
-                    {
-                        userBatchTradeMaxDetailId[userID] = Math.Max(userBatchTradeMaxDetailId.GetValueOrDefault(userID), detail.ID);
-                        await ScheduleFileDeletion(embedData.EmbedImageUrl, 0, detail.ID);
-                        if (detail.ID == userBatchTradeMaxDetailId[userID] && batchTradeNumber == totalBatchTrades)
-                        {
-                            DeleteBatchTradeFiles(detail.ID);
-                        }
-                    }
-                    else
-                    {
-                        await ScheduleFileDeletion(embedData.EmbedImageUrl, 0);
-                    }
+                    await ScheduleFileDeletion(embedData.EmbedImageUrl, 0);
                 }
-                else
-                {
-                    await context.Channel.SendMessageAsync(embed: embed);
-                }
+            else
+            {
+                await context.Channel.SendMessageAsync(embed: embed);
             }
+        }
             else
             {
                 var message = $"▹𝗦𝗨𝗖𝗖𝗘𝗦𝗦𝗙𝗨𝗟𝗟𝗬 𝗔𝗗𝗗𝗘𝗗◃\n" +
@@ -235,6 +227,41 @@ public static class QueueHelper<T> where T : PKM, new()
         }
 
         return new TradeQueueResult(true);
+    }
+
+    public static async Task AddBatchContainerToQueueAsync(SocketCommandContext context, int code, string trainer, T firstTrade, List<T> allTrades, RequestSignificance sig, SocketUser trader, int totalBatchTrades)
+    {
+        var userID = trader.Id;
+        var name = trader.Username;
+        var trainer_info = new PokeTradeTrainerInfo(trainer, userID);
+        var notifier = new DiscordTradeNotifier<T>(firstTrade, trainer_info, code, trader, 1, totalBatchTrades, false, lgcode: null);
+        int uniqueTradeID = GenerateUniqueTradeID();
+        var detail = new PokeTradeDetail<T>(firstTrade, trainer_info, notifier, PokeTradeType.Batch, code,
+        sig == RequestSignificance.Favored, null, 1, totalBatchTrades, false, uniqueTradeID)
+        {
+            BatchTrades = allTrades
+        };
+        var trade = new TradeEntry<T>(detail, userID, PokeRoutineType.Batch, name, uniqueTradeID);
+        var hub = SysCord<T>.Runner.Hub;
+        var Info = hub.Queues.Info;
+        var added = Info.AddToTradeQueue(trade, userID, false, sig == RequestSignificance.Owner);
+        // Send trade code once
+        await EmbedHelper.SendTradeCodeEmbedAsync(trader, code).ConfigureAwait(false);
+        // Start queue position updates for Discord notification
+        if (added != QueueResultAdd.AlreadyInQueue && notifier is DiscordTradeNotifier<T> discordNotifier)
+        {
+            await discordNotifier.SendInitialQueueUpdate().ConfigureAwait(false);
+        }
+        // Handle the display
+        if (added == QueueResultAdd.AlreadyInQueue)
+        {
+            await context.Channel.SendMessageAsync("You are already in the queue!").ConfigureAwait(false);
+            return;
+        }
+        var position = Info.CheckPosition(userID, uniqueTradeID, PokeRoutineType.Batch);
+        var botct = Info.Hub.Bots.Count;
+        var baseEta = position.Position > botct ? Info.Hub.Config.Queues.EstimateDelay(position.Position, botct) : 0;
+        await context.Channel.SendMessageAsync($"{trader.Mention} - Added batch trade with {totalBatchTrades} Pokémon to the queue! Position: {position.Position}. Estimated: {baseEta:F1} min(s).").ConfigureAwait(false);
     }
 
     private static int GenerateUniqueTradeID()
@@ -287,9 +314,10 @@ public static class QueueHelper<T> where T : PKM, new()
 
         if (pk.IsEgg)
         {
-            string eggImageUrl = "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/egg2.png";
+            string eggImageUrl = GetEggTypeImageUrl(pk);
             speciesImageUrl = AbstractTrade<T>.PokeImg(pk, false, true, null);
-            System.Drawing.Image? combinedImage = await OverlaySpeciesOnEgg(eggImageUrl, speciesImageUrl);
+            System.Drawing.Image combinedImage = await OverlaySpeciesOnEgg(eggImageUrl, speciesImageUrl);
+            embedImageUrl = SaveImageLocally(combinedImage);
 
             if (combinedImage == null)
             {
@@ -505,26 +533,11 @@ public static class QueueHelper<T> where T : PKM, new()
         }
     }
 
-    private static async Task ScheduleFileDeletion(string filePath, int delayInMilliseconds, int batchTradeId = -1)
+    private static async Task ScheduleFileDeletion(string filePath, int delayInMilliseconds)
     {
-        if (batchTradeId != -1)
-        {
-            // If this is part of a batch trade, add the file path to the dictionary
-            if (!batchTradeFiles.TryGetValue(batchTradeId, out List<string>? value))
-            {
-                value = ([]);
-                batchTradeFiles[batchTradeId] = value;
-            }
-
-            value.Add(filePath);
-        }
-        else
-        {
-            // If this is not part of a batch trade, delete the file after the delay
             await Task.Delay(delayInMilliseconds);
             DeleteFile(filePath);
         }
-    }
 
     private static void DeleteFile(string filePath)
     {
@@ -538,19 +551,6 @@ public static class QueueHelper<T> where T : PKM, new()
             {
                 Console.WriteLine($"Error deleting file: {ex.Message}");
             }
-        }
-    }
-
-    // Call this method after the last trade in a batch is completed
-    private static void DeleteBatchTradeFiles(int batchTradeId)
-    {
-        if (batchTradeFiles.TryGetValue(batchTradeId, out var files))
-        {
-            foreach (var filePath in files)
-            {
-                DeleteFile(filePath);
-            }
-            batchTradeFiles.Remove(batchTradeId);
         }
     }
 
@@ -670,6 +670,21 @@ public static class QueueHelper<T> where T : PKM, new()
                 break;
         }
         await context.Channel.SendMessageAsync(message).ConfigureAwait(false);
+    }
+
+    private static string GetEggTypeImageUrl(T pk)
+    {
+        var pi = pk.PersonalInfo;
+        byte typeIndex = pi.Type1;
+        string[] typeNames = [
+        "Normal", "Fighting", "Flying", "Poison", "Ground", "Rock", "Bug", "Ghost",
+        "Steel", "Fire", "Water", "Grass", "Electric", "Psychic", "Ice", "Dragon",
+        "Dark", "Fairy"
+        ];
+        string typeName = (typeIndex >= 0 && typeIndex < typeNames.Length)
+        ? typeNames[typeIndex]
+        : "Normal";
+        return $"https://raw.githubusercontent.com/hexbyt3/HomeImages/ebd562941ff77b1889a297ee50eacfa8cb3589de/128x128/Egg_{typeName}.png";
     }
 
     public static (string, Embed) CreateLGLinkCodeSpriteEmbed(List<Pictocodes> lgcode)

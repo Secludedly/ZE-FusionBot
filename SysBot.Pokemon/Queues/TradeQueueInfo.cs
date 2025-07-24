@@ -1,6 +1,7 @@
 using Discord.WebSocket;
 using PKHeX.Core;
 using SysBot.Base;
+using SysBot.Pokemon.Helpers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -57,16 +58,50 @@ public sealed record TradeQueueInfo<T>(PokeTradeHub<T> Hub)
         lock (_sync)
         {
             var allTrades = Hub.Queues.AllQueues.SelectMany(q => q.Queue.Select(x => x.Value)).ToList();
+
+            // Check if the user is in the queue
             var index = allTrades.FindIndex(z => z.Trainer.ID == uid && z.UniqueTradeID == uniqueTradeID);
             if (index < 0)
                 return QueueCheckResult<T>.None;
 
             var entry = allTrades[index];
-            var actualIndex = index + 1;
 
-            var inQueue = allTrades.Count;
+            // Count total trades accounting for batch trades
+            int totalTradesAhead = 0;
+            int processingCount = 0;
+            for (int i = 0; i < allTrades.Count; i++)
+            {
+                var trade = allTrades[i];
 
-            return new QueueCheckResult<T>(true, new TradeEntry<T>(entry, uid, type, entry.Trainer.TrainerName, uniqueTradeID), actualIndex, inQueue);
+                // Count processing trades
+                if (trade.IsProcessing)
+                {
+                    processingCount++;
+                    continue;
+                }
+
+                // For trades ahead of us, count their actual trade count
+                if (i < index)
+                {
+                    if (trade.TotalBatchTrades > 1 && trade.BatchTrades != null)
+                        totalTradesAhead += trade.BatchTrades.Count;
+                    else
+                        totalTradesAhead += 1;
+                }
+            }
+
+            // Calculate actual position
+            var actualIndex = totalTradesAhead + 1 + processingCount;
+
+            // Calculate total trades in queue
+            var totalInQueue = allTrades.Sum(trade =>
+            {
+                if (trade.TotalBatchTrades > 1 && trade.BatchTrades != null)
+                    return trade.BatchTrades.Count;
+                return 1;
+            }) + processingCount;
+
+            return new QueueCheckResult<T>(true, new TradeEntry<T>(entry, uid, type, entry.Trainer.TrainerName, uniqueTradeID), actualIndex, totalInQueue);
         }
     }
 
@@ -93,6 +128,25 @@ public sealed record TradeQueueInfo<T>(PokeTradeHub<T> Hub)
         {
             Hub.Queues.ClearAll();
             UsersInQueue.Clear();
+        }
+    }
+
+    public void CleanStuckTrades()
+    {
+        lock (_sync)
+        {
+            var stuckTrades = UsersInQueue.Where(x => x.Trade.IsProcessing).ToList();
+            foreach (var trade in stuckTrades)
+            {
+                trade.Trade.IsProcessing = false;
+                Remove(trade);
+                // Also release batch tracker if it's a batch trade
+                if (trade.Trade.TotalBatchTrades > 1)
+                {
+                    var tracker = BatchTradeTracker<T>.Instance;
+                    tracker.ReleaseBatch(trade.UserID, trade.Trade.UniqueTradeID);
+                }
+            }
         }
     }
 
@@ -246,6 +300,26 @@ public sealed record TradeQueueInfo<T>(PokeTradeHub<T> Hub)
     {
         lock (_sync)
             return UsersInQueue.Count(func);
+    }
+
+    public (int effectiveCount, int processingBatchTrades) GetQueueStats()
+    {
+        lock (_sync)
+        {
+            var allTrades = Hub.Queues.AllQueues.SelectMany(q => q.Queue.Select(x => x.Value)).ToList();
+
+            // Count effective queue size (batch trades count as their full size)
+            int effectiveCount = allTrades
+            .GroupBy(t => new { t.Trainer.ID, t.UniqueTradeID })
+            .Sum(g => g.First().TotalBatchTrades > 1 ? g.First().TotalBatchTrades : g.Count());
+
+            // Count how many batch trades are currently processing
+            int processingBatchTrades = allTrades
+            .Where(t => t.IsProcessing && t.TotalBatchTrades > 1)
+            .GroupBy(t => new { t.Trainer.ID, t.UniqueTradeID })
+            .Count();
+            return (effectiveCount, processingBatchTrades);
+        }
     }
 
     public int GetRandomTradeCode(int trainerID)

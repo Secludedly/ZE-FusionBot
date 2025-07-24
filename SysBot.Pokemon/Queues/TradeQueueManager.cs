@@ -15,7 +15,7 @@ public class TradeQueueManager<T> where T : PKM, new()
     public readonly List<Action<PokeRoutineExecutorBase, PokeTradeDetail<T>>> Forwarders = [];
     public readonly TradeQueueInfo<T> Info;
 
-    private readonly BatchTradeTracker<T> _batchTracker = new();
+    public BatchTradeTracker<T> BatchTracker => BatchTradeTracker<T>.Instance;
     private readonly PokeTradeHub<T> Hub;
 
     // Individual queues for different trade types
@@ -84,22 +84,15 @@ public class TradeQueueManager<T> where T : PKM, new()
         bool isBatchTrade = detail.TotalBatchTrades > 1;
 
         // For batch trades, check if we can process it
-        if (isBatchTrade && !_batchTracker.CanProcessBatchTrade(detail))
+        if (isBatchTrade && !BatchTracker.CanProcessBatchTrade(detail))
             return false;
-
-        // For first trade in a batch
-        if (isBatchTrade && detail.BatchTradeNumber == 1)
-        {
-            // Store all trades in the batch
-            TradeQueueManager<T>.StoreRemainingBatchTrades(queue, detail);
-        }
 
         // Try to dequeue the trade
         if (!queue.TryDequeue(out detail, out priority))
             return false;
 
         // For batch trades, try to claim it
-        if (isBatchTrade && !_batchTracker.TryClaimBatchTrade(detail, botName))
+        if (isBatchTrade && !BatchTracker.TryClaimBatchTrade(detail, botName))
         {
             queue.Enqueue(detail, priority);
             return false;
@@ -108,57 +101,9 @@ public class TradeQueueManager<T> where T : PKM, new()
         return true;
     }
 
-    private static void StoreRemainingBatchTrades(PokeTradeQueue<T> queue, PokeTradeDetail<T> firstTrade)
-    {
-        var batchTrades = new List<(PokeTradeDetail<T>, uint)>();
-        var tempStorage = new List<(PokeTradeDetail<T>, uint)>();
-
-        // Store current trades
-        while (queue.TryDequeue(out var trade, out var prio))
-        {
-            if (trade.Trainer.ID == firstTrade.Trainer.ID &&
-                trade.UniqueTradeID == firstTrade.UniqueTradeID)
-            {
-                batchTrades.Add((trade, prio));
-            }
-            else
-            {
-                tempStorage.Add((trade, prio));
-            }
-        }
-
-        // Put non-batch trades back
-        foreach (var (trade, prio) in tempStorage)
-        {
-            queue.Enqueue(trade, prio);
-        }
-
-        // Put batch trades back in order
-        foreach (var (trade, prio) in batchTrades.OrderBy(x => x.Item1.BatchTradeNumber))
-        {
-            queue.Enqueue(trade, prio);
-        }
-    }
-
     public void CompleteTrade(PokeRoutineExecutorBase b, PokeTradeDetail<T> detail)
     {
-        _batchTracker.CompleteBatchTrade(detail);
-        if (detail.TotalBatchTrades > 1)
-        {
-            // Re-sort remaining batch trades if needed
-            var queue = GetQueue(PokeRoutineType.Batch);
-            var tempStorage = new List<(PokeTradeDetail<T>, uint)>();
-
-            while (queue.TryDequeue(out var trade, out var prio))
-            {
-                tempStorage.Add((trade, prio));
-            }
-
-            foreach (var (trade, prio) in tempStorage.OrderBy(x => x.Item1.BatchTradeNumber))
-            {
-                queue.Enqueue(trade, prio);
-            }
-        }
+        BatchTracker.CompleteBatchTrade(detail);
     }
 
     private bool GetFlexDequeue(out PokeTradeDetail<T> detail, out uint priority, string botName)
@@ -194,7 +139,7 @@ public class TradeQueueManager<T> where T : PKM, new()
             if (!q.TryPeek(out var qDetail, out var qPriority))
                 continue;
 
-            if (qDetail.TotalBatchTrades > 1 && !_batchTracker.CanProcessBatchTrade(qDetail))
+            if (qDetail.TotalBatchTrades > 1 && !BatchTracker.CanProcessBatchTrade(qDetail))
                 continue;
 
             if (qPriority > bestPriority)
@@ -220,7 +165,7 @@ public class TradeQueueManager<T> where T : PKM, new()
         if (!preferredQueue.TryDequeue(out detail, out priority))
             return false;
 
-        if (detail.TotalBatchTrades > 1 && !_batchTracker.TryClaimBatchTrade(detail, botName))
+        if (detail.TotalBatchTrades > 1 && !BatchTracker.TryClaimBatchTrade(detail, botName))
         {
             preferredQueue.Enqueue(detail, priority);
             return false;

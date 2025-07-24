@@ -1,29 +1,51 @@
 using PKHeX.Core;
-using System.Collections.Concurrent;
 using System;
-using System.Linq;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
+
 namespace SysBot.Pokemon.Helpers
 {
     public class BatchTradeTracker<T> where T : PKM, new()
     {
-        // Just track which bot is handling which batch
+        private static readonly ConcurrentDictionary<Type, object> _instances = new();
+        private static readonly object _instanceLock = new();
+
         private readonly ConcurrentDictionary<(ulong TrainerId, int UniqueTradeID), string> _activeBatches = new();
         private readonly TimeSpan _tradeTimeout = TimeSpan.FromMinutes(5);
         private readonly ConcurrentDictionary<(ulong TrainerId, int UniqueTradeID), DateTime> _lastTradeTime = new();
         private readonly ConcurrentDictionary<ulong, List<T>> _receivedPokemon = new();
         private readonly object _claimLock = new();
 
+        private BatchTradeTracker() { }
+
+        public static BatchTradeTracker<T> Instance
+        {
+            get
+            {
+                var type = typeof(T);
+                if (_instances.TryGetValue(type, out var instance))
+                    return (BatchTradeTracker<T>)instance;
+
+                lock (_instanceLock)
+                {
+                    if (_instances.TryGetValue(type, out instance))
+                        return (BatchTradeTracker<T>)instance;
+
+                    var newInstance = new BatchTradeTracker<T>();
+                    _instances[type] = newInstance;
+                    return newInstance;
+                }
+            }
+        }
+
         public bool CanProcessBatchTrade(PokeTradeDetail<T> trade)
         {
             if (trade.TotalBatchTrades <= 1)
                 return true;
+
             CleanupStaleEntries();
-            var key = (trade.Trainer.ID, trade.UniqueTradeID);
-            // If nobody is handling this batch yet, allow it
-            if (!_activeBatches.ContainsKey(key))
-                return true;
-            return true; // Allow all trades from this batch
+            return true; // Always true since we handle one batch container at a time
         }
 
         public bool TryClaimBatchTrade(PokeTradeDetail<T> trade, string botName)
@@ -35,14 +57,14 @@ namespace SysBot.Pokemon.Helpers
 
             lock (_claimLock)
             {
-                // If we already have this batch, make sure it's the same bot
+                CleanupStaleEntries();
+
                 if (_activeBatches.TryGetValue(key, out var existingBot))
                 {
                     _lastTradeTime[key] = DateTime.Now;
                     return botName == existingBot;
                 }
 
-                // Try to claim this batch
                 if (_activeBatches.TryAdd(key, botName))
                 {
                     _lastTradeTime[key] = DateTime.Now;
@@ -57,14 +79,19 @@ namespace SysBot.Pokemon.Helpers
         {
             if (trade.TotalBatchTrades <= 1)
                 return;
+
             var key = (trade.Trainer.ID, trade.UniqueTradeID);
-            _lastTradeTime[key] = DateTime.Now;
-            // Only remove tracking when it's the last trade
-            if (trade.BatchTradeNumber == trade.TotalBatchTrades)
-            {
-                _activeBatches.TryRemove(key, out _);
-                _lastTradeTime.TryRemove(key, out _);
-            }
+
+            // Since we process the entire batch as one unit, we can remove it immediately
+            _activeBatches.TryRemove(key, out _);
+            _lastTradeTime.TryRemove(key, out _);
+        }
+
+        public void ReleaseBatch(ulong trainerId, int uniqueTradeId)
+        {
+            var key = (trainerId, uniqueTradeId);
+            _activeBatches.TryRemove(key, out _);
+            _lastTradeTime.TryRemove(key, out _);
         }
 
         private void CleanupStaleEntries()
@@ -74,6 +101,7 @@ namespace SysBot.Pokemon.Helpers
                 .Where(x => now - x.Value > _tradeTimeout)
                 .Select(x => x.Key)
                 .ToList();
+
             foreach (var key in staleKeys)
             {
                 _activeBatches.TryRemove(key, out _);
@@ -93,6 +121,7 @@ namespace SysBot.Pokemon.Helpers
                 var newList = new List<T>();
                 _receivedPokemon.TryAdd(trainerId, newList);
             }
+
             if (_receivedPokemon.TryGetValue(trainerId, out var list))
             {
                 lock (list)
@@ -108,7 +137,7 @@ namespace SysBot.Pokemon.Helpers
             {
                 lock (list)
                 {
-                    return [.. list]; // Return copy of list
+                    return [.. list];
                 }
             }
             return [];
