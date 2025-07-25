@@ -13,6 +13,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Text;
 using System.Threading.Tasks;
 using Color = System.Drawing.Color;
 using DiscordColor = Discord.Color;
@@ -245,13 +246,16 @@ public static class QueueHelper<T> where T : PKM, new()
         var hub = SysCord<T>.Runner.Hub;
         var Info = hub.Queues.Info;
         var added = Info.AddToTradeQueue(trade, userID, false, sig == RequestSignificance.Owner);
+
         // Send trade code once
         await EmbedHelper.SendTradeCodeEmbedAsync(trader, code).ConfigureAwait(false);
+
         // Start queue position updates for Discord notification
         if (added != QueueResultAdd.AlreadyInQueue && notifier is DiscordTradeNotifier<T> discordNotifier)
         {
             await discordNotifier.SendInitialQueueUpdate().ConfigureAwait(false);
         }
+
         // Handle the display
         if (added == QueueResultAdd.AlreadyInQueue)
         {
@@ -261,7 +265,123 @@ public static class QueueHelper<T> where T : PKM, new()
         var position = Info.CheckPosition(userID, uniqueTradeID, PokeRoutineType.Batch);
         var botct = Info.Hub.Bots.Count;
         var baseEta = position.Position > botct ? Info.Hub.Config.Queues.EstimateDelay(position.Position, botct) : 0;
-        await context.Channel.SendMessageAsync($"{trader.Mention} - Added batch trade with {totalBatchTrades} Pokémon to the queue! Position: {position.Position}. Estimated: {baseEta:F1} min(s).").ConfigureAwait(false);
+
+        // Get user trade details for footer
+        int totalTradeCount = 0;
+        TradeCodeStorage.TradeCodeDetails? tradeDetails = null;
+        if (SysCord<T>.Runner.Config.Trade.TradeConfiguration.StoreTradeCodes)
+        {
+            var tradeCodeStorage = new TradeCodeStorage();
+
+            // Fetch current count
+            totalTradeCount = tradeCodeStorage.GetTradeCount(trader.Id);
+
+            // Always true in batch context
+            bool isBatchTrade = true;
+            int batchTradeNumber = 1; // This will get updated inside the loop
+
+            // Adjust total trade count assuming first trade is being processed now
+            if (isBatchTrade)
+                totalTradeCount += batchTradeNumber;
+
+            tradeDetails = tradeCodeStorage.GetTradeDetails(trader.Id);
+        }
+
+        // Create and send embeds for each Pokémon in the batch
+        if (SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.UseEmbeds)
+        {
+            for (int i = 0; i < allTrades.Count; i++)
+            {
+                var pk = allTrades[i];
+                var batchTradeNumber = i + 1;
+
+                // Extract details for this Pokémon
+                var embedData = DetailsExtractor<T>.ExtractPokemonDetails(
+                pk, trader, false, false, false, false, false, true, batchTradeNumber, totalBatchTrades
+                );
+                try
+                {
+
+                    // Prepare embed details
+                    (string embedImageUrl, DiscordColor embedColor) = await PrepareEmbedDetails(pk);
+                    embedData.EmbedImageUrl = embedImageUrl;
+                    embedData.HeldItemUrl = string.Empty;
+                    if (!string.IsNullOrWhiteSpace(embedData.HeldItem))
+                    {
+                        string heldItemName = embedData.HeldItem.ToLower().Replace(" ", "");
+                        embedData.HeldItemUrl = $"https://serebii.net/itemdex/sprites/{heldItemName}.png";
+                    }
+
+                    embedData.IsLocalFile = File.Exists(embedData.EmbedImageUrl);
+
+                    // Build footer text with batch info
+                    double tradeEta = baseEta + (batchTradeNumber - 1); // adds 1 min per Pokémon in batch (except first one)
+                    string etaMessage = $"Estimated: {tradeEta:F1} min(s) for trade {batchTradeNumber}/{totalBatchTrades}";
+                    string userDetailsText = DetailsExtractor<T>.GetUserDetails(
+                        totalTradeCount,
+                        tradeDetails,
+                        etaMessage,
+                        (position.Position, position.TotalBatchTrades)
+                    );
+
+                    // Build the footer text in a clean order
+                    var sb = new StringBuilder();
+                    if (!string.IsNullOrEmpty(userDetailsText))
+                        sb.AppendLine(userDetailsText);
+
+                    sb.Append($"ZE FusionBot {TradeBot.Version}");
+                    string footerText = sb.ToString();
+
+                    // Create embed
+                    var embedBuilder = new EmbedBuilder()
+                    .WithColor(embedColor)
+                    .WithImageUrl(embedData.IsLocalFile ? $"attachment://{Path.GetFileName(embedData.EmbedImageUrl)}" : embedData.EmbedImageUrl)
+                    .WithFooter(footerText)
+                    .WithAuthor(new EmbedAuthorBuilder()
+                    .WithName(embedData.AuthorName)
+                    .WithIconUrl(trader.GetAvatarUrl() ?? trader.GetDefaultAvatarUrl())
+                    .WithUrl("https://genpkm.com"));
+                    DetailsExtractor<T>.AddAdditionalText(embedBuilder);
+                    DetailsExtractor<T>.AddNormalTradeFields(embedBuilder, embedData, trader.Mention, pk);
+
+                    // Check for Non-Native and Home Tracker
+                    bool isNonNative = false; // You may need to pass this from the batch trade processing
+                    if (pk is IHomeTrack homeTrack)
+                    {
+                        if (homeTrack.HasTracker)
+                        {
+                            embedBuilder.AddField("**__Notice__**: **Home Tracker Detected.**", "*AutoOT not applied.*");
+                        }
+                    }
+
+                    DetailsExtractor<T>.AddThumbnails(embedBuilder, false, false, embedData.HeldItemUrl);
+                    var embed = embedBuilder.Build();
+
+                    // Send embed
+                    if (embedData.IsLocalFile)
+                    {
+                        await context.Channel.SendFileAsync(embedData.EmbedImageUrl, embed: embed);
+                        await ScheduleFileDeletion(embedData.EmbedImageUrl, 0);
+                    }
+
+                    else
+                    {
+                        await context.Channel.SendMessageAsync(embed: embed);
+                    }
+
+                    // Small delay between embeds to avoid rate limiting
+                    if (i < allTrades.Count - 1)
+                    {
+                        await Task.Delay(500);
+                    }
+                }
+
+                catch (HttpException ex)
+                {
+                    await HandleDiscordExceptionAsync(context, trader, ex);
+                }
+            }
+        }
     }
 
     private static int GenerateUniqueTradeID()

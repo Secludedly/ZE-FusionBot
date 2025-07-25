@@ -298,8 +298,6 @@ public class DetailsExtractor<T> where T : PKM, new()
         return string.Empty;
     }
 
-
-
     public static void AddAdditionalText(EmbedBuilder embedBuilder)
     {
         string additionalText = string.Join("\n", SysCordSettings.Settings.AdditionalEmbedText);
