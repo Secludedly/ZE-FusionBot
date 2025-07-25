@@ -790,6 +790,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             }
         }
         content = ReusableActions.StripCodeBlock(content);
+        content = BatchNormalizer.NormalizeBatchCommands(content);
         var trades = ParseBatchTradeContent(content);
         if (trades.Count < 2)
         {
