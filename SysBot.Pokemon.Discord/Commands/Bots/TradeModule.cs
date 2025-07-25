@@ -791,6 +791,13 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         }
         content = ReusableActions.StripCodeBlock(content);
         var trades = ParseBatchTradeContent(content);
+        if (trades.Count < 2)
+        {
+            await ReplyAndDeleteAsync("Batch trades require at least 2 Pokémon. Use regular `.trade` for single Pokémon trades.", 5, Context.Message);
+            _ = DeleteMessagesAfterDelayAsync(null, Context.Message, 2);
+            return;
+        }
+
         const int maxTradesAllowed = 4;
         // Check if batch mode is allowed and if the number of trades exceeds the limit
         if (maxTradesAllowed < 1 || trades.Count > maxTradesAllowed)
@@ -862,10 +869,14 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             return;
         }
         // All trades are valid, proceed to queue
-        if (batchPokemonList.Count > 0)
+        if (batchPokemonList.Count == 0)
         {
-            await ProcessBatchContainer(batchPokemonList, batchTradeCode, trades.Count);
+            await ReplyAndDeleteAsync("Unexpected error: No valid Pokémon were processed from the batch.", 5, Context.Message);
+            return;
         }
+
+        await ProcessBatchContainer(batchPokemonList, batchTradeCode, trades.Count);
+
         // Final cleanup
         if (Context.Message is IUserMessage userMessage)
         {
