@@ -211,12 +211,6 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
             return toSend;
         }
 
-        if (toSend.Species == (ushort)Species.Ditto)
-        {
-            Log("Do nothing to trade Pokemon, since pokemon is Ditto");
-            return toSend;
-        }
-
         if (toSend.Generation != toSend.Format)
         {
             Log("Can not apply Partner details: Current handler cannot be different gen OT.");
