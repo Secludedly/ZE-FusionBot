@@ -793,7 +793,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         var trades = ParseBatchTradeContent(content);
         if (trades.Count < 2)
         {
-            await ReplyAndDeleteAsync("Batch trades require at least 2 Pokémon. Use regular `.trade` for single Pokémon trades.", 5, Context.Message);
+            await ReplyAndDeleteAsync("Batch trades require at least two Pokémon. Use the standard trade command for single Pokémon trades.", 5, Context.Message);
             _ = DeleteMessagesAfterDelayAsync(null, Context.Message, 2);
             return;
         }
