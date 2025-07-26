@@ -49,8 +49,6 @@ namespace SysBot.Pokemon.WinForms
         private FlowLayoutPanel _FLP_Bots;
         private PictureBox _pictureBox1;
 
-
-
         public BotsForm()
         {
             InitializeControls();
@@ -66,11 +64,10 @@ namespace SysBot.Pokemon.WinForms
             _B_Stop = new FancyButton { Text = "STOP", Location = new Point(120, 7), Size = new Size(100, 40) };
             _B_RebootStop = new FancyButton { Text = "RESTART", Location = new Point(230, 7), Size = new Size(100, 40) };
             _updater = new FancyButton { Text = "UPDATE", Location = new Point(340, 7), Size = new Size(100, 40) };
-            _B_New = new FancyButton { Text = "+", Location = new Point(424, 55), Size = new Size(54, 30) };
-            _B_New.Font = new Font(_B_New.Font.FontFamily, 16, FontStyle.Bold);
+            _B_New = new FancyButton { Text = "+", Location = new Point(423, 56), Size = new Size(54, 30) };
+            _B_New.Font = new Font(_B_New.Font.FontFamily, 10, FontStyle.Bold);
             _B_Reload = new FancyButton { Text = "RELOAD", Location = new Point(625, 40), Size = new Size(100, 40) };
             _B_Reload.Click += (_, _) => RestartApplication();
-
 
             // Colors for boxes and controls
             Color darkBG = Color.FromArgb(20, 19, 57);
@@ -129,7 +126,6 @@ namespace SysBot.Pokemon.WinForms
                 _FLP_Bots.Size = new Size(ClientSize.Width - 20, ClientSize.Height - 100); // Match the initial size minus padding
                 ResizeBots();
             };
-
 
                 Controls.AddRange(new Control[] {
                 _B_Start, _B_Stop, _B_RebootStop, _updater, _B_New,
@@ -237,7 +233,6 @@ namespace SysBot.Pokemon.WinForms
             }
         }
 
-
         private void RestartApplication()
         {
             string exePath = Application.ExecutablePath;
@@ -256,7 +251,6 @@ namespace SysBot.Pokemon.WinForms
             // Kill current one
             Application.Exit();
         }
-
 
         public void AddNewBot(IPokeBotRunner runner, PokeBotState cfg)
         {

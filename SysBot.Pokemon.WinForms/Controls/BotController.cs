@@ -166,6 +166,24 @@ public partial class BotController : UserControl
         PB_Lamp.Image = seconds > threshold ? RedImage : GreenImage; ;
     }
 
+    public void SetTradeProgress(int percent)
+    {
+        if (InvokeRequired)
+            BeginInvoke((Action)(() => tradeProgressBar.Value = Math.Clamp(percent, 0, 100)));
+        else
+            tradeProgressBar.Value = Math.Clamp(percent, 0, 100);
+    }
+
+    public void SetProgressBarColor(Color c)
+    {
+        tradeProgressBar.ProgressColor = c;
+    }
+
+    public void ResetProgress()
+    {
+        tradeProgressBar.Value = 0;
+    }
+
     public void TryRemove()
     {
         var bot = GetBot();

@@ -46,7 +46,7 @@ public class FancyButton : Button
         FlatAppearance.BorderSize = 0;
         BackColor = Color.Transparent;
         ForeColor = Color.White;
-        Font = new Font("Montserrat-Regular", 8, FontStyle.Bold);
+        Font = new Font("Verdana", 9, FontStyle.Regular);
 
         DoubleBuffered = true;
 

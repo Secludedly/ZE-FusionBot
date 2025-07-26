@@ -1,8 +1,10 @@
 using FontAwesome.Sharp;
 using PKHeX.Core;
 using SysBot.Base;
+using SysBot.Pokemon.WinForms;
 using SysBot.Pokemon.Discord;
 using SysBot.Pokemon.Helpers;
+using SysBot.Pokemon.WinForms.Controls;
 using SysBot.Pokemon.WinForms.Properties;
 using SysBot.Pokemon.Z3;
 using System;
@@ -311,6 +313,9 @@ namespace SysBot.Pokemon.WinForms
             {
                 c.SendCommand(cmd); // When you push a button, it sends to all bots
                 c.ReadState();      // Read bot controller, update it, call it daddy
+
+                if (cmd == BotControlCommand.Stop)
+                    c.ResetProgress();
             }
         }
 
@@ -369,6 +374,68 @@ namespace SysBot.Pokemon.WinForms
             await UpdateChecker.CheckForUpdatesAsync(forceShow: true); // Will auto-handle the UpdateForm without all the other crap
         }
 
+        // Bot progress bar hook
+        private void HookBotProgress(PokeBotState cfg, PokeRoutineExecutorBase bot)
+        {
+            BotController? botControl = _botsForm.BotPanel.Controls.OfType<BotController>()
+                .FirstOrDefault(c => c.State.Connection.Equals(cfg.Connection));
+
+            if (botControl == null)
+                return;
+
+            ProgressHelper.Initialize(botControl);
+
+            if (bot is PokeTradeBotSV svBot)
+            {
+                svBot.TradeProgressChanged += percent =>
+                {
+                    if (_botsForm.InvokeRequired)
+                        _botsForm.BeginInvoke((Action)(() => ProgressHelper.Set(percent)));
+                    else
+                        ProgressHelper.Set(percent);
+                };
+            }
+            else if (bot is PokeTradeBotSWSH swshBot)
+            {
+                swshBot.TradeProgressChanged += percent =>
+                {
+                    if (_botsForm.InvokeRequired)
+                        _botsForm.BeginInvoke((Action)(() => ProgressHelper.Set(percent)));
+                    else
+                        ProgressHelper.Set(percent);
+                };
+            }
+            else if (bot is PokeTradeBotBS bsBot)
+            {
+                bsBot.TradeProgressChanged += percent =>
+                {
+                    if (_botsForm.InvokeRequired)
+                        _botsForm.BeginInvoke((Action)(() => ProgressHelper.Set(percent)));
+                    else
+                        ProgressHelper.Set(percent);
+                };
+            }
+            else if (bot is PokeTradeBotLA laBot)
+            {
+                laBot.TradeProgressChanged += percent =>
+                {
+                    if (_botsForm.InvokeRequired)
+                        _botsForm.BeginInvoke((Action)(() => ProgressHelper.Set(percent)));
+                    else
+                        ProgressHelper.Set(percent);
+                };
+            }
+            else if (bot is PokeTradeBotLGPE lgpeBot)
+            {
+                lgpeBot.TradeProgressChanged += percent =>
+                {
+                    if (_botsForm.InvokeRequired)
+                        _botsForm.BeginInvoke((Action)(() => ProgressHelper.Set(percent)));
+                    else
+                        ProgressHelper.Set(percent);
+                };
+            }
+        }
 
         // Add a new bot to the environment and UI
         private bool AddBot(PokeBotState? cfg)
@@ -404,6 +471,7 @@ namespace SysBot.Pokemon.WinForms
             Bots.Add(cfg);                // Add the bots from config file
             Config.Bots = Bots.ToArray(); // What's this do again?
             SaveCurrentConfig();          // Save it all to config to eat now or eat later
+            HookBotProgress(cfg, newBot);
             return true;                  // This does not say false
         }
 
@@ -412,6 +480,7 @@ namespace SysBot.Pokemon.WinForms
             var row = new BotController { Width = _botsForm.BotPanel.Width };
             row.Initialize(RunningEnvironment, cfg);
             row.ReadState();
+            ProgressHelper.Initialize(row);
             _botsForm.BotPanel.Controls.Add(row);
             _botsForm.BotPanel.SetFlowBreak(row, true);
 

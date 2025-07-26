@@ -17,6 +17,14 @@ namespace SysBot.Pokemon;
 
 public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState config) : PokeRoutineExecutor8SWSH(config), ICountBot, ITradeBot
 {
+    // Add this event for progress updates (int = percentage 0-100)
+    public event Action<int>? TradeProgressChanged;
+
+    // Helper method inside your bot to raise the event
+    private void ReportProgress(int percent)
+    {
+        TradeProgressChanged?.Invoke(percent);
+    }
     public static ISeedSearchHandler<PK8> SeedChecker { get; set; } = new NoSeedSearchHandler<PK8>();
 
     private readonly TradeSettings TradeSettings = hub.Config.Trade;
@@ -163,6 +171,7 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState config) : Poke
             detail.IsProcessing = true;
             string tradetype = $" ({detail.Type})";
             Log($"Starting next {type}{tradetype} Bot Trade. Getting data...");
+            ReportProgress(10);
             hub.Config.Stream.StartTrade(this, detail, hub);
             hub.Queues.StartTrade(this, detail);
 
@@ -177,6 +186,7 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState config) : Poke
             // Updates the assets.
             hub.Config.Stream.IdleAssets(this);
             Log("Nothing to check, waiting for new users...");
+            ReportProgress(0);
         }
 
         const int interval = 10;
@@ -275,12 +285,15 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState config) : Poke
 
         // Initial connection setup (only done once)
         Log("Opening Y-Comm menu.");
+        ReportProgress(20);
         await Click(Y, 2_000, token).ConfigureAwait(false);
 
         Log("Selecting Link Trade.");
+        ReportProgress(30);
         await Click(A, 1_500, token).ConfigureAwait(false);
 
         Log("Selecting Link Trade code.");
+        ReportProgress(40);
         await Click(DDOWN, 500, token).ConfigureAwait(false);
 
         for (int i = 0; i < 2; i++)
@@ -295,6 +308,7 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState config) : Poke
 
         var code = poke.Code;
         Log($"Entering Link Trade code: {code:0000 0000}...");
+        ReportProgress(50);
         await EnterLinkCode(code, hub.Config, token).ConfigureAwait(false);
 
         WaitAtBarrierIfApplicable(token);
@@ -339,6 +353,7 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState config) : Poke
         var trainerNID = await GetTradePartnerNID(token).ConfigureAwait(false);
 
         Log($"Found Link Trade partner: {trainerName}-{trainerTID} (ID: {trainerNID})");
+        ReportProgress(75);
         poke.SendNotification(this, $"Found Link Trade partner: {trainerName}. **TID**: {trainerTID} **SID**: {trainerSID}");
 
         // Initialize lastOffered state for tracking between trades
@@ -349,6 +364,7 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState config) : Poke
         if (partnerCheck != PokeTradeResult.Success)
         {
             poke.SendNotification(this, $"Suspicious activity detected. Canceling the batch trades.");
+            ReportProgress(0);
             SendCollectedPokemonAndCleanup();
             await ExitTrade(false, token).ConfigureAwait(false);
             return partnerCheck;
@@ -423,6 +439,7 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState config) : Poke
                 if (!await IsInBox(token).ConfigureAwait(false))
                 {
                     poke.SendNotification(this, $"Failed to enter box after trade {completedTrades + 1}/{totalBatchTrades}. Canceling the remaining trades.");
+                    ReportProgress(0);
                     SendCollectedPokemonAndCleanup();
                     await ExitTrade(true, token).ConfigureAwait(false);
                     return PokeTradeResult.RecoverOpenBox;
@@ -436,6 +453,7 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState config) : Poke
             if (offered == null)
             {
                 poke.SendNotification(this, $"No Pokémon offered for trade {currentTradeIndex + 1}/{totalBatchTrades}. Canceling the remaining trades.");
+                ReportProgress(0);
                 SendCollectedPokemonAndCleanup();
                 await ExitTrade(false, token).ConfigureAwait(false);
                 return PokeTradeResult.TrainerTooSlow;
@@ -447,6 +465,7 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState config) : Poke
             if (update.check != PokeTradeResult.Success)
             {
                 poke.SendNotification(this, $"Check failed for trade {currentTradeIndex + 1}/{totalBatchTrades}. Canceling the remaining trades.");
+                ReportProgress(0);
                 SendCollectedPokemonAndCleanup();
                 await ExitTrade(false, token).ConfigureAwait(false);
                 return update.check;
@@ -455,10 +474,12 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState config) : Poke
 
             // Confirm and execute the trade
             Log($"Confirming trade {currentTradeIndex + 1}/{totalBatchTrades}.");
+            ReportProgress(85);
             var tradeResult = await ConfirmAndStartTrading(poke, token).ConfigureAwait(false);
             if (tradeResult != PokeTradeResult.Success)
             {
                 poke.SendNotification(this, $"Trade confirmation failed for trade {currentTradeIndex + 1}/{totalBatchTrades}. Canceling the remaining trades.");
+                ReportProgress(0);
                 SendCollectedPokemonAndCleanup();
                 await ExitTrade(false, token).ConfigureAwait(false);
                 return tradeResult;
@@ -476,6 +497,7 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState config) : Poke
             if (SearchUtil.HashByDetails(received) == SearchUtil.HashByDetails(toSend) && received.Checksum == toSend.Checksum)
             {
                 poke.SendNotification(this, $"Partner did not complete trade {currentTradeIndex + 1}/{totalBatchTrades}. Canceling the remaining trades.");
+                ReportProgress(0);
                 SendCollectedPokemonAndCleanup();
                 await ExitTrade(false, token).ConfigureAwait(false);
                 return PokeTradeResult.TrainerTooSlow;
@@ -500,6 +522,7 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState config) : Poke
             {
                 var allReceived = BatchTracker.GetReceivedPokemon(originalTrainerID);
                 Log($"Batch trades complete. Found {allReceived.Count} Pokémon stored for trainer {originalTrainerID}");
+                ReportProgress(100);
 
                 poke.SendNotification(this, "All batch trades completed! Thank you for trading!");
 
@@ -535,6 +558,7 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState config) : Poke
             {
                 // Notify about the next trade
                 poke.SendNotification(this, $"Trade {completedTrades} completed! Preparing for trade {completedTrades + 1}/{totalBatchTrades}...");
+                ReportProgress(92);
             }
         }
 
@@ -626,6 +650,7 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState config) : Poke
         else
         {
             detail.SendNotification(this, $"Oops! Something happened. Canceling the trade: {result}.");
+            ReportProgress(0);
             detail.TradeCanceled(this, result);
         }
     }
@@ -669,12 +694,15 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState config) : Poke
         }
 
         Log("Opening Y-Comm menu.");
+        ReportProgress(20);
         await Click(Y, 2_000, token).ConfigureAwait(false);
 
         Log("Selecting Link Trade.");
+        ReportProgress(30);
         await Click(A, 1_500, token).ConfigureAwait(false);
 
         Log("Selecting Link Trade code.");
+        ReportProgress(40);
         await Click(DDOWN, 500, token).ConfigureAwait(false);
 
         for (int i = 0; i < 2; i++)
@@ -691,6 +719,7 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState config) : Poke
 
         var code = poke.Code;
         Log($"Entering Link Trade code: {code:0000 0000}...");
+        ReportProgress(50);
         await EnterLinkCode(code, hub.Config, token).ConfigureAwait(false);
 
         // Wait for Barrier to trigger all bots simultaneously.
@@ -740,6 +769,7 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState config) : Poke
         var trainerNID = await GetTradePartnerNID(token).ConfigureAwait(false);
         RecordUtil<PokeTradeBotSWSH>.Record($"Initiating\t{trainerNID:X16}\t{trainerName}\t{poke.Trainer.TrainerName}\t{poke.Trainer.ID}\t{poke.ID}\t{toSend.EncryptionConstant:X8}");
         Log($"Found Link Trade partner: {trainerName}. **TID**: {trainerTID}  **SID**: {trainerSID}. Waiting for a Pokémon...");
+        ReportProgress(75);
 
         var tradeCodeStorage = new TradeCodeStorage();
         var existingTradeDetails = tradeCodeStorage.GetTradeDetails(poke.Trainer.ID);
@@ -843,6 +873,7 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState config) : Poke
         if (SearchUtil.HashByDetails(received) == SearchUtil.HashByDetails(toSend) && received.Checksum == toSend.Checksum)
         {
             Log($"Trade not completed. User did not trade their Pokémon.");
+            ReportProgress(0);
             RecordUtil<PokeTradeBotSWSH>.Record($"Cancelled\t{trainerNID:X16}\t{trainerName}\t{poke.Trainer.TrainerName}\t{poke.ID}\t{toSend.Species}\t{toSend.EncryptionConstant:X8}\t{offered.Species}\t{offered.EncryptionConstant:X8}");
             await ExitTrade(false, token).ConfigureAwait(false);
             return PokeTradeResult.TrainerTooSlow;
@@ -861,6 +892,7 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState config) : Poke
         var receivedSpeciesStr = LanguageHelper.GetLocalizedSpeciesLog(received);
         var sentSpeciesStr = LanguageHelper.GetLocalizedSpeciesLog(toSend);
         Log($"Trade completed. Received {receivedSpeciesStr} from {otName} in exchange for {sentSpeciesStr}.");
+        ReportProgress(100);
 
         poke.TradeFinished(this, received);
         RecordUtil<PokeTradeBotSWSH>.Record($"Finished\t{trainerNID:X16}\t{trainerName}\t{poke.Trainer.TrainerName}\t{poke.ID}\t{toSend.Species}\t{toSend.EncryptionConstant:X8}\t{received.Species}\t{received.EncryptionConstant:X8}");
@@ -878,6 +910,7 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState config) : Poke
     protected virtual Task<bool> WaitForTradePartnerOffer(CancellationToken token)
     {
         Log("Waiting for trainer...");
+        ReportProgress(60);
         return WaitForPokemonChanged(LinkTradePartnerPokemonOffset, hub.Config.Trade.TradeConfiguration.TradeWaitTime * 1_000, 0_200, token);
     }
 
@@ -973,6 +1006,7 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState config) : Poke
             var report = la.Report();
             Log(report);
             poke.SendNotification(this, "This Pokémon is not legal per PKHeX's legality checks. I am forbidden from cloning this. Exiting trade.");
+            ReportProgress(0);
             poke.SendNotification(this, report);
 
             return (offered, PokeTradeResult.IllegalTrade);
@@ -984,6 +1018,7 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState config) : Poke
 
         poke.SendNotification(this, $"**Cloned your {GameInfo.GetStrings("en").Species[clone.Species]}!**\nNow press B to cancel your offer and trade me a Pokémon you don't want.");
         Log($"Cloned a {LanguageHelper.GetLocalizedSpeciesLog(clone)}. Waiting for user to change their Pokémon...");
+        ReportProgress(80);
 
         // Separate this out from WaitForPokemonChanged since we compare to old EC from original read.
         var partnerFound = await ReadUntilChanged(LinkTradePartnerPokemonOffset, oldEC, 15_000, 0_200, false, token).ConfigureAwait(false);
@@ -1000,6 +1035,7 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState config) : Poke
         if (!partnerFound || pk2 == null || SearchUtil.HashByDetails(pk2) == SearchUtil.HashByDetails(offered))
         {
             Log("Trade partner did not change their Pokémon.");
+            ReportProgress(0);
             return (offered, PokeTradeResult.TrainerTooSlow);
         }
 
@@ -1124,6 +1160,7 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState config) : Poke
         }
 
         Log($"Ended Dump loop after processing {ctr} Pokémon.");
+        ReportProgress(0);
         await ExitSeedCheckTrade(token).ConfigureAwait(false);
         if (ctr == 0)
             return PokeTradeResult.TrainerTooSlow;
@@ -1296,6 +1333,7 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState config) : Poke
         if (result.IsShiny)
         {
             Log("The Pokémon is already shiny!"); // Do not bother checking for next shiny frame
+            ReportProgress(0);
             detail.SendNotification(this, "This Pokémon is already shiny! Raid seed calculation was not done.");
 
             if (DumpSetting.Dump && !string.IsNullOrEmpty(DumpSetting.DumpFolder))
@@ -1307,6 +1345,7 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState config) : Poke
 
         SeedChecker.CalculateAndNotify(result, detail, hub.Config.SeedCheckSWSH, this);
         Log("Seed calculation completed.");
+        ReportProgress(100);
     }
 
     private void WaitAtBarrierIfApplicable(CancellationToken token)
@@ -1331,6 +1370,7 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState config) : Poke
 
         FailedBarrier++;
         Log($"Barrier sync timed out after {timeoutAfter} seconds. Continuing.");
+        ReportProgress(0);
     }
 
     /// <summary>
@@ -1410,6 +1450,7 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState config) : Poke
     private async Task ResetTradePosition(CancellationToken token)
     {
         Log("Resetting bot position.");
+        ReportProgress(0);
 
         // Shouldn't ever be used while not on overworld.
         if (!await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
@@ -1484,6 +1525,7 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState config) : Poke
         if (!adOT && laInit.Valid)
         {
             poke.SendNotification(this, "No ad detected in Nickname or OT, and the Pokémon is legal. Exiting trade.");
+            ReportProgress(0);
             return (offered, PokeTradeResult.TrainerRequestBad);
         }
 
@@ -1535,6 +1577,7 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState config) : Poke
         if (!la.Valid)
         {
             poke.SendNotification(this, "This Pokémon is not legal per PKHeX's legality checks. I was unable to fix this. Exiting trade.");
+            ReportProgress(0);
             return (clone, PokeTradeResult.IllegalTrade);
         }
 
@@ -1570,6 +1613,7 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState config) : Poke
         {
             poke.SendNotification(this, "Pokémon was swapped and not changed back. Exiting trade.");
             Log("Trading partner did not wish to send away their ad-mon.");
+            ReportProgress(0);
             return (offered, PokeTradeResult.TrainerTooSlow);
         }
 

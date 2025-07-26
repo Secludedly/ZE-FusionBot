@@ -1,7 +1,7 @@
 using System.Windows.Forms;
 using System;
 using System.Drawing;
-using System.Windows.Forms;
+using SysBot.Pokemon.WinForms.Controls;
 
 
 namespace SysBot.Pokemon.WinForms
@@ -39,6 +39,7 @@ namespace SysBot.Pokemon.WinForms
             RTB_Left = new RichTextBox();
             PB_Lamp = new PictureBox();
             RCMenu = new ContextMenuStrip(components);
+            tradeProgressBar = new FancyProgressBar();
             ((System.ComponentModel.ISupportInitialize)PB_Lamp).BeginInit();
             SuspendLayout();
             // 
@@ -89,18 +90,30 @@ namespace SysBot.Pokemon.WinForms
             RCMenu.ShowItemToolTips = false;
             RCMenu.Size = new Size(36, 4);
             // 
+            // tradeProgressBar
+            // 
+            tradeProgressBar = new FancyProgressBar
+            {
+                Dock = DockStyle.Bottom,
+                BackColor = Color.FromArgb(31, 30, 68),
+                ProgressColor = Color.FromArgb(31, 30, 68),
+                Height = 4
+            };
+            Controls.Add(tradeProgressBar);
+            // 
             // BotController
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
             BackColor = Color.FromArgb(20, 19, 57);
             ContextMenuStrip = RCMenu;
+            Controls.Add(tradeProgressBar);
             Controls.Add(PB_Lamp);
             Controls.Add(RTB_Left);
             Controls.Add(RTB_Description);
             Margin = new Padding(0);
             Name = "BotController";
-            Size = new Size(704, 91);
+            Size = new Size(704, 96);
             MouseEnter += BotController_MouseEnter;
             MouseLeave += BotController_MouseLeave;
             ((System.ComponentModel.ISupportInitialize)PB_Lamp).EndInit();
@@ -113,5 +126,7 @@ namespace SysBot.Pokemon.WinForms
         private System.Windows.Forms.RichTextBox RTB_Left;
         private System.Windows.Forms.PictureBox PB_Lamp;
         private System.Windows.Forms.ContextMenuStrip RCMenu;
+        private FancyProgressBar tradeProgressBar;
+
     }
 }

@@ -18,6 +18,15 @@ namespace SysBot.Pokemon;
 // ReSharper disable once ClassWithVirtualMembersNeverInherited.Global
 public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRoutineExecutor9SV(Config), ICountBot, ITradeBot
 {
+    // Add this event for progress updates (int = percentage 0-100)
+    public event Action<int>? TradeProgressChanged;
+
+    // Helper method inside your bot to raise the event
+    private void ReportProgress(int percent)
+    {
+        TradeProgressChanged?.Invoke(percent);
+    }
+
     public readonly TradeAbuseSettings AbuseSettings = Hub.Config.TradeAbuse;
 
     /// <summary>
@@ -169,6 +178,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
     protected virtual async Task<bool> WaitForTradePartner(CancellationToken token)
     {
         Log("Waiting for trainer...");
+        ReportProgress(60);
         int ctr = (Hub.Config.Trade.TradeConfiguration.TradeWaitTime * 1_000) - 2_000;
         await Task.Delay(2_000, token).ConfigureAwait(false);
         while (ctr > 0)
@@ -353,6 +363,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
             await RecoverToOverworld(token).ConfigureAwait(false);
 
         Log("Opening the Poké Portal.");
+        ReportProgress(20);
 
         // Open the X Menu.
         await Click(X, 1_000, token).ConfigureAwait(false);
@@ -394,12 +405,14 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
                 if (await IsConnectedOnline(ConnectedOffset, token).ConfigureAwait(false))
                 {
                     Log("Connection established successfully.");
+                    ReportProgress(30);
                     break; // Exit the loop if connected successfully
                 }
 
                 if (attemptCount >= maxAttempt)
                 {
                     Log($"Failed to connect after {maxAttempt} attempts. Assuming a softban. Initiating wait for {waitTime} minutes before retrying.");
+                    ReportProgress(0);
                     // Waiting process
                     await Click(B, 0_500, token).ConfigureAwait(false);
                     await Click(B, 0_500, token).ConfigureAwait(false);
@@ -451,6 +464,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
     private async Task DoNothing(CancellationToken token)
     {
         Log("No task assigned. Waiting for new task assignment.");
+        ReportProgress(0);
         while (!token.IsCancellationRequested && Config.NextRoutineType == PokeRoutineType.Idle)
             await Task.Delay(1_000, token).ConfigureAwait(false);
     }
@@ -473,6 +487,8 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
             detail.IsProcessing = true;
             string tradetype = $" ({detail.Type})";
             Log($"Starting next {type}{tradetype} Bot Trade. Getting data...");
+            ReportProgress(10);
+
             Hub.Config.Stream.StartTrade(this, detail, Hub);
             Hub.Queues.StartTrade(this, detail);
 
@@ -488,6 +504,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
 
         if (unexpected)
             Log("Unexpected behavior, recovering to Portal.");
+        ReportProgress(0);
 
         // Ensure we're not in the box first.
         // Takes a long time for the Portal to load up, so once we exit the box, wait 5 seconds.
@@ -520,6 +537,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
             if (++attempts > 20)
             {
                 Log("Failed to exit box, rebooting the game.");
+                ReportProgress(0);
                 if (!await RecoverToOverworld(token).ConfigureAwait(false))
                     await RestartGameSV(token).ConfigureAwait(false);
                 await ConnectAndEnterPortal(token).ConfigureAwait(false);
@@ -540,6 +558,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
             if (++attempts > 40)
             {
                 Log("Failed to load the portal, rebooting the game.");
+                ReportProgress(0);
                 if (!await RecoverToOverworld(token).ConfigureAwait(false))
                     await RestartGameSV(token).ConfigureAwait(false);
                 await ConnectAndEnterPortal(token).ConfigureAwait(false);
@@ -573,6 +592,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
         else
         {
             detail.SendNotification(this, $"Oops! Something happened. Canceling the trade: {result}.");
+            ReportProgress(0);
             detail.TradeCanceled(this, result);
         }
     }
@@ -588,6 +608,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
         if (!la.Valid)
         {
             Log($"Clone request (from {poke.Trainer.TrainerName}) has detected an invalid Pokémon: {speciesName}.");
+            ReportProgress(0);
             if (DumpSetting.Dump)
                 DumpPokemon(DumpSetting.DumpFolder, "hacked", offered);
 
@@ -605,6 +626,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
 
         poke.SendNotification(this, $"**Cloned your {GameInfo.GetStrings("en").Species[clone.Species]}!**\nNow press B to cancel your offer and trade me a Pokémon you don't want.");
         Log($"Cloned a {LanguageHelper.GetLocalizedSpeciesLog(clone)}. Waiting for user to change their Pokémon...");
+        ReportProgress(80);
 
         // Separate this out from WaitForPokemonChanged since we compare to old EC from original read.
         var partnerFound = await ReadUntilChanged(TradePartnerOfferedOffset, oldEC, 15_000, 0_200, false, true, token).ConfigureAwait(false);
@@ -620,6 +642,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
         if (!await IsInBox(PortalOffset, token).ConfigureAwait(false))
         {
             Log("User cancelled the trade. Exiting...");
+            ReportProgress(0);
             await ExitTradeToPortal(false, token).ConfigureAwait(false);
             return (offered, PokeTradeResult.TrainerTooSlow);
         }
@@ -628,6 +651,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
         if (!partnerFound || pk2 is null || SearchUtil.HashByDetails(pk2) == SearchUtil.HashByDetails(offered))
         {
             Log("Trade partner did not change their Pokémon.");
+            ReportProgress(0);
             await ExitTradeToPortal(false, token).ConfigureAwait(false);
             return (offered, PokeTradeResult.TrainerTooSlow);
         }
@@ -649,6 +673,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
         if (!adOT && laInit.Valid)
         {
             poke.SendNotification(this, "No ad detected in Nickname or OT, and the Pokémon is legal. Exiting trade.");
+            ReportProgress(0);
             return (offered, PokeTradeResult.TrainerRequestBad);
         }
 
@@ -699,6 +724,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
         if (!la.Valid)
         {
             poke.SendNotification(this, "This Pokémon is not legal per PKHeX's legality checks. I was unable to fix this. Exiting trade.");
+            ReportProgress(0);
             return (clone, PokeTradeResult.IllegalTrade);
         }
 
@@ -734,6 +760,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
         {
             poke.SendNotification(this, "Pokémon was swapped and not changed back. Exiting trade.");
             Log("Trading partner did not wish to send away their ad-mon.");
+            ReportProgress(0);
             return (offered, PokeTradeResult.TrainerTooSlow);
         }
 
@@ -900,7 +927,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
                 // Subsequent trades - we're already in the trade screen
                 // FIRST: Prepare the Pokemon BEFORE allowing user to offer
                 poke.SendNotification(this, $"Trade {completedTrades} completed! **DO NOT OFFER YET** - Preparing your next Pokémon ({completedTrades + 1}/{totalBatchTrades})...");
-
+                ReportProgress(92);
                 // Wait for trade animation to fully complete
                 await Task.Delay(5_000, token).ConfigureAwait(false);
 
@@ -948,6 +975,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
                     LastTradeDistributionFixed = false;
                     await ExitTradeToPortal(false, token).ConfigureAwait(false);
                     poke.SendNotification(this, "Canceling the batch trades. The routine has been interrupted.");
+                    ReportProgress(0);
                     SendCollectedPokemonAndCleanup();
                     return PokeTradeResult.RoutineCancel;
                 }
@@ -956,12 +984,14 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
                 {
                     poke.IsProcessing = false;
                     poke.SendNotification(this, "No trading partner found. Canceling the batch trades.");
+                    ReportProgress(0);
                     poke.TradeCanceled(this, PokeTradeResult.NoTrainerFound);
                     SendCollectedPokemonAndCleanup();
 
                     if (!await RecoverToPortal(token).ConfigureAwait(false))
                     {
                         Log("Failed to recover to portal.");
+                        ReportProgress(0);
                         await RecoverToOverworld(token).ConfigureAwait(false);
                     }
                     return PokeTradeResult.NoTrainerFound;
@@ -981,9 +1011,11 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
                         if (!await RecoverToPortal(token).ConfigureAwait(false))
                         {
                             Log("Failed to recover to portal.");
+                            ReportProgress(0);
                             await RecoverToOverworld(token).ConfigureAwait(false);
                         }
                         poke.SendNotification(this, "Failed to enter trade box. Canceling the batch trades.");
+                        ReportProgress(0);
                         return PokeTradeResult.RecoverOpenBox;
                     }
                 }
@@ -1023,6 +1055,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
                 if (partnerCheck != PokeTradeResult.Success)
                 {
                     poke.SendNotification(this, "Trade partner verification failed. Canceling the batch trades.");
+                    ReportProgress(0);
                     SendCollectedPokemonAndCleanup();
                     await Click(A, 1_000, token).ConfigureAwait(false);
                     await ExitTradeToPortal(false, token).ConfigureAwait(false);
@@ -1033,12 +1066,14 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
                 if (!tradeOffered)
                 {
                     poke.SendNotification(this, "Trade partner took too long. Canceling the batch trades.");
+                    ReportProgress(0);
                     SendCollectedPokemonAndCleanup();
                     await ExitTradeToPortal(false, token).ConfigureAwait(false);
                     return PokeTradeResult.TrainerTooSlow;
                 }
 
                 Log($"Found Link Trade partner: {tradePartner.TrainerName}-{tradePartner.TID7} (ID: {trainerNID})");
+                ReportProgress(75);
                 poke.SendNotification(this, $"Found Link Trade partner: {tradePartner.TrainerName}. **TID**: {tradePartner.TID7} **SID**: {tradePartner.SID7}");
 
                 // Apply AutoOT for first trade if needed
@@ -1062,6 +1097,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
             if (offered == null || offered.Species == 0 || !offered.ChecksumValid)
             {
                 Log("Trade ended because a valid Pokémon was not offered.");
+                ReportProgress(0);
                 poke.SendNotification(this, $"Invalid Pokémon offered for trade {currentTradeIndex + 1}/{totalBatchTrades}. Canceling the remaining trades.");
                 SendCollectedPokemonAndCleanup();
                 await ExitTradeToPortal(false, token).ConfigureAwait(false);
@@ -1081,16 +1117,19 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
             if (update != PokeTradeResult.Success)
             {
                 poke.SendNotification(this, $"Update check failed for trade {currentTradeIndex + 1}/{totalBatchTrades}. Canceling the remaining trades.");
+                ReportProgress(0);
                 SendCollectedPokemonAndCleanup();
                 await ExitTradeToPortal(false, token).ConfigureAwait(false);
                 return update;
             }
 
             Log($"Confirming trade {currentTradeIndex + 1}/{totalBatchTrades}.");
+            ReportProgress(85);
             var tradeResult = await ConfirmAndStartTrading(poke, token).ConfigureAwait(false);
             if (tradeResult != PokeTradeResult.Success)
             {
                 poke.SendNotification(this, $"Trade confirmation failed for trade {currentTradeIndex + 1}/{totalBatchTrades}. Canceling the remaining trades.");
+                ReportProgress(0);
                 SendCollectedPokemonAndCleanup();
                 await ExitTradeToPortal(false, token).ConfigureAwait(false);
                 return tradeResult;
@@ -1101,6 +1140,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
                 StartFromOverworld = true;
                 LastTradeDistributionFixed = false;
                 poke.SendNotification(this, "Canceling the batch trades. The routine has been interrupted.");
+                ReportProgress(0);
                 SendCollectedPokemonAndCleanup();
                 await ExitTradeToPortal(false, token).ConfigureAwait(false);
                 return PokeTradeResult.RoutineCancel;
@@ -1110,6 +1150,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
             if (SearchUtil.HashByDetails(received) == SearchUtil.HashByDetails(toSend) && received.Checksum == toSend.Checksum)
             {
                 poke.SendNotification(this, $"Partner did not complete trade {currentTradeIndex + 1}/{totalBatchTrades}. Canceling the remaining trades.");
+                ReportProgress(0);
                 SendCollectedPokemonAndCleanup();
                 await ExitTradeToPortal(false, token).ConfigureAwait(false);
                 return PokeTradeResult.TrainerTooSlow;
@@ -1125,12 +1166,14 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
             completedTrades = currentTradeIndex + 1;
             var speciesName = LanguageHelper.GetLocalizedSpeciesLog(received);
             Log($"Added received Pokémon {speciesName} (Checksum: {received.Checksum:X8}) to batch tracker for trainer {originalTrainerID} (Trade {completedTrades}/{totalBatchTrades})");
+            ReportProgress(50);
 
             if (completedTrades == totalBatchTrades)
             {
                 // Get all collected Pokemon before cleaning anything up
                 var allReceived = BatchTracker.GetReceivedPokemon(originalTrainerID);
                 Log($"Batch trades complete. Found {allReceived.Count} Pokémon stored for trainer {originalTrainerID}");
+                ReportProgress(100);
 
                 // First send notification that trades are complete
                 poke.SendNotification(this, "All batch trades completed! Thank you for trading!");
@@ -1276,6 +1319,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
     {
         // Assumes we're freshly in the Portal and the cursor is over Link Trade.
         Log("Selecting Link Trade.");
+        ReportProgress(40);
         await Click(A, 1_500, token).ConfigureAwait(false);
 
         // Always clear Link Codes and enter a new one based on the current trade type
@@ -1284,6 +1328,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
         await Task.Delay(Hub.Config.Timings.MiscellaneousSettings.ExtraTimeOpenCodeEntry, token).ConfigureAwait(false);
 
         Log($"Entering Link Trade code: {code:0000 0000}...");
+        ReportProgress(50);
         await EnterLinkCode(code, Hub.Config, token).ConfigureAwait(false);
         await Click(PLUS, 3_000, token).ConfigureAwait(false);
 
@@ -1328,6 +1373,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
             if (!await RecoverToPortal(token).ConfigureAwait(false))
             {
                 Log("Failed to recover to portal.");
+                ReportProgress(0);
                 await RecoverToOverworld(token).ConfigureAwait(false);
             }
             return PokeTradeResult.NoTrainerFound;
@@ -1358,6 +1404,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
         var trainerNID = await GetTradePartnerNID(TradePartnerNIDOffset, token).ConfigureAwait(false);
         RecordUtil<PokeTradeBotSV>.Record($"Initiating\t{trainerNID:X16}\t{tradePartner.TrainerName}\t{poke.Trainer.TrainerName}\t{poke.Trainer.ID}\t{poke.ID}\t{toSend.EncryptionConstant:X8}");
         Log($"Found Link Trade partner: {tradePartner.TrainerName}-{tradePartner.TID7} (ID: {trainerNID})");
+        ReportProgress(80);
         poke.SendNotification(this, $"Found Link Trade partner: {tradePartner.TrainerName}. TID: {tradePartner.TID7} SID: {tradePartner.SID7} Waiting for a Pokémon...");
 
         var tradeCodeStorage = new TradeCodeStorage();
@@ -1416,6 +1463,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
         if (offered == null || offered.Species == 0 || !offered.ChecksumValid)
         {
             Log("Trade ended because a valid Pokémon was not offered.");
+            ReportProgress(0);
             await ExitTradeToPortal(false, token).ConfigureAwait(false);
             return PokeTradeResult.TrainerTooSlow;
         }
@@ -1455,6 +1503,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
             poke.SendNotification(this, "Shinify success!  Thanks for being part of the community!");
 
         Log("Confirming trade.");
+        ReportProgress(85);
         var tradeResult = await ConfirmAndStartTrading(poke, token).ConfigureAwait(false);
         if (tradeResult != PokeTradeResult.Success)
         {
@@ -1477,6 +1526,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
         if (SearchUtil.HashByDetails(received) == SearchUtil.HashByDetails(toSend) && received.Checksum == toSend.Checksum)
         {
             Log("User did not complete the trade.");
+            ReportProgress(0);
             await ExitTradeToPortal(false, token).ConfigureAwait(false);
             return PokeTradeResult.TrainerTooSlow;
         }
@@ -1486,6 +1536,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
         var receivedSpeciesStr = LanguageHelper.GetLocalizedSpeciesLog(received);
         var sentSpeciesStr = LanguageHelper.GetLocalizedSpeciesLog(toSend);
         Log($"Trade completed. Received {receivedSpeciesStr} from {otName} in exchange for {sentSpeciesStr}.");
+        ReportProgress(100);
 
         poke.TradeFinished(this, received);
 
@@ -1584,6 +1635,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
         }
 
         Log($"Ended Dump loop after processing {ctr} Pokémon.");
+        ReportProgress(0);
         if (ctr == 0)
             return PokeTradeResult.TrainerTooSlow;
 
@@ -1601,6 +1653,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
             return true;
 
         Log("Attempting to recover to overworld.");
+        ReportProgress(0);
         var attempts = 0;
         while (!await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
         {
@@ -1624,6 +1677,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
         if (!await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
         {
             Log("Failed to recover to overworld, rebooting the game.");
+            ReportProgress(0);
             await RestartGameSV(token).ConfigureAwait(false);
         }
         await Task.Delay(1_000, token).ConfigureAwait(false);
@@ -1647,6 +1701,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
             if (++attempts >= 30)
             {
                 Log("Failed to recover to Poké Portal.");
+                ReportProgress(0);
                 return false;
             }
         }
@@ -1674,6 +1729,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
             if (++attempts > 20)
             {
                 Log("Failed to load the Poké Portal.");
+                ReportProgress(0);
                 return false;
             }
         }
@@ -1683,6 +1739,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
         if (!await ConnectToOnline(Hub.Config, token).ConfigureAwait(false))
         {
             Log("Failed to connect to online.");
+            ReportProgress(0);
             return false; // Failed, either due to connection or softban.
         }
 
@@ -1770,6 +1827,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
 
         FailedBarrier++;
         Log($"Barrier sync timed out after {timeoutAfter} seconds. Continuing.");
+        ReportProgress(0);
     }
 
     private Task WaitForQueueStep(int waitCounter, CancellationToken token)
@@ -1779,6 +1837,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
             // Updates the assets.
             Hub.Config.Stream.IdleAssets(this);
             Log("Nothing to check, waiting for new users...");
+            ReportProgress(0);
         }
 
         return Task.Delay(1_000, token);
