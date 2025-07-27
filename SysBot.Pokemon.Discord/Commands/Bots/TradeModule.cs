@@ -773,117 +773,128 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
     [RequireQueueRole(nameof(DiscordManager.RolesTrade))]
     public async Task BatchTradeAsync([Summary("List of Showdown Sets separated by '---'")][Remainder] string content)
     {
-        // Check if the user is already in the queue
-        var userID = Context.User.Id;
-        if (Info.IsUserInQueue(userID))
+        // Offload the entire trade logic onto a background task
+        _ = Task.Run(async () =>
         {
-            var existingTrades = Info.GetIsUserQueued(x => x.UserID == userID);
-            foreach (var trade in existingTrades)
+            try
             {
-                trade.Trade.IsProcessing = false;
-            }
-            var clearResult = Info.ClearTrade(userID);
-            if (clearResult == QueueResultRemove.CurrentlyProcessing || clearResult == QueueResultRemove.NotInQueue)
-            {
-                _ = ReplyAndDeleteAsync("You already have an existing trade in the queue that cannot be cleared. Please wait until it is processed.", 2);
-                return;
-            }
-        }
-        content = ReusableActions.StripCodeBlock(content);
-        content = BatchNormalizer.NormalizeBatchCommands(content);
-        var trades = ParseBatchTradeContent(content);
-        if (trades.Count < 2)
-        {
-            await ReplyAndDeleteAsync("Batch trades require at least two Pokémon. Use the standard trade command for single Pokémon trades.", 5, Context.Message);
-            _ = DeleteMessagesAfterDelayAsync(null, Context.Message, 2);
-            return;
-        }
+                var userID = Context.User.Id;
 
-        const int maxTradesAllowed = 4;
-        // Check if batch mode is allowed and if the number of trades exceeds the limit
-        if (maxTradesAllowed < 1 || trades.Count > maxTradesAllowed)
-        {
-            _ = ReplyAndDeleteAsync($"You can only process up to {maxTradesAllowed} trades at a time. Please reduce the number of trades in your batch.", 5, Context.Message);
-            _ = DeleteMessagesAfterDelayAsync(null, Context.Message, 2);
-            return;
-        }
-        var batchTradeCode = Info.GetRandomTradeCode((int)userID);
-        // Process all trades and collect results
-        var batchPokemonList = new List<T>();
-        var errors = new List<BatchTradeError>();
-        for (int i = 0; i < trades.Count; i++)
-        {
-            var trade = trades[i];
-            var (pk, error, set, legalizationHint) = await ProcessSingleTradeForBatch(trade);
-            if (pk != null)
-            {
-                batchPokemonList.Add(pk);
-            }
-            else
-            {
-                var speciesName = set != null && set.Species > 0
-                ? GameInfo.Strings.Species[set.Species]
-                : "Unknown";
-                errors.Add(new BatchTradeError
+                // Check if user is already in queue and clear them
+                if (Info.IsUserInQueue(userID))
                 {
-                    TradeNumber = i + 1,
-                    SpeciesName = speciesName,
-                    ErrorMessage = error ?? "Unknown error",
-                    LegalizationHint = legalizationHint,
-                    ShowdownSet = set != null ? string.Join("\n", set.GetSetLines()) : trade
-                });
-            }
-        }
-        // If any trades failed, reject the entire batch with detailed error information
-        if (errors.Count > 0)
-        {
-            var errorMessage = BuildDetailedBatchErrorMessage(errors, trades.Count);
-            // Create an embed for better formatting in Discord
-            var embed = new EmbedBuilder()
-            .WithTitle("❌ Batch Trade Validation Failed")
-            .WithColor(Color.Red)
-            .WithDescription($"{errors.Count} out of {trades.Count} Pokémon could not be processed.")
-            .WithFooter("Please fix the invalid sets and try again.");
-            // Add each error as a field in the embed
-            foreach (var error in errors)
-            {
-                var fieldValue = $"**Error:** {error.ErrorMessage}";
-                if (!string.IsNullOrEmpty(error.LegalizationHint))
-                {
-                    fieldValue += $"\n💡 **Hint:** {error.LegalizationHint}";
-                }
-                // Add first few lines of the showdown set for context
-                if (!string.IsNullOrEmpty(error.ShowdownSet))
-                {
-                    var lines = error.ShowdownSet.Split('\n').Take(2);
-                    fieldValue += $"\n**Set:** {string.Join(" | ", lines)}...";
-                }
-                // Discord embed fields have a 1024 character limit
-                if (fieldValue.Length > 1024)
-                {
-                    fieldValue = fieldValue.Substring(0, 1021) + "...";
-                }
-                embed.AddField($"Trade #{error.TradeNumber} - {error.SpeciesName}", fieldValue);
-            }
-            var replyMessage = await ReplyAsync(embed: embed.Build());
-            _ = DeleteMessagesAfterDelayAsync(replyMessage, Context.Message, 20);
-            return;
-        }
-        // All trades are valid, proceed to queue
-        if (batchPokemonList.Count == 0)
-        {
-            await ReplyAndDeleteAsync("Unexpected error: No valid Pokémon were processed from the batch.", 5, Context.Message);
-            return;
-        }
+                    var existingTrades = Info.GetIsUserQueued(x => x.UserID == userID);
+                    foreach (var trade in existingTrades)
+                        trade.Trade.IsProcessing = false;
 
-        await ProcessBatchContainer(batchPokemonList, batchTradeCode, trades.Count);
+                    var clearResult = Info.ClearTrade(userID);
+                    if (clearResult is QueueResultRemove.CurrentlyProcessing or QueueResultRemove.NotInQueue)
+                    {
+                        _ = ReplyAndDeleteAsync("You already have an existing trade in the queue that cannot be cleared. Please wait until it is processed.", 2);
+                        return;
+                    }
+                }
 
-        // Final cleanup
-        if (Context.Message is IUserMessage userMessage)
-        {
-            _ = DeleteMessagesAfterDelayAsync(userMessage, null, 2);
-        }
+                // Normalize and split sets
+                content = ReusableActions.StripCodeBlock(content);
+                content = BatchNormalizer.NormalizeBatchCommands(content);
+                var trades = ParseBatchTradeContent(content);
+
+                if (trades.Count < 2)
+                {
+                    await ReplyAndDeleteAsync("Batch trades require at least two Pokémon. Use the standard trade command for single Pokémon trades.", 5, Context.Message);
+                    return;
+                }
+
+                int maxTradesAllowed = Info.Hub.Config.Trade.TradeConfiguration.MaxPkmsPerTrade;
+                if (maxTradesAllowed < 1)
+                {
+                    await ReplyAndDeleteAsync("Batch trading is disabled on this bot. Contact an admin.", 5, Context.Message);
+                    return;
+                }
+
+                if (trades.Count > maxTradesAllowed)
+                {
+                    await ReplyAndDeleteAsync($"You can only process up to {maxTradesAllowed} Pokémon per batch trade.", 5, Context.Message);
+                    return;
+                }
+
+                var batchTradeCode = Info.GetRandomTradeCode((int)userID);
+                var batchPokemonList = new List<T>();
+                var errors = new List<BatchTradeError>();
+
+                for (int i = 0; i < trades.Count; i++)
+                {
+                    var tradeText = trades[i];
+
+                    try
+                    {
+                        var (pk, error, set, hint) = await ProcessSingleTradeForBatch(tradeText);
+
+                        if (pk != null)
+                        {
+                            batchPokemonList.Add(pk);
+                        }
+                        else
+                        {
+                            var speciesName = set?.Species > 0
+                                ? GameInfo.Strings.Species[set.Species]
+                                : "Unknown";
+
+                            errors.Add(new BatchTradeError
+                            {
+                                TradeNumber = i + 1,
+                                SpeciesName = speciesName,
+                                ErrorMessage = error ?? "Unknown error occurred.",
+                                LegalizationHint = hint,
+                                ShowdownSet = set != null ? string.Join("\n", set.GetSetLines()) : tradeText
+                            });
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        LogUtil.LogError($"[BatchTrade Fatal Crash] Trade #{i + 1}\nInput:\n{tradeText}\nException:\n{ex}", "Batch Command");
+
+                        errors.Add(new BatchTradeError
+                        {
+                            TradeNumber = i + 1,
+                            SpeciesName = "Crash",
+                            ErrorMessage = "A fatal error occurred while parsing this set.",
+                            LegalizationHint = ex.Message,
+                            ShowdownSet = tradeText
+                        });
+                    }
+                }
+
+                if (batchPokemonList.Count == 0)
+                {
+                    var failEmbed = BuildErrorEmbed(errors, trades.Count);
+                    var failMsg = await ReplyAsync(embed: failEmbed);
+                    _ = DeleteMessagesAfterDelayAsync(failMsg, Context.Message, 20);
+                    return;
+                }
+
+                if (errors.Count > 0)
+                {
+                    var warnEmbed = BuildErrorEmbed(errors, trades.Count);
+                    var warnMsg = await ReplyAsync(embed: warnEmbed);
+                    _ = DeleteMessagesAfterDelayAsync(warnMsg, Context.Message, 20);
+                }
+
+                await ProcessBatchContainer(batchPokemonList, batchTradeCode, trades.Count);
+
+                if (Context.Message is IUserMessage userMessage)
+                    _ = DeleteMessagesAfterDelayAsync(userMessage, null, 2);
+            }
+            catch (Exception ex)
+            {
+                LogUtil.LogError($"[BatchTrade Fatal Crash] Exception in BatchTradeAsync: {ex}", "BatchTradeInitiated");
+                await ReplyAsync("⚠️ Something went *really* wrong while processing your batch trade. Contact an admin.");
+            }
+        });
     }
+
+
     private static Task<(T? Pokemon, string? Error, ShowdownSet? Set, string? LegalizationHint)> ProcessSingleTradeForBatch(string tradeContent)
     {
         tradeContent = ReusableActions.StripCodeBlock(tradeContent);
@@ -963,30 +974,35 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         }
         return Task.FromResult<(T?, string?, ShowdownSet?, string?)>((pk, null, set, null));
     }
-    private static string BuildDetailedBatchErrorMessage(List<BatchTradeError> errors, int totalTrades)
+    private static Embed BuildErrorEmbed(List<BatchTradeError> errors, int totalTrades)
     {
-        var sb = new StringBuilder();
-        sb.AppendLine($"**Batch Trade Validation Failed**");
-        sb.AppendLine($"❌ {errors.Count} out of {totalTrades} Pokémon could not be processed.\n");
-        foreach (var error in errors)
+        var embed = new EmbedBuilder()
+            .WithTitle("❌ Batch Trade Validation")
+            .WithColor(Color.Red)
+            .WithDescription($"⚠️ {errors.Count} out of {totalTrades} trades failed to process.")
+            .WithFooter("Fix the issues and try again.");
+
+        foreach (var err in errors)
         {
-            sb.AppendLine($"**Trade #{error.TradeNumber} - {error.SpeciesName}**");
-            sb.AppendLine($"Error: {error.ErrorMessage}");
-            if (!string.IsNullOrEmpty(error.LegalizationHint))
-            {
-                sb.AppendLine($"💡 Hint: {error.LegalizationHint}");
-            }
-            // Optionally include a preview of the showdown set that failed
-            if (!string.IsNullOrEmpty(error.ShowdownSet))
-            {
-                var lines = error.ShowdownSet.Split('\n').Take(3);
-                sb.AppendLine($"Set Preview: {string.Join(" | ", lines)}...");
-            }
-            sb.AppendLine(); // Empty line between errors
+            var lines = !string.IsNullOrEmpty(err.ShowdownSet)
+                ? string.Join(" | ", err.ShowdownSet.Split('\n').Take(2))
+                : "No data";
+
+            var value = $"**Error:** {err.ErrorMessage}";
+            if (!string.IsNullOrEmpty(err.LegalizationHint))
+                value += $"\n💡 **Hint:** {err.LegalizationHint}";
+
+            value += $"\n**Set Preview:** {lines}";
+
+            if (value.Length > 1024)
+                value = value[..1021] + "...";
+
+            embed.AddField($"Trade #{err.TradeNumber} - {err.SpeciesName}", value);
         }
-        sb.AppendLine("**Please fix the invalid sets and try again.**");
-        return sb.ToString();
+
+        return embed.Build();
     }
+
     private class BatchTradeError
     {
         public int TradeNumber { get; set; }
@@ -1004,10 +1020,13 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         // Create a single detail with all batch trades
         await QueueHelper<T>.AddBatchContainerToQueueAsync(Context, code, Context.User.Username, firstPokemon, batchPokemonList, sig, Context.User, totalTrades).ConfigureAwait(false);
     }
+
     private static List<string> ParseBatchTradeContent(string content)
     {
-        var delimiters = new[] { "---", "—-" }; // Includes both three hyphens and an em dash followed by a hyphen
-        return [.. content.Split(delimiters, StringSplitOptions.RemoveEmptyEntries).Select(trade => trade.Trim())];
+        var delimiters = new[] { "---", "—-" }; // Both three hyphens and em dash + hyphen
+        return content.Split(delimiters, StringSplitOptions.RemoveEmptyEntries)
+                      .Select(trade => trade.Trim())
+                      .ToList();
     }
 
     [Command("batchtradezip")]
