@@ -377,7 +377,8 @@ namespace SysBot.Pokemon.WinForms
         // Bot progress bar hook
         private void HookBotProgress(PokeBotState cfg, PokeRoutineExecutorBase bot)
         {
-            BotController? botControl = _botsForm.BotPanel.Controls.OfType<BotController>()
+            BotController? botControl = _botsForm.BotPanel.Controls
+                .OfType<BotController>()
                 .FirstOrDefault(c => c.State.Connection.Equals(cfg.Connection));
 
             if (botControl == null)
@@ -385,57 +386,50 @@ namespace SysBot.Pokemon.WinForms
 
             ProgressHelper.Initialize(botControl);
 
-            if (bot is PokeTradeBotSV svBot)
+            // Local method for handling progress updates
+            void HandleProgress(int percent)
             {
-                svBot.TradeProgressChanged += percent =>
+                if (_botsForm.InvokeRequired)
                 {
-                    if (_botsForm.InvokeRequired)
-                        _botsForm.BeginInvoke((Action)(() => ProgressHelper.Set(percent)));
+                    _botsForm.BeginInvoke((Action)(() =>
+                    {
+                        if (percent == 100)
+                            botControl.SetProgressWithFade(percent, 6000); // 👈 Fade only at 100%
+                        else
+                            ProgressHelper.Set(percent);
+                    }));
+                }
+                else
+                {
+                    if (percent == 100)
+                        botControl.SetProgressWithFade(percent, 6000);
                     else
                         ProgressHelper.Set(percent);
-                };
+                }
             }
-            else if (bot is PokeTradeBotSWSH swshBot)
+
+            // Hook up the correct bot instance
+            switch (bot)
             {
-                swshBot.TradeProgressChanged += percent =>
-                {
-                    if (_botsForm.InvokeRequired)
-                        _botsForm.BeginInvoke((Action)(() => ProgressHelper.Set(percent)));
-                    else
-                        ProgressHelper.Set(percent);
-                };
-            }
-            else if (bot is PokeTradeBotBS bsBot)
-            {
-                bsBot.TradeProgressChanged += percent =>
-                {
-                    if (_botsForm.InvokeRequired)
-                        _botsForm.BeginInvoke((Action)(() => ProgressHelper.Set(percent)));
-                    else
-                        ProgressHelper.Set(percent);
-                };
-            }
-            else if (bot is PokeTradeBotLA laBot)
-            {
-                laBot.TradeProgressChanged += percent =>
-                {
-                    if (_botsForm.InvokeRequired)
-                        _botsForm.BeginInvoke((Action)(() => ProgressHelper.Set(percent)));
-                    else
-                        ProgressHelper.Set(percent);
-                };
-            }
-            else if (bot is PokeTradeBotLGPE lgpeBot)
-            {
-                lgpeBot.TradeProgressChanged += percent =>
-                {
-                    if (_botsForm.InvokeRequired)
-                        _botsForm.BeginInvoke((Action)(() => ProgressHelper.Set(percent)));
-                    else
-                        ProgressHelper.Set(percent);
-                };
+                case PokeTradeBotSV svBot:
+                    svBot.TradeProgressChanged += HandleProgress;
+                    break;
+                case PokeTradeBotSWSH swshBot:
+                    swshBot.TradeProgressChanged += HandleProgress;
+                    break;
+                case PokeTradeBotBS bsBot:
+                    bsBot.TradeProgressChanged += HandleProgress;
+                    break;
+                case PokeTradeBotLA laBot:
+                    laBot.TradeProgressChanged += HandleProgress;
+                    break;
+                case PokeTradeBotLGPE lgpeBot:
+                    lgpeBot.TradeProgressChanged += HandleProgress;
+                    break;
             }
         }
+
+
 
         // Add a new bot to the environment and UI
         private bool AddBot(PokeBotState? cfg)

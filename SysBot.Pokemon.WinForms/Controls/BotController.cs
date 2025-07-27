@@ -184,6 +184,18 @@ public partial class BotController : UserControl
         tradeProgressBar.Value = 0;
     }
 
+    public void SetProgressWithFade(int value, int holdMs = 6000)
+    {
+        if (InvokeRequired)
+        {
+            Invoke(() => SetProgressWithFade(value, holdMs));
+            return;
+        }
+
+        tradeProgressBar.Value = value;
+        tradeProgressBar.ShowCompleteAndFade(holdMs);
+    }
+
     public void TryRemove()
     {
         var bot = GetBot();

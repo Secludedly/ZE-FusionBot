@@ -14,8 +14,10 @@ namespace SysBot.Pokemon.WinForms.Controls
 
         private int _shimmerX = 0;
         private int _shimmerDirection = 1; // 1 = right, -1 = left
-        private const int ShimmerSpeed = 6;
-        private const int ShimmerWidth = 70;
+        private const int ShimmerSpeed = 12;
+        private const int ShimmerWidth = 125;
+        private Timer _fadeTimer;
+        private int _fadeStep = 0;
 
         public FancyProgressBar()
         {
@@ -146,6 +148,44 @@ namespace SysBot.Pokemon.WinForms.Controls
             return path;
         }
 
+        public void ShowCompleteAndFade(int durationMs = 6000, int fadeDurationMs = 1000)
+        {
+            // Stay at 100% for 'durationMs' then start fading
+            _fadeTimer?.Dispose();
+            _fadeTimer = new Timer();
+            _fadeTimer.Interval = durationMs;
+            _fadeTimer.Tick += (s, e) =>
+            {
+                _fadeTimer.Stop();
+                _fadeTimer.Dispose();
+                StartFadeOut(fadeDurationMs);
+            };
+            _fadeTimer.Start();
+        }
+
+        private void StartFadeOut(int totalFadeTime)
+        {
+            int steps = 20;
+            int fadeStepTime = totalFadeTime / steps;
+            _fadeStep = 0;
+
+            Timer fade = new Timer();
+            fade.Interval = fadeStepTime;
+            fade.Tick += (s, e) =>
+            {
+                _fadeStep++;
+                int newValue = 100 - (_fadeStep * (100 / steps));
+                if (newValue < 0) newValue = 0;
+                Value = newValue;
+
+                if (_fadeStep >= steps)
+                {
+                    fade.Stop();
+                    fade.Dispose();
+                }
+            };
+            fade.Start();
+        }
     }
 }
 
