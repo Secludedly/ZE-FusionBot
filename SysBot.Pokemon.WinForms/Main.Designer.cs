@@ -137,11 +137,11 @@ namespace SysBot.Pokemon.WinForms
             // 
             // CB_Themes
             // 
+            CB_Themes.BackColor = Color.FromArgb(20, 19, 57);
+            CB_Themes.ForeColor = Color.White;
             CB_Themes.FormattingEnabled = true;
             CB_Themes.Location = new Point(38, 322);
             CB_Themes.Name = "CB_Themes";
-            CB_Themes.ForeColor = Color.White;
-            CB_Themes.BackColor = Color.FromArgb(20, 19, 57);
             CB_Themes.Size = new Size(144, 28);
             CB_Themes.TabIndex = 5;
             // 
@@ -174,7 +174,6 @@ namespace SysBot.Pokemon.WinForms
             panelImageLogo.Controls.Add(panel5);
             panelImageLogo.Controls.Add(panel3);
             panelImageLogo.Controls.Add(pictureLogo);
-            panelImageLogo.Cursor = Cursors.Hand;
             panelImageLogo.Dock = DockStyle.Top;
             panelImageLogo.Location = new Point(0, 0);
             panelImageLogo.Name = "panelImageLogo";
@@ -212,6 +211,7 @@ namespace SysBot.Pokemon.WinForms
             // 
             pictureLogo.BackColor = Color.Transparent;
             pictureLogo.BackgroundImageLayout = ImageLayout.Stretch;
+            pictureLogo.Cursor = Cursors.Default;
             pictureLogo.Image = (Image)resources.GetObject("pictureLogo.Image");
             pictureLogo.Location = new Point(12, 12);
             pictureLogo.Name = "pictureLogo";

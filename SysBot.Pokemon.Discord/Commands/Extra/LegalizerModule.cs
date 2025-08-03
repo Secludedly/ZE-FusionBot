@@ -1,6 +1,8 @@
 using Discord;
 using Discord.Commands;
 using PKHeX.Core;
+using SysBot.Base;
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -14,7 +16,18 @@ namespace SysBot.Pokemon.Discord
         public async Task ConvertShowdown([Summary("Generation/Format")] byte gen, [Remainder][Summary("Showdown Set")] string content)
         {
             var deleteMessageTask = DeleteCommandMessageAsync(Context.Message, 2000);
-            var convertTask = Task.Run(() => Context.Channel.ReplyWithLegalizedSetAsync(content, gen));
+            var convertTask = Task.Run(async () =>
+            {
+                try
+                {
+                    await Context.Channel.ReplyWithLegalizedSetAsync(content, gen);
+                }
+                catch (Exception ex)
+                {
+                    LogUtil.LogSafe(ex, nameof(LegalizerModule<T>));
+                }
+            });
+
             await Task.WhenAll(deleteMessageTask, convertTask).ConfigureAwait(false);
         }
 

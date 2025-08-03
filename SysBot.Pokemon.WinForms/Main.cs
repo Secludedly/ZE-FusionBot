@@ -18,6 +18,7 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using static SysBot.Pokemon.WinForms.BotController;
 
 namespace SysBot.Pokemon.WinForms
 {
@@ -68,6 +69,20 @@ namespace SysBot.Pokemon.WinForms
         // Main Constructor
         public Main()
         {
+            // GLOBAL EXCEPTION HANDLERS — LOG BEFORE BOT DIES
+            TaskScheduler.UnobservedTaskException += (sender, e) =>
+            {
+                LogUtil.LogSafe(e.Exception, "🔥 UnobservedTaskException");
+                e.SetObserved(); // Prevents app crash
+            };
+
+            AppDomain.CurrentDomain.UnhandledException += (sender, e) =>
+            {
+                if (e.ExceptionObject is Exception ex)
+                    LogUtil.LogSafe(ex, "💥 UnhandledException");
+                else
+                    LogUtil.LogGeneric($"💀 Non-Exception UnhandledException: {e.ExceptionObject}", "💥 UnhandledException");
+            };
             Task.Run(BotMonitor);      // Start the bot monitor
             InitializeComponent();     // Initialize all the form components before program
             Instance = this;
@@ -113,6 +128,7 @@ namespace SysBot.Pokemon.WinForms
             leftBorderBtn = new Panel { Size = new Size(7, 60) }; // Left border for active button
             panelLeftSide.Controls.Add(leftBorderBtn);            // Add left border to the panel
             panelTitleBar.MouseDown += panelTitleBar_MouseDown;   // Allow dragging the window from the title bar
+
 
             // Title‑bar controls
             this.Text = ""; // Set the form title to empty
@@ -196,6 +212,7 @@ namespace SysBot.Pokemon.WinForms
             Text = $"{(string.IsNullOrEmpty(Config.Hub.BotName) ? "ZE FusionBot |" : Config.Hub.BotName)} {TradeBot.Version} | Mode: {Config.Mode}";
             UpdateBackgroundImage(Config.Mode);        // Call the method to update image in leftSidePanel
             LoadThemeOptions();
+
             CB_Themes.SelectedIndexChanged += CB_Themes_SelectedIndexChanged;
             LoadLogoImage(Config.Hub.BotLogoImage); // Load a URL image to replace logo
             InitUtil.InitializeStubs(Config.Mode);     // Stubby McStubbinson will set environment based on config mode
@@ -236,7 +253,7 @@ namespace SysBot.Pokemon.WinForms
                         continue; // Yes, you may.
 
                     foreach (var bot in _botsForm.BotPanel.Controls.OfType<BotController>()) // Iterate through each BotController in the BotPanel
-                        bot.ReadState(); // Read the state of the bot controller to update its UI, but do it sexy
+                        bot.ReloadStatus(); // Read the state of the bot controller to update its UI, but do it sexy
                 }
                 catch { /* Fail silently, iterator safety */ }
 
@@ -312,10 +329,9 @@ namespace SysBot.Pokemon.WinForms
             foreach (var c in _botsForm.BotPanel.Controls.OfType<BotController>()) // Iterate through each BotController in the BotPanel
             {
                 c.SendCommand(cmd); // When you push a button, it sends to all bots
-                c.ReadState();      // Read bot controller, update it, call it daddy
+                c.ReloadStatus();      // Read bot controller, update it, call it daddy
 
-                if (cmd == BotControlCommand.Stop)
-                    c.ResetProgress();
+                if (cmd == BotControlCommand.Stop) ;
             }
         }
 
@@ -374,77 +390,19 @@ namespace SysBot.Pokemon.WinForms
             await UpdateChecker.CheckForUpdatesAsync(forceShow: true); // Will auto-handle the UpdateForm without all the other crap
         }
 
-        // Bot progress bar hook
-        private void HookBotProgress(PokeBotState cfg, PokeRoutineExecutorBase bot)
-        {
-            BotController? botControl = _botsForm.BotPanel.Controls
-                .OfType<BotController>()
-                .FirstOrDefault(c => c.State.Connection.Equals(cfg.Connection));
-
-            if (botControl == null)
-                return;
-
-            ProgressHelper.Initialize(botControl);
-
-            // Local method for handling progress updates
-            void HandleProgress(int percent)
-            {
-                if (_botsForm.InvokeRequired)
-                {
-                    _botsForm.BeginInvoke((Action)(() =>
-                    {
-                        if (percent == 100)
-                            botControl.SetProgressWithFade(percent, 6000); // 👈 Fade only at 100%
-                        else
-                            ProgressHelper.Set(percent);
-                    }));
-                }
-                else
-                {
-                    if (percent == 100)
-                        botControl.SetProgressWithFade(percent, 6000);
-                    else
-                        ProgressHelper.Set(percent);
-                }
-            }
-
-            // Hook up the correct bot instance
-            switch (bot)
-            {
-                case PokeTradeBotSV svBot:
-                    svBot.TradeProgressChanged += HandleProgress;
-                    break;
-                case PokeTradeBotSWSH swshBot:
-                    swshBot.TradeProgressChanged += HandleProgress;
-                    break;
-                case PokeTradeBotBS bsBot:
-                    bsBot.TradeProgressChanged += HandleProgress;
-                    break;
-                case PokeTradeBotLA laBot:
-                    laBot.TradeProgressChanged += HandleProgress;
-                    break;
-                case PokeTradeBotLGPE lgpeBot:
-                    lgpeBot.TradeProgressChanged += HandleProgress;
-                    break;
-            }
-        }
-
-
-
         // Add a new bot to the environment and UI
         private bool AddBot(PokeBotState? cfg)
         {
-            if (!cfg.IsValid()) // Check if the bot configuration is valid or if you fucked it up
-                return false;   // Don't add it, it's a trap.
+            if (!cfg.IsValid())
+                return false;
 
-            if (Bots.Any(z => z.Connection.Equals(cfg.Connection))) // Check if a bot with the same connection already exists
-                return false;   // Don't add it, it's a double trap.
+            if (Bots.Any(z => z.Connection.Equals(cfg.Connection)))
+                return false;
 
             PokeRoutineExecutorBase newBot;
             try
             {
-                Console.WriteLine($"Current Mode ({Config.Mode}) does not support this type of bot ({cfg.CurrentRoutineType}).");
-                newBot = RunningEnvironment.CreateBotFromConfig(cfg); // Create a new bot from the configuration if you did it right and didn't fuck up like a douchebag
+                newBot = RunningEnvironment.CreateBotFromConfig(cfg);
             }
             catch
             {
@@ -453,30 +411,29 @@ namespace SysBot.Pokemon.WinForms
 
             try
             {
-                RunningEnvironment.Add(newBot); // Add that shit to the environment if we good. Captain Planet <3
+                RunningEnvironment.Add(newBot);
             }
-            catch (ArgumentException ex)        // ...unless you DONE FUCKED UP
+            catch (ArgumentException ex)
             {
-                WinFormsUtil.Error(ex.Message); // Yell at me, daddy
+                WinFormsUtil.Error(ex.Message);
                 return false;
             }
 
-            AddBotControl(cfg);           // Add the control configuration to the config file
-            Bots.Add(cfg);                // Add the bots from config file
-            Config.Bots = Bots.ToArray(); // What's this do again?
-            SaveCurrentConfig();          // Save it all to config to eat now or eat later
-            HookBotProgress(cfg, newBot);
-            return true;                  // This does not say false
+            AddBotControl(cfg);
+            Bots.Add(cfg);
+            Config.Bots = Bots.ToArray();
+            SaveCurrentConfig();
+
+            return true;
         }
 
         private void AddBotControl(PokeBotState cfg)
         {
             var row = new BotController { Width = _botsForm.BotPanel.Width };
             row.Initialize(RunningEnvironment, cfg);
-            row.ReadState();
-            ProgressHelper.Initialize(row);
             _botsForm.BotPanel.Controls.Add(row);
             _botsForm.BotPanel.SetFlowBreak(row, true);
+            row.ReloadStatus();
 
             row.Click += (s, e) =>
             {
@@ -507,7 +464,6 @@ namespace SysBot.Pokemon.WinForms
             ThemeManager.ApplyTheme(this, selected);
         }
 
-
         private void LoadThemeOptions()
         {
             CB_Themes.Items.Clear();
@@ -517,8 +473,6 @@ namespace SysBot.Pokemon.WinForms
             CB_Themes.SelectedItem = Config.Theme;
             ThemeManager.ApplyTheme(this, Config.Theme);
         }
-
-
 
         // Creates a new bot config based on current settings in BotsForm class
         private PokeBotState CreateNewBotConfig() // Create a new bot configuration based on the current settings in the BotsForm
@@ -617,7 +571,6 @@ namespace SysBot.Pokemon.WinForms
                 Console.WriteLine($"[Logo Load] Failed to load logo: {ex.Message}");
             }
         }
-
 
         // Update the background image based on the current game mode
         private void UpdateBackgroundImage(ProgramMode mode)

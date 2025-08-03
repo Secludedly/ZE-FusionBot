@@ -7,6 +7,8 @@ using SysBot.Base;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using SysBot.Pokemon.WinForms.Controls;
+using System.Diagnostics;
 
 
 namespace SysBot.Pokemon.WinForms
@@ -38,6 +40,8 @@ namespace SysBot.Pokemon.WinForms
         private Button _updater;
         private Button _B_New;
         private Button _B_Reload;
+        private ToolTip _toolTips;
+
 
         private TextBox _TB_IP;
         private NumericUpDown _NUD_Port;
@@ -59,14 +63,58 @@ namespace SysBot.Pokemon.WinForms
 
         private void InitializeControls()
         {
+            _toolTips = new ToolTip
+            {
+                AutoPopDelay = 1000,
+                InitialDelay = 2000,
+                ReshowDelay = 1000,
+                ShowAlways = true
+            };
+
             // Buttons
             _B_Start = new FancyButton { Text = "START", Location = new Point(10, 7), Size = new Size(100, 40) };
+            _toolTips.SetToolTip(_B_Start, "Start all bots together that are listed.");
+            _toolTips.AutoPopDelay = 5000;      // How long it stays visible
+            _toolTips.InitialDelay = 500;       // Delay before it shows up
+            _toolTips.ReshowDelay = 1000;        // Delay between tooltips
+            _toolTips.ShowAlways = true;        // Show even if the form isn’t active
+
             _B_Stop = new FancyButton { Text = "STOP", Location = new Point(120, 7), Size = new Size(100, 40) };
-            _B_RebootStop = new FancyButton { Text = "RESTART", Location = new Point(230, 7), Size = new Size(100, 40) };
+            _toolTips.SetToolTip(_B_Stop, "Stop all running bots together that are listed.");
+            _toolTips.AutoPopDelay = 5000;      // How long it stays visible
+            _toolTips.InitialDelay = 2000;       // Delay before it shows up
+            _toolTips.ReshowDelay = 1000;        // Delay between tooltips
+            _toolTips.ShowAlways = true;        // Show even if the form isn’t active
+
+            _B_RebootStop = new FancyButton { Text = "REBOOT", Location = new Point(230, 7), Size = new Size(100, 40) };
+            _toolTips.SetToolTip(_B_RebootStop, "Reboot game and stop all bots listed.");
+            _toolTips.AutoPopDelay = 5000;      // How long it stays visible
+            _toolTips.InitialDelay = 2000;       // Delay before it shows up
+            _toolTips.ReshowDelay = 1000;        // Delay between tooltips
+            _toolTips.ShowAlways = true;        // Show even if the form isn’t active
+
             _updater = new FancyButton { Text = "UPDATE", Location = new Point(340, 7), Size = new Size(100, 40) };
+            _toolTips.SetToolTip(_updater, "Check for program updates.");
+            _toolTips.AutoPopDelay = 5000;      // How long it stays visible
+            _toolTips.InitialDelay = 2000;       // Delay before it shows up
+            _toolTips.ReshowDelay = 1000;        // Delay between tooltips
+            _toolTips.ShowAlways = true;        // Show even if the form isn’t active
+
             _B_New = new FancyButton { Text = "+", Location = new Point(423, 56), Size = new Size(54, 30) };
             _B_New.Font = new Font(_B_New.Font.FontFamily, 10, FontStyle.Bold);
+            _toolTips.SetToolTip(_B_New, "Create a new bot slot.");
+            _toolTips.AutoPopDelay = 5000;      // How long it stays visible
+            _toolTips.InitialDelay = 2000;       // Delay before it shows up
+            _toolTips.ReshowDelay = 1000;        // Delay between tooltips
+            _toolTips.ShowAlways = true;        // Show even if the form isn’t active
+
             _B_Reload = new FancyButton { Text = "RELOAD", Location = new Point(625, 40), Size = new Size(100, 40) };
+            _toolTips.SetToolTip(_B_Reload, "Reload the application cleanly.");
+            _toolTips.AutoPopDelay = 5000;      // How long it stays visible
+            _toolTips.InitialDelay = 2000;       // Delay before it shows up
+            _toolTips.ReshowDelay = 1000;        // Delay between tooltips
+            _toolTips.ShowAlways = true;        // Show even if the form isn’t active
+
             _B_Reload.Click += (_, _) => RestartApplication();
 
             // Colors for boxes and controls
@@ -110,22 +158,18 @@ namespace SysBot.Pokemon.WinForms
             _FLP_Bots = new FlowLayoutPanel
             {
                 Location = new Point(10, 89),
-                Anchor = AnchorStyles.Top | AnchorStyles.Left,
-                Size = new Size(ClientSize.Width - 24, ClientSize.Height - 100),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom,
+                Size = new Size(ClientSize.Width - 18, ClientSize.Height - 100),
                 AutoScroll = true,
                 BorderStyle = BorderStyle.FixedSingle,
                 WrapContents = false,
                 FlowDirection = FlowDirection.TopDown,
-                BackColor = Color.FromArgb(28, 27, 65)
+                BackColor = Color.FromArgb(28, 27, 65),
+                Padding = new Padding(0),
+                Margin = new Padding(0)
             };
 
-            this.BackColor = Color.FromArgb(28, 27, 65);
-            this.Resize += (s, e) =>
-            {
-                _FLP_Bots.BackColor = Color.FromArgb(23, 22, 60);
-                _FLP_Bots.Size = new Size(ClientSize.Width - 20, ClientSize.Height - 100); // Match the initial size minus padding
-                ResizeBots();
-            };
+            this.BackColor = Color.FromArgb(28, 27, 65); 
 
                 Controls.AddRange(new Control[] {
                 _B_Start, _B_Stop, _B_RebootStop, _updater, _B_New,
@@ -256,25 +300,45 @@ namespace SysBot.Pokemon.WinForms
         {
             if (cfg == null)
                 return;
-            // Now create the controller for the same config
-            var controller = new BotController();
-            controller.Initialize(runner, cfg);
-            controller.Margin = new Padding(0, 1, 0, 1);
-            controller.Remove += (s, e) => RemoveBot(controller);
-            controller.Click += (s, e) => LoadBotSettingsToUI(cfg);
-            _FLP_Bots.Controls.Add(controller);
-            _FLP_Bots.SetFlowBreak(controller, true);
-            BotControls.Add(controller);
-            _FLP_Bots.PerformLayout();
-            _FLP_Bots.Update();
-            if (_FLP_Bots.Controls.Count > 0 && _FLP_Bots.Controls[0] is BotController first)
+
+            // Create a new BotController
+            var controller = new BotController
             {
-                controller.Width = first.Width;
+                Margin = new Padding(0),
+                Padding = new Padding(0),
+            };
+
+            // 👇 Grab size from the first existing controller
+            if (_FLP_Bots.Controls.Count > 0 && _FLP_Bots.Controls[0] is BotController existing)
+            {
+                controller.Size = existing.Size;
             }
             else
             {
-                // Fallback just in case no bots exist yet
-                controller.Width = _FLP_Bots.ClientSize.Width - 5;
+                // Default size if no others exist
+                controller.Size = new Size(700, 110);
+            }
+
+            controller.Initialize(runner, cfg);
+            controller.Remove += (_, _) => RemoveBot(controller);
+            controller.Click += (_, _) => LoadBotSettingsToUI(cfg);
+
+            // Add and finalize
+            _FLP_Bots.Controls.Add(controller);
+            _FLP_Bots.SetFlowBreak(controller, true);
+            BotControls.Add(controller);
+
+            _FLP_Bots.PerformLayout();
+            _FLP_Bots.Update();
+
+            var source = runner.GetBot(cfg);
+            if (source?.Bot?.Connection != null)
+            {
+                BotControllerManager.RegisterController(source.Bot.Connection.Label, controller);
+            }
+            else
+            {
+                Debug.WriteLine("Warning: could not register controller – missing bot or connection info.");
             }
         }
 
@@ -284,20 +348,10 @@ namespace SysBot.Pokemon.WinForms
             BotControls.Remove(controller);
         }
 
-        private void ResizeBots()
-        {
-            int safeWidth = _FLP_Bots.ClientSize.Width - 5;
-
-            foreach (var ctrl in BotControls)
-        {
-            ctrl.Width = safeWidth;
-        }
-    }
-
         public void ReadAllBotStates()
         {
             foreach (var bot in BotControls)
-                bot.ReadState();
+                bot.ReloadStatus();
         }
 
         private void LoadBotSettingsToUI(PokeBotState cfg)

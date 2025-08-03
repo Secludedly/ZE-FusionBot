@@ -819,7 +819,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
                     return;
                 }
 
-                var batchTradeCode = Info.GetRandomTradeCode((int)userID);
+                var batchTradeCode = Info.GetRandomTradeCode(userID, Context.Channel, Context.User);
                 var batchPokemonList = new List<T>();
                 var errors = new List<BatchTradeError>();
 

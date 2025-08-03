@@ -474,7 +474,7 @@ public static class QueueHelper<T> where T : PKM, new()
                 throw new PlatformNotSupportedException("This functionality is only supported on Windows 6.1 or later.");
             }
 
-            using var localImage = System.Drawing.Image.FromFile(uri.LocalPath);
+            using var localImage = await Task.Run(() => System.Drawing.Image.FromFile(uri.LocalPath));
             using var ballImage = await LoadImageFromUrl(ballImgUrl);
             if (ballImage != null)
             {
@@ -844,7 +844,7 @@ public static class QueueHelper<T> where T : PKM, new()
         int outputImageWidth = spritearray[0].Width + 20;
         int outputImageHeight = spritearray[0].Height - 65;
 
-        Bitmap outputImage = new Bitmap(outputImageWidth, outputImageHeight, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+        Bitmap outputImage = new (outputImageWidth, outputImageHeight, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
 
         using (Graphics graphics = Graphics.FromImage(outputImage))
         {

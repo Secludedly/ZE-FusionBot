@@ -7,8 +7,10 @@ namespace SysBot.Base
     /// <summary>
     /// Commands a Bot to a perform a routine asynchronously.
     /// </summary>
+
     public abstract class RoutineExecutor<T> : IRoutineExecutor where T : class, IConsoleBotConfig
     {
+
         public readonly T Config;
 
         public readonly IConsoleConnectionAsync Connection;

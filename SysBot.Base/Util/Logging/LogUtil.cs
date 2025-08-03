@@ -58,6 +58,12 @@ public static class LogUtil
         Log(message, identity);
     }
 
+    public static void LogGeneric(string message, string identity)
+    {
+        Logger.Log(NLog.LogLevel.Info, $"{identity} {message}");
+        Log(message, identity);
+    }
+
     public static void LogSafe(Exception exception, string identity)
     {
         Logger.Log(LogLevel.Error, $"Exception from {identity}:");

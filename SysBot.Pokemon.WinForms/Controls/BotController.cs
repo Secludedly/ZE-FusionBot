@@ -1,10 +1,14 @@
 using SysBot.Base;
+using SysBot.Pokemon.WinForms.Controls;
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace SysBot.Pokemon.WinForms;
@@ -15,192 +19,186 @@ public partial class BotController : UserControl
     public PokeBotState State { get; private set; } = new();
     private IPokeBotRunner? Runner;
     public EventHandler? Remove;
+    public List<BotController> BotControls { get; } = new();
+    private string _status = "DISCONNECTED";
+    private Timer _glowTimer;
+    private float _glowPhase = 60f;
+    private bool _glowIncreasing = true;
+    private Color _glowBaseColor = Color.Red;
 
-    private readonly Image GreenImage = Image.FromStream(new System.IO.MemoryStream(Properties.Resources.status_green));
-    private readonly Image YellowImage = Image.FromStream(new System.IO.MemoryStream(Properties.Resources.status_yellow));
-    private readonly Image RedImage = Image.FromStream(new System.IO.MemoryStream(Properties.Resources.status_red));
-    private readonly Image AquaImage = Image.FromStream(new System.IO.MemoryStream(Properties.Resources.status_aqua));
-    private readonly Image TransparentImage = Image.FromStream(new System.IO.MemoryStream(Properties.Resources.status_transparent));
-
-    public bool IsRunning()
-    {
-        if (Runner == null || State == null)
-            return false;
-
-        var activeBot = Runner.GetBot(State);
-        return activeBot?.IsRunning ?? false;
-    }
 
     public BotController()
     {
         InitializeComponent();
-        var opt = (BotControlCommand[])Enum.GetValues(typeof(BotControlCommand));
+        InitializeContextMenu();
 
-        for (int i = 1; i < opt.Length; i++)
+        this.Margin = new Padding(0);
+        this.Padding = new Padding(0);
+        this.SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint, true);
+        this.UpdateStyles();
+        _glowTimer = new Timer { Interval = 30 }; // Adjust speed as needed
+        _glowTimer.Tick += (s, e) => AnimateStatusGlow();
+        _glowTimer.Start();
+
+
+        // Disable mouse highlight effects
+        foreach (Control control in Controls)
         {
-            var cmd = opt[i];
-            var item = new ToolStripMenuItem(cmd.ToString());
-            item.Click += (_, __) => SendCommand(cmd);
-
-            RCMenu.Items.Add(item);
+            control.MouseEnter += (_, _) => BackColor = BackColor;
+            control.MouseLeave += (_, _) => BackColor = BackColor;
         }
+    }
 
-        var remove = new ToolStripMenuItem("Remove");
+    private void InitializeContextMenu()
+    {
+        RCMenu.Items.Clear();
+
+        // Primary control commands
+        AddMenuItem("Start Bot", BotControlCommand.Start);
+        AddMenuItem("Stop Bot", BotControlCommand.Stop);
+        AddMenuItem("Idle Bot", BotControlCommand.Idle);
+        AddMenuItem("Resume Bot", BotControlCommand.Resume);
+
+        RCMenu.Items.Add(new ToolStripSeparator());
+
+        // Maintenance / remote control
+        AddMenuItem("Restart Bot", BotControlCommand.Restart);
+        AddMenuItem("Reboot + Stop", BotControlCommand.RebootAndStop);
+
+        RCMenu.Items.Add(new ToolStripSeparator());
+
+        // Screen commands
+        AddMenuItem("Turn Screen On", BotControlCommand.ScreenOn);
+        AddMenuItem("Turn Screen Off", BotControlCommand.ScreenOff);
+
+        RCMenu.Items.Add(new ToolStripSeparator());
+
+        // Final command
+        var remove = new ToolStripMenuItem("Remove Bot");
         remove.Click += (_, __) => TryRemove();
         RCMenu.Items.Add(remove);
+
         RCMenu.Opening += RcMenuOnOpening;
-
-        var controls = Controls;
-        foreach (var c in controls.OfType<Control>())
-        {
-            c.MouseEnter += BotController_MouseEnter;
-            c.MouseLeave += BotController_MouseLeave;
-        }
     }
 
-    private void RcMenuOnOpening(object? sender, CancelEventArgs? e)
+    private void AddMenuItem(string label, BotControlCommand cmd)
     {
-        var bot = Runner?.GetBot(State);
-        if (bot is null)
-            return;
-
-        foreach (var tsi in RCMenu.Items.OfType<ToolStripMenuItem>())
+        var bot = GetBotSafely();
+        var item = new ToolStripMenuItem(label)
         {
-            var text = tsi.Text;
-            tsi.Enabled = Enum.TryParse(text, out BotControlCommand cmd)
-                ? cmd.IsUsable(bot.IsRunning, bot.IsPaused)
-                : !bot.IsRunning;
-        }
+            Tag = cmd,
+            Enabled = cmd.IsUsable(bot?.IsRunning == true, bot?.IsPaused == true)
+        };
+        item.Click += (_, __) => SendCommand(cmd);
+        RCMenu.Items.Add(item);
     }
+
 
     public void Initialize(IPokeBotRunner runner, PokeBotState cfg)
     {
         Runner = runner;
         State = cfg;
         ReloadStatus();
-        if (PB_Lamp.Image == TransparentImage)
-            PB_Lamp.BackColor = Color.Gray; // or any placeholder
-
     }
 
-    public void ReloadStatus()
+    public bool IsRunning()
     {
-        var bot = GetBot().Bot;
-        RTB_Left.Text = $"{bot.Connection.Name}{Environment.NewLine}{State.InitialRoutine}";
+        return lblStatus.Text.Equals("RUNNING", StringComparison.OrdinalIgnoreCase);
     }
 
-    private DateTime LastUpdateStatus = DateTime.Now;
-
-    public void ReloadStatus(BotSource<PokeBotState> b)
+    public void UpdateLastLogTime(DateTime time)
     {
-        ReloadStatus();
-        var bot = b.Bot;
-        // Update description with styled text
-        RTB_Description.Clear();
-        RTB_Description.SelectionFont = new Font("Ubuntu Mono", 10F, FontStyle.Bold);
-        RTB_Description.SelectionColor = Color.FromArgb(165, 137, 182);
-        RTB_Description.AppendText("BOT STATUS: ");
+        // Example output: "LAST LOG: 6:30:00 PM"
+        string formatted = time.ToString("h:mm:ss tt"); // 12-hour, no leading zero on hour, AM/PM
+        lblLastLogTime.Text = $"{formatted}";
+    }
 
-        RTB_Description.SelectionFont = new Font("Ubuntu Mono", 10F, FontStyle.Regular);
-        RTB_Description.SelectionColor = Color.White;
-        RTB_Description.AppendText($"  {bot.LastLogged}\n");
-
-        RTB_Description.SelectionFont = new Font("Ubuntu Mono", 10F, FontStyle.Bold);
-        RTB_Description.SelectionColor = Color.FromArgb(165, 137, 182);
-        RTB_Description.AppendText("LAST LOG: ");
-
-        RTB_Description.SelectionFont = new Font("Ubuntu Mono", 10F, FontStyle.Regular);
-        RTB_Description.SelectionColor = Color.White;
-        DateTime time = bot.LastTime;
-        string formattedTime = time.ToString("h:mm:ss tt", CultureInfo.InvariantCulture);
-        RTB_Description.AppendText($"    {formattedTime}");
-
-        // Update left section
-        RTB_Left.Clear();
-        RTB_Left.SelectionFont = new Font("Ubuntu Mono", 10F, FontStyle.Bold);
-        RTB_Left.SelectionColor = Color.FromArgb(165, 137, 182);
-        RTB_Left.AppendText("BOT ADDRESS: ");
-
-        RTB_Left.SelectionFont = new Font("Ubuntu Mono", 10F, FontStyle.Regular);
-        RTB_Left.SelectionColor = Color.White;
-        RTB_Left.AppendText($" {bot.Connection.Name}\n");
-
-        RTB_Left.SelectionFont = new Font("Ubuntu Mono", 10F, FontStyle.Bold);
-        RTB_Left.SelectionColor = Color.FromArgb(165, 137, 182);
-        RTB_Left.AppendText("TRADE TYPE: ");
-
-        RTB_Left.SelectionFont = new Font("Ubuntu Mono", 10F, FontStyle.Regular);
-        RTB_Left.SelectionColor = Color.White;
-        RTB_Left.AppendText($"  {State.InitialRoutine}");
-
-
-        var lastTime = bot.LastTime;
-        if (!b.IsRunning)
+    public void ReloadStatus(BotSource<PokeBotState>? botSource = null)
+    {
+        try { botSource ??= GetBot(); }
+        catch (Exception ex)
         {
-            PB_Lamp.Image = TransparentImage;
-            return;
-        }
-        if (!b.Bot.Connection.Connected)
-        {
-            PB_Lamp.Image = AquaImage;
+            Debug.WriteLine($"[ERROR GETTING BOT]: {ex}");
             return;
         }
 
-        var cfg = bot.Config;
-        if (cfg is { CurrentRoutineType: PokeRoutineType.Idle, NextRoutineType: PokeRoutineType.Idle })
+        var bot = botSource?.Bot;
+        if (bot == null) return;
+
+        string status = bot.Connection == null ? "DISCONNECTED"
+                      : botSource.IsPaused ? "PAUSED"
+                      : botSource.IsRunning ? "RUNNING"
+                      : "STOPPED";
+
+        _status = status;
+        UpdateStatusUI(status);
+
+        lblConnectionName.Text = bot.Connection?.Label ?? "Unknown Connection";
+        lblConnectionInfo.Text = $"↪ {bot.LastLogged}";
+        SetBotMetaDisplay(State.InitialRoutine.ToString(), bot.LastTime);
+    }
+    private void SetBotMetaDisplay(string routine, DateTime lastTime)
+    {
+        rtbBotMeta.Clear();
+
+        // Format top line
+        string timeString = lastTime.ToString("h:mm.ss tt");
+        string topLine = $"{routine} @ {timeString}";
+
+        rtbBotMeta.SelectionFont = new Font("Segoe UI", 9F, FontStyle.Bold);
+        rtbBotMeta.SelectionColor = Color.White;
+        rtbBotMeta.AppendText(topLine);
+    }
+
+    private void UpdateStatusUI(string status)
+    {
+        Color statusColor = status.ToUpperInvariant() switch
         {
-            PB_Lamp.Image = YellowImage;
-            return;
-        }
-        if (LastUpdateStatus == lastTime)
-            return;
+            "RUNNING" => Color.LimeGreen,
+            "PAUSED" => Color.Goldenrod,
+            "STOPPED" => Color.OrangeRed,
+            "DISCONNECTED" => Color.Red,
+            _ => Color.DimGray
+        };
 
-        const int threshold = 100;
-        var delta = DateTime.Now - lastTime;
-        var seconds = delta.Seconds;
-        LastUpdateStatus = lastTime;
-
-        if (seconds > 2 * threshold)
-            return;
-
-        PB_Lamp.Image = seconds > threshold ? RedImage : GreenImage; ;
+        lblStatus.Text = status.ToUpperInvariant();
+        lblStatus.ForeColor = statusColor;
+        _glowBaseColor = statusColor;
     }
 
-    public void SetTradeProgress(int percent)
+    private void AnimateStatusGlow()
     {
-        if (InvokeRequired)
-            BeginInvoke((Action)(() => tradeProgressBar.Value = Math.Clamp(percent, 0, 100)));
-        else
-            tradeProgressBar.Value = Math.Clamp(percent, 0, 100);
-    }
+        float min = 60f;
+        float max = 255f;
+        float speed = 5f;
 
-    public void SetProgressBarColor(Color c)
-    {
-        tradeProgressBar.ProgressColor = c;
-    }
+        _glowPhase += (_glowIncreasing ? speed : -speed);
 
-    public void ResetProgress()
-    {
-        tradeProgressBar.Value = 0;
-    }
-
-    public void SetProgressWithFade(int value, int holdMs = 6000)
-    {
-        if (InvokeRequired)
+        if (_glowPhase >= max)
         {
-            Invoke(() => SetProgressWithFade(value, holdMs));
-            return;
+            _glowPhase = max;
+            _glowIncreasing = false;
+        }
+        else if (_glowPhase <= min)
+        {
+            _glowPhase = min;
+            _glowIncreasing = true;
         }
 
-        tradeProgressBar.Value = value;
-        tradeProgressBar.ShowCompleteAndFade(holdMs);
+        // Fade between BACKGROUND COLOR and _glowBaseColor
+        float t = (_glowPhase - min) / (max - min);
+
+        Color background = Color.FromArgb(20, 19, 57);
+        int r = (int)(background.R + (_glowBaseColor.R - background.R) * t);
+        int g = (int)(background.G + (_glowBaseColor.G - background.G) * t);
+        int b = (int)(background.B + (_glowBaseColor.B - background.B) * t);
+
+        pnlStatus.BackColor = Color.FromArgb(r, g, b);
     }
 
     public void TryRemove()
     {
-        var bot = GetBot();
-        if (!Runner!.Config.SkipConsoleBotCreation)
-            bot.Stop();
+        GetBot().Stop();
         Remove?.Invoke(this, EventArgs.Empty);
     }
 
@@ -211,84 +209,88 @@ public partial class BotController : UserControl
             LogUtil.LogError("No bots were created because SkipConsoleBotCreation is on!", "Hub");
             return;
         }
+
         var bot = GetBot();
         switch (cmd)
         {
             case BotControlCommand.Idle: bot.Pause(); break;
-            case BotControlCommand.Start:
-                Runner.InitializeStart();
-                bot.Start(); break;
+            case BotControlCommand.Start: Runner.InitializeStart(); bot.Start(); break;
             case BotControlCommand.Stop: bot.Stop(); break;
-            case BotControlCommand.RebootAndStop: bot.RebootAndStop(); break;
             case BotControlCommand.Resume: bot.Resume(); break;
             case BotControlCommand.Restart:
-                {
-                    var prompt = WinFormsUtil.Prompt(MessageBoxButtons.YesNo, "Are you sure you want to restart the connection?");
-                    if (prompt != DialogResult.Yes)
-                        return;
+                if (WinFormsUtil.Prompt(MessageBoxButtons.YesNo, "Restart the connection?") != DialogResult.Yes)
+                    return;
+                Runner.InitializeStart(); bot.Restart(); break;
+            case BotControlCommand.RebootAndStop: bot.RebootAndStop(); break;
 
-                    Runner.InitializeStart();
-                    bot.Restart();
-                    break;
-                }
+            case BotControlCommand.ScreenOn:
+                _ = Task.Run(() => BotControlCommandExtensions.SendScreenState(State.Connection.IP, true));
+                break;
+            case BotControlCommand.ScreenOff:
+                _ = Task.Run(() => BotControlCommandExtensions.SendScreenState(State.Connection.IP, false));
+                break;
+
             default:
-                WinFormsUtil.Alert($"{cmd} is not a command that can be sent to the Bot.");
-                return;
+                WinFormsUtil.Alert("Unsupported command.");
+                break;
+        }
+    }
+
+    private void BtnActions_Click(object? sender, EventArgs e)
+    {
+        if (RCMenu.Items.Count > 0)
+            RCMenu.Show(btnActions, new Point(0, btnActions.Height));
+    }
+
+    private void RcMenuOnOpening(object? sender, CancelEventArgs e)
+    {
+        var bot = GetBotSafely();
+
+        foreach (ToolStripItem item in RCMenu.Items)
+        {
+            if (item is ToolStripMenuItem mi && mi.Tag is BotControlCommand cmd)
+            {
+                mi.Enabled = cmd.IsUsable(bot?.IsRunning == true, bot?.IsPaused == true);
+            }
         }
     }
 
     private BotSource<PokeBotState> GetBot()
     {
-        if (Runner == null)
-            throw new ArgumentNullException(nameof(Runner));
-
-        var bot = Runner.GetBot(State);
-        if (bot == null)
-            throw new ArgumentNullException(nameof(bot));
+        if (Runner == null) throw new ArgumentNullException(nameof(Runner));
+        var bot = Runner.GetBot(State) ?? throw new ArgumentNullException("bot");
         return bot;
     }
 
-    private void BotController_MouseEnter(object? sender, EventArgs e) => BackColor = Color.FromArgb(31, 30, 68);
-    private void BotController_MouseLeave(object? sender, EventArgs e) => BackColor = Color.Transparent;
-
-    public void ReadState()
+    public void ReadAllBotStates()
     {
-        var bot = GetBot();
+        foreach (var bot in BotControls)
+            bot.ReloadStatus();
+    }
 
-        if (InvokeRequired)
+    private BotSource<PokeBotState>? GetBotSafely()
+    {
+        try
         {
-            BeginInvoke((MethodInvoker)(() => ReloadStatus(bot)));
+            return Runner != null ? Runner.GetBot(State) : null;
         }
-        else
+        catch
         {
-            ReloadStatus(bot);
+            return null;
         }
     }
-}
 
-public enum BotControlCommand
-{
-    None,
-    Start,
-    Stop,
-    Idle,
-    Resume,
-    Restart,
-    RebootAndStop,
-}
-
-public static class BotControlCommandExtensions
-{
-    public static bool IsUsable(this BotControlCommand cmd, bool running, bool paused)
+    public enum BotControlCommand
     {
-        return cmd switch
-        {
-            BotControlCommand.Start => !running,
-            BotControlCommand.Stop => running,
-            BotControlCommand.Idle => running && !paused,
-            BotControlCommand.Resume => paused,
-            BotControlCommand.Restart => true,
-            _ => false,
-        };
+        None,
+        Start,
+        Stop,
+        Idle,
+        Resume,
+        Restart,
+        RebootAndStop,
+        ScreenOn,
+        ScreenOff
     }
+
 }

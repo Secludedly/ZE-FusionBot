@@ -29,12 +29,12 @@ namespace SysBot.Pokemon.Discord
                 return;
             }
 
-            var code = Info.GetRandomTradeCode((int)userID);
+            var code = Info.GetRandomTradeCode(userID, Context.Channel, Context.User);
             _ = Task.Run(async () =>
             {
                 try
                 {
-                    await ProcessMysteryEggTradeAsync(code).ConfigureAwait(false);
+                    await ProcessMysteryEggTradeAsync(code);
                 }
                 catch (Exception ex)
                 {
@@ -42,6 +42,7 @@ namespace SysBot.Pokemon.Discord
                 }
             });
         }
+
 
         /// <summary>
         /// Generates a legal mystery egg with shiny status, perfect IVs, and hidden ability if available.
