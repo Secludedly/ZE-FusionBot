@@ -25,6 +25,16 @@ public partial class BotController : UserControl
     private float _glowPhase = 60f;
     private bool _glowIncreasing = true;
     private Color _glowBaseColor = Color.Red;
+    private Panel _progressBarContainer;
+    private Panel _progressFill;
+    private Timer _progressAnimationTimer;
+    private int _targetProgress = 0;
+    private int _currentProgress = 0;
+    private Color _glowColor = Color.Cyan;
+    private readonly Color _startColor = Color.Cyan;
+    private readonly Color _endColor = Color.FromArgb(255, 0, 255);
+    private bool _holdAt100 = false;
+    private Timer _holdTimer;
 
 
     public BotController()
@@ -36,10 +46,10 @@ public partial class BotController : UserControl
         this.Padding = new Padding(0);
         this.SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint, true);
         this.UpdateStyles();
-        _glowTimer = new Timer { Interval = 30 }; // Adjust speed as needed
+
+        _glowTimer = new Timer { Interval = 30 };
         _glowTimer.Tick += (s, e) => AnimateStatusGlow();
         _glowTimer.Start();
-
 
         // Disable mouse highlight effects
         foreach (Control control in Controls)
@@ -47,6 +57,103 @@ public partial class BotController : UserControl
             control.MouseEnter += (_, _) => BackColor = BackColor;
             control.MouseLeave += (_, _) => BackColor = BackColor;
         }
+
+        _progressBarContainer = new Panel
+        {
+            Dock = DockStyle.Bottom,
+            Height = 4,
+            BackColor = Color.FromArgb(20, 19, 57),
+            Margin = Padding.Empty,
+            Padding = Padding.Empty,
+        };
+        _progressBarContainer.BorderStyle = BorderStyle.None;
+
+        _progressFill = new Panel
+        {
+            Height = _progressBarContainer.Height,
+            Width = 0,
+            Location = new Point(0, 0),
+            BackColor = _glowColor,
+            Anchor = AnchorStyles.Left | AnchorStyles.Top
+        };
+        _progressFill.BorderStyle = BorderStyle.None;
+
+        _progressBarContainer.Controls.Add(_progressFill);
+        Controls.Add(_progressBarContainer);
+
+        _progressAnimationTimer = new Timer { Interval = 15 };
+        _progressAnimationTimer.Tick += (_, _) => AnimateProgress();
+        _progressAnimationTimer.Start();
+    }
+
+    public void SetTradeProgress(int percent)
+    {
+        if (percent < 0 || percent > 100)
+            return;
+
+        _targetProgress = percent;
+    }
+
+    public void SetProgressValue(int percent)
+    {
+        Console.WriteLine($"SetProgressValue({percent})"); // Add this
+        _targetProgress = Math.Clamp(percent, 0, 100);
+    }
+
+    public void ResetProgress()
+    {
+        _targetProgress = 0;
+    }
+
+    private void AnimateProgress()
+    {
+        if (_holdAt100)
+            return; // Don't animate while in the 6-second hold
+
+        if (_currentProgress == _targetProgress)
+            return;
+
+        int speed = 2;
+
+        if (_currentProgress < _targetProgress)
+            _currentProgress = Math.Min(_currentProgress + speed, _targetProgress);
+        else
+            _currentProgress = Math.Max(_currentProgress - speed, _targetProgress);
+
+        int totalWidth = _progressBarContainer.Width;
+        _progressFill.Width = (totalWidth * _currentProgress) / 100;
+
+        // If we hit 100%, trigger the 6-second green hold
+        if (_currentProgress == 100)
+        {
+            _holdAt100 = true;
+            _progressFill.BackColor = Color.Lime; // or Color.FromArgb(0, 255, 0) for neon green
+
+            _holdTimer = new Timer { Interval = 6000 }; // 6 seconds
+            _holdTimer.Tick += (s, e) =>
+            {
+                _holdTimer.Stop();
+                _holdAt100 = false;
+                _targetProgress = 0; // Reset to 0 and restart animation
+            };
+            _holdTimer.Start();
+            return;
+        }
+
+        // Otherwise: gradient & glow during normal progress
+        float percentProgress = _currentProgress / 100f;
+        Color interpolated = InterpolateColor(_startColor, _endColor, percentProgress);
+
+        int brightnessPulse = (int)(10 + (Math.Sin(DateTime.Now.Millisecond / 200.0) * 20));
+        _progressFill.BackColor = ControlPaint.Light(interpolated, brightnessPulse / 100f);
+    }
+
+    private Color InterpolateColor(Color start, Color end, float progress)
+    {
+        int r = (int)(start.R + (end.R - start.R) * progress);
+        int g = (int)(start.G + (end.G - start.G) * progress);
+        int b = (int)(start.B + (end.B - start.B) * progress);
+        return Color.FromArgb(r, g, b);
     }
 
     private void InitializeContextMenu()

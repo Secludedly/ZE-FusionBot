@@ -331,7 +331,8 @@ namespace SysBot.Pokemon.WinForms
                 c.SendCommand(cmd); // When you push a button, it sends to all bots
                 c.ReloadStatus();      // Read bot controller, update it, call it daddy
 
-                if (cmd == BotControlCommand.Stop) ;
+                if (cmd == BotControlCommand.Stop)
+                    c.ResetProgress();
             }
         }
 
@@ -423,6 +424,7 @@ namespace SysBot.Pokemon.WinForms
             Bots.Add(cfg);
             Config.Bots = Bots.ToArray();
             SaveCurrentConfig();
+            HookBotProgress(cfg, newBot);
 
             return true;
         }
@@ -434,6 +436,7 @@ namespace SysBot.Pokemon.WinForms
             _botsForm.BotPanel.Controls.Add(row);
             _botsForm.BotPanel.SetFlowBreak(row, true);
             row.ReloadStatus();
+            ProgressHelper.Initialize(row);
 
             row.Click += (s, e) =>
             {
@@ -599,6 +602,46 @@ namespace SysBot.Pokemon.WinForms
                     break;
             }
         }
+
+        private void HookBotProgress(PokeBotState cfg, PokeRoutineExecutorBase bot)
+        {
+            BotController? botControl = _botsForm.BotPanel.Controls
+                .OfType<BotController>()
+                .FirstOrDefault(c => c.State.Connection.Equals(cfg.Connection));
+
+            if (botControl == null)
+                return;
+
+            ProgressHelper.Initialize(botControl); // Only if you're using this style
+
+            void SetProgress(int percent)
+            {
+                if (_botsForm.InvokeRequired)
+                    _botsForm.BeginInvoke((Action)(() => botControl.SetProgressValue(percent)));
+                else
+                    botControl.SetProgressValue(percent);
+            }
+
+            switch (bot)
+            {
+                case PokeTradeBotSV svBot:
+                    svBot.TradeProgressChanged += SetProgress;
+                    break;
+                case PokeTradeBotSWSH swshBot:
+                    swshBot.TradeProgressChanged += SetProgress;
+                    break;
+                case PokeTradeBotBS bsBot:
+                    bsBot.TradeProgressChanged += SetProgress;
+                    break;
+                case PokeTradeBotLA laBot:
+                    laBot.TradeProgressChanged += SetProgress;
+                    break;
+                case PokeTradeBotLGPE lgpeBot:
+                    lgpeBot.TradeProgressChanged += SetProgress;
+                    break;
+            }
+        }
+
 
         // Resize the BotController controls when the panel is resized, focused on width
         private void FLP_Bots_Resize(object sender, EventArgs e)
