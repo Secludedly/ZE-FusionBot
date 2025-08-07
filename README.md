@@ -55,10 +55,19 @@ At its core, FusionBot is powered by [Gengar's](https://github.com/bdawg1989) [P
 ## 🖼️ GUI Previews
 
 <p align="center">
-    <img src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/README_IntroGif.gif">
+    <img src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/README_BotControlProgress.gif">
 </p>
 <p align="center">
-    <img src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/README_IntroGif2.gif">
+    <img src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/README_BotLogs.gif">
+</p>
+<p align="center">
+    <img src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/README_Program.gif">
+</p>
+<p align="center">
+    <img src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/README_ReloadGameMode.gif">
+</p>
+<p align="center">
+    <img src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/README_Context.gif">
 </p>
 
 
