@@ -41,9 +41,6 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
     // Track the last Pokémon we were offered since it persists between trades.
     private byte[] lastOffered = new byte[8];
 
-    // Stores whether the last trade was Distribution with fixed code, in which case we don't need to re-enter the code.
-    private bool LastTradeDistributionFixed;
-
     // Store the current save's OT and TID/SID for comparison.
     private string OT = string.Empty;
 
@@ -63,7 +60,6 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
     public event EventHandler? ConnectionSuccess;
 
     public event Action<int>? TradeProgressChanged;
-
 
     public ICountSettings Counts => TradeSettings;
 
@@ -101,7 +97,6 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
 
             // Force the bot to go through all the motions again on its first pass.
             StartFromOverworld = true;
-            LastTradeDistributionFixed = false;
 
             Log($"Starting main {nameof(PokeTradeBotSV)} loop.");
             await InnerLoop(sav, token).ConfigureAwait(false);
@@ -980,7 +975,6 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
                 if (token.IsCancellationRequested)
                 {
                     StartFromOverworld = true;
-                    LastTradeDistributionFixed = false;
                     await ExitTradeToPortal(false, token).ConfigureAwait(false);
                     poke.SendNotification(this, "Canceling the batch trades. The routine has been interrupted.");
                     TradeProgressChanged?.Invoke(0);
@@ -1156,7 +1150,6 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
             if (token.IsCancellationRequested)
             {
                 StartFromOverworld = true;
-                LastTradeDistributionFixed = false;
                 poke.SendNotification(this, "Canceling the batch trades. The routine has been interrupted.");
                 TradeProgressChanged?.Invoke(0);
 
@@ -1382,7 +1375,6 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
         if (token.IsCancellationRequested)
         {
             StartFromOverworld = true;
-            LastTradeDistributionFixed = false;
             await ExitTradeToPortal(false, token).ConfigureAwait(false);
             return PokeTradeResult.RoutineCancel;
         }
@@ -1544,7 +1536,6 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
         if (token.IsCancellationRequested)
         {
             StartFromOverworld = true;
-            LastTradeDistributionFixed = false;
             await ExitTradeToPortal(false, token).ConfigureAwait(false);
             return PokeTradeResult.RoutineCancel;
         }
@@ -1719,7 +1710,6 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
 
         // Force the bot to go through all the motions again on its first pass.
         StartFromOverworld = true;
-        LastTradeDistributionFixed = false;
         return true;
     }
 
