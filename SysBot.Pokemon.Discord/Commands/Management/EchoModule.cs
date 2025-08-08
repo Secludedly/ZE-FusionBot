@@ -35,12 +35,12 @@ namespace SysBot.Pokemon.Discord
     public class EchoModule : ModuleBase<SocketCommandContext>
     {
         private static DiscordSettings? Settings { get; set; }
-        private class EchoChannel(ulong channelId, string channelName, Action<string> action, Action<byte[], string, EmbedBuilder> raidAction)
+        private class EchoChannel(ulong channelId, string channelName, Action<string> action, Action<byte[], string, EmbedBuilder>? raidAction)
         {
             public readonly ulong ChannelID = channelId;
             public readonly string ChannelName = channelName;
             public readonly Action<string> Action = action;
-            public readonly Action<byte[], string, EmbedBuilder> RaidAction = raidAction;
+            public readonly Action<byte[], string, EmbedBuilder>? RaidAction = raidAction;
             public string EmbedResult = string.Empty;
         }
 

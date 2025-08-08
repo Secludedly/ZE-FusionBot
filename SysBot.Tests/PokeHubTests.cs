@@ -19,7 +19,7 @@ public class PokeHubTests
         var a = new T { Species = 5 };
         pool.Add(a);
 
-        var trade = hub.Queues.TryDequeue(PokeRoutineType.FlexTrade, out _, out _, null);
+        var trade = hub.Queues.TryDequeue(PokeRoutineType.FlexTrade, out _, out _, string.Empty);
         trade.Should().BeFalse();
 
         var ledy = hub.Queues.TryDequeueLedy(out var detail);

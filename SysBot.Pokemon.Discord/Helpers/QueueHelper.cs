@@ -436,8 +436,11 @@ public static class QueueHelper<T> where T : PKM, new()
         {
             string eggImageUrl = GetEggTypeImageUrl(pk);
             speciesImageUrl = AbstractTrade<T>.PokeImg(pk, false, true, null);
-            System.Drawing.Image combinedImage = await OverlaySpeciesOnEgg(eggImageUrl, speciesImageUrl);
-            embedImageUrl = SaveImageLocally(combinedImage);
+            System.Drawing.Image? combinedImage = await OverlaySpeciesOnEgg(eggImageUrl, speciesImageUrl);
+            if (combinedImage != null)
+                embedImageUrl = SaveImageLocally(combinedImage);
+            else
+                embedImageUrl = speciesImageUrl;
 
             if (combinedImage == null)
             {
@@ -507,7 +510,7 @@ public static class QueueHelper<T> where T : PKM, new()
         return (embedImageUrl, new DiscordColor(R, G, B));
     }
 
-    private static async Task<(System.Drawing.Image, bool)> OverlayBallOnSpecies(string speciesImageUrl, string ballImageUrl)
+    private static async Task<(System.Drawing.Image?, bool)> OverlayBallOnSpecies(string speciesImageUrl, string ballImageUrl)
     {
         var speciesImage = await LoadImageFromUrl(speciesImageUrl);
         if (speciesImage == null)
@@ -580,7 +583,7 @@ public static class QueueHelper<T> where T : PKM, new()
         double scaleRatio = Math.Min((double)eggImage.Width / speciesImage.Width, (double)eggImage.Height / speciesImage.Height);
         Size newSize = new((int)(speciesImage.Width * scaleRatio), (int)(speciesImage.Height * scaleRatio));
 
-        using System.Drawing.Image resizedSpeciesImage = new Bitmap(speciesImage, newSize);
+        using System.Drawing.Image? resizedSpeciesImage = new Bitmap(speciesImage, newSize);
 
         using (Graphics g = Graphics.FromImage(eggImage))
         {
