@@ -55,7 +55,7 @@ namespace SysBot.Pokemon.Helpers.ShowdownHelpers
             if (index >= MAX_COUNT)
                 return index.ToString();
             var expect = $"Ribbon{index}";
-            return RibbonStrings.GetName(expect);
+            return GameInfo.Strings.Ribbons.GetName(expect);
         }
     }
 }

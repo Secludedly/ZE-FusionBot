@@ -16,10 +16,12 @@ public static class AutoLegalityWrapper
         Initialized = true;
         InitializeAutoLegality(cfg);
     }
+
     public static void SetTradeSettings(TradeSettings settings)
     {
         TradeConfig = settings;
     }
+
     private static void InitializeAutoLegality(LegalitySettings cfg)
     {
         InitializeCoreStrings();
@@ -27,6 +29,7 @@ public static class AutoLegalityWrapper
         InitializeTrainerDatabase(cfg);
         InitializeSettings(cfg);
     }
+
     // The list of encounter types in the priority we prefer if no order is specified.
     private static readonly EncounterTypeGroup[] EncounterPriority = [EncounterTypeGroup.Egg, EncounterTypeGroup.Slot, EncounterTypeGroup.Static, EncounterTypeGroup.Mystery, EncounterTypeGroup.Trade];
     private static void InitializeSettings(LegalitySettings cfg)
@@ -67,6 +70,7 @@ public static class AutoLegalityWrapper
         cfg.PrioritizeEncounters = [.. cfg.PrioritizeEncounters.Distinct()]; // Don't allow duplicates.
         EncounterMovesetGenerator.PriorityList = cfg.PrioritizeEncounters;
     }
+
     private static void InitializeTrainerDatabase(LegalitySettings cfg)
     {
         var externalSource = cfg.GeneratePathTrainerInfo;
@@ -86,6 +90,7 @@ public static class AutoLegalityWrapper
         RegisterIfNoneExist(fallback, 7, GameVersion.GP);
         RegisterIfNoneExist(fallback, 7, GameVersion.GE);
     }
+
     private static SimpleTrainerInfo GetDefaultTrainer(LegalitySettings cfg)
     {
         var OT = cfg.GenerateOT;
@@ -101,6 +106,7 @@ public static class AutoLegalityWrapper
         };
         return fallback;
     }
+
     private static void RegisterIfNoneExist(SimpleTrainerInfo fallback, byte generation, GameVersion version)
     {
         fallback = new SimpleTrainerInfo(version)
@@ -115,14 +121,18 @@ public static class AutoLegalityWrapper
         if (exist is SimpleTrainerInfo) // not anything from files; this assumes ALM returns SimpleTrainerInfo for non-user-provided fake templates.
             TrainerSettings.Register(fallback);
     }
+
     private static void InitializeCoreStrings()
     {
         var lang = Thread.CurrentThread.CurrentCulture.TwoLetterISOLanguageName[..2];
-        LocalizationUtil.SetLocalization(typeof(LegalityCheckStrings), lang);
+        LocalizationUtil.SetLocalization(typeof(LegalityCheckResultCode), lang);
         LocalizationUtil.SetLocalization(typeof(MessageStrings), lang);
-        RibbonStrings.ResetDictionary(GameInfo.Strings.ribbons);
-        ParseSettings.ChangeLocalizationStrings(GameInfo.Strings.movelist, GameInfo.Strings.specieslist);
+
+        // Pre-initialize BattleTemplateLocalization to prevent concurrent dictionary access issues
+        // This forces all localizations to be loaded at startup before any concurrent operations
+        _ = BattleTemplateLocalization.ForceLoadAll();
     }
+
     public static bool CanBeTraded(this PKM pkm)
     {
         if (TradeConfig?.TradeConfiguration.EnableSpamCheck ?? false)
@@ -134,6 +144,7 @@ public static class AutoLegalityWrapper
         }
         return !FormInfo.IsFusedForm(pkm.Species, pkm.Form, pkm.Format);
     }
+
     public static bool IsFixedOT(IEncounterTemplate t, PKM pkm) => t switch
     {
         IFixedTrainer { IsFixedTrainer: true } => true,
@@ -149,6 +160,7 @@ public static class AutoLegalityWrapper
         },
         _ => false,
     };
+
     public static ITrainerInfo GetTrainerInfo<T>() where T : PKM, new()
     {
         if (typeof(T) == typeof(PK8))
@@ -163,6 +175,7 @@ public static class AutoLegalityWrapper
             return TrainerSettings.GetSavedTrainerData(GameVersion.GE, 7);
         throw new ArgumentException("Type does not have a recognized trainer fetch.", typeof(T).Name);
     }
+
     public static ITrainerInfo GetTrainerInfo(byte gen) => TrainerSettings.GetSavedTrainerData(gen);
     public static PKM GetLegal(this ITrainerInfo sav, IBattleTemplate set, out string res)
     {

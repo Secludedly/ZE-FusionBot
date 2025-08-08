@@ -104,9 +104,9 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
                     return null;
             }
 
-            var speciesIndex = GameInfo.SpeciesDataSource
+            var speciesIndex = GameInfo.GetStrings(game).Species
                 .Select((item, index) => new { item, index })
-                .FirstOrDefault(x => x.item.Text.Equals(species, StringComparison.OrdinalIgnoreCase))?.index ?? -1;
+                .FirstOrDefault(x => x.item.Equals(species, StringComparison.OrdinalIgnoreCase))?.index ?? -1;
             if (speciesIndex < 0)
                 return null;
 

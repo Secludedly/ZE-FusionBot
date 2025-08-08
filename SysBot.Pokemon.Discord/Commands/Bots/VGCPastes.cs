@@ -172,7 +172,8 @@ namespace SysBot.Pokemon.Discord
                             var fileName = namer.GetName(pk);
                             var entry = archive.CreateEntry($"{fileName}.{pk.Extension}");
                             using var entryStream = entry.Open();
-                            await entryStream.WriteAsync(pk.Data.AsMemory(0, pk.Data.Length));
+                            byte[] dataArray = pk.Data.ToArray();
+                            await entryStream.WriteAsync(dataArray.AsMemory(0, dataArray.Length));
 
                             string speciesImageUrl = AbstractTrade<PK9>.PokeImg(pk, false, false);
                             var speciesImage = System.Drawing.Image.FromStream(await new HttpClient().GetStreamAsync(speciesImageUrl));

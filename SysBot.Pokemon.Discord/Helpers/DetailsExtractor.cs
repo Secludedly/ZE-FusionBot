@@ -1,5 +1,6 @@
 using Discord;
 using Discord.WebSocket;
+using Microsoft.VisualBasic;
 using PKHeX.Core;
 using SysBot.Pokemon.Helpers;
 using System;
@@ -17,7 +18,7 @@ public class DetailsExtractor<T> where T : PKM, new()
         var embedData = new EmbedData
         {
             // Basic Pokémon details
-            Moves = GetMoveNames(pk),
+            Moves = GetMoveNames(pk, strings),
             Level = pk.CurrentLevel
         };
 
@@ -29,8 +30,8 @@ public class DetailsExtractor<T> where T : PKM, new()
         }
 
         // Pokémon identity and special attributes
-        embedData.Ability = GetAbilityName(pk);
-        embedData.Nature = GetNatureName(pk);
+        embedData.Ability = GetAbilityName(pk, strings);
+        embedData.Nature = GetNatureName(pk, strings);
         embedData.SpeciesName = strings.Species[pk.Species];
         embedData.SpecialSymbols = GetSpecialSymbols(pk);
         embedData.FormName = ShowdownParsing.GetStringFromForm(pk.Form, strings, pk.Species, pk.Context);
@@ -86,7 +87,7 @@ public class DetailsExtractor<T> where T : PKM, new()
         return embedData;
     }
 
-    private static List<string> GetMoveNames(T pk)
+    private static List<string> GetMoveNames(T pk, GameStrings strings)
     {
         ushort[] moves = new ushort[4];
         pk.GetMoves(moves.AsSpan());
@@ -99,8 +100,8 @@ public class DetailsExtractor<T> where T : PKM, new()
 
         for (int i = 0; i < moves.Length; i++)
         {
-            if (moves[i] == 0) continue;
-            string moveName = GameInfo.MoveDataSource.FirstOrDefault(m => m.Value == moves[i])?.Text ?? "";
+            if(moves[i] == 0) continue;
+            string moveName = strings.movelist[moves[i]];
             byte moveTypeId = MoveInfo.GetType(moves[i], default);
             PKHeX.Core.MoveType moveType = (PKHeX.Core.MoveType)moveTypeId;
             string formattedMove = $"*{moveName}* ({movePPs[i]} PP)";
@@ -165,14 +166,14 @@ public class DetailsExtractor<T> where T : PKM, new()
         return (scaleText, scaleNumber);
     }
 
-    private static string GetAbilityName(T pk)
+    private static string GetAbilityName(T pk, GameStrings strings)
     {
-        return GameInfo.AbilityDataSource.FirstOrDefault(a => a.Value == pk.Ability)?.Text ?? "";
+        return strings.abilitylist[pk.Ability];
     }
 
-    private static string GetNatureName(T pk)
+    private static string GetNatureName(T pk, GameStrings strings)
     {
-        return GameInfo.NatureDataSource.FirstOrDefault(n => n.Value == (int)pk.Nature)?.Text ?? "";
+        return strings.natures[(int)pk.Nature];
     }
 
     private static string GetSpecialSymbols(T pk)
