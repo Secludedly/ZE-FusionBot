@@ -33,8 +33,8 @@ namespace SysBot.Pokemon.Discord.Helpers
             { "Mark", "Mark" },
             { "Ribbon", "Ribbon" },
             { "GVs", "GVs" },
-            { "EVs", "EVs" },
-            { "IVs", "IVs" },
+            { "Set EVs", "SetEVs" },
+            { "Set IVs", "SetIVs" },
             { "OT Friendship", "OriginalTrainerFriendship" },
             { "HT Friendship", "HandlingTrainerFriendship" }
         };
@@ -64,8 +64,8 @@ namespace SysBot.Pokemon.Discord.Helpers
                 { "Mark", ProcessMark },
                 { "Ribbon", ProcessRibbon },
                 { "GVs", ProcessGVs },
-                { "EVs", ProcessEVs },
-                { "IVs", ProcessIVs }
+                { "SetEVs", ProcessEVs },
+                { "SetIVs", ProcessIVs }
             };
 
         //////////////////////////////////// NEW COMMAND DICTIONARIES //////////////////////////////////////
@@ -255,9 +255,9 @@ namespace SysBot.Pokemon.Discord.Helpers
         private static string ProcessRibbon(string val) =>
             $".Ribbon{val.Replace(" ", "")}=True";
 
-        // Creates an ".EVs=" batch command that can be written as "EVs:" that accepts "Random" or "Suggest" as special values
-        // "EVs: Random" value randomizes EVs across all stats
-        // "EVs: Suggest" generates a suggested EV spread like 252/252/4
+        // Creates a ".SetEVs=" batch command that can be written as "Set EVs:" that accepts "Random" or "Suggest" as special values
+        // "Set EVs: Random" value randomizes EVs across all stats
+        // "Set EVs: Suggest" generates a suggested EV spread like 252/252/4
         private static readonly string[] EvStats = { "HP", "ATK", "DEF", "SPA", "SPD", "SPE" };
         private static string ProcessEVs(string val)
         {
@@ -271,7 +271,7 @@ namespace SysBot.Pokemon.Discord.Helpers
             }
             else
             {
-                return $".EVs={val}";
+                return $".SetEVs={val}";
             }
         }
         private static string GenerateRandomEVs()
@@ -314,10 +314,10 @@ namespace SysBot.Pokemon.Discord.Helpers
             return FormatEVs(evs);
         }
 
-        // Creates an ".IVs=" batch command that can be written as "IVs:" that accepts "Random" or "1IV", "2IV", "3IV", "4IV", "5IV", "6IV"
-        // "IVs: Random" randomizes IVs across all stats
-        // "IVs: 1IV" sets one random stat to 31 IVs, the rest are random
-        // "IVs: 6IV" sets all stats to 31 IVs
+        // Creates a ".SetIVs=" batch command that can be written as "Set IVs:" that accepts "Random" or "1IV", "2IV", "3IV", "4IV", "5IV", "6IV"
+        // "Set IVs: Random" randomizes IVs across all stats
+        // "Set IVs: 1IV" sets one random stat to 31 IVs, the rest are random
+        // "Set IVs: 6IV" sets all stats to 31 IVs
         private static readonly string[] IvStats = { "HP", "ATK", "DEF", "SPA", "SPD", "SPE" };
         private static string ProcessIVs(string val)
         {
@@ -334,7 +334,7 @@ namespace SysBot.Pokemon.Discord.Helpers
                     return GeneratePresetIVs(ivCount);
             }
 
-            return $".IVs={val}";
+            return $".SetIVs={val}";
         }
         private static string GenerateRandomIVs()
         {
