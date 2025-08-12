@@ -115,7 +115,9 @@ namespace SysBot.Pokemon.WinForms
                 "seguisli.ttf",
                 "SegUIVar.ttf",
                 "Montserrat-Bold.ttf",
-                "Montserrat-Regular.ttf"
+                "Montserrat-Regular.ttf",
+                "Enter-The-Grid.ttf",
+                "GNUOLANE RG.TTF"
                 );
 
             // Set up left‑panel buttons & effects
@@ -217,7 +219,7 @@ namespace SysBot.Pokemon.WinForms
             LoadLogoImage(Config.Hub.BotLogoImage); // Load a URL image to replace logo
             InitUtil.InitializeStubs(Config.Mode);     // Stubby McStubbinson will set environment based on config mode
             _isFormLoading = false;                    // ...but is it loading?
-            ActivateButton(btnBots, RGBColors.color4); // We gonna start this party off right with the Bots Control panel and set its button color
+            ActivateButton(btnBots, RGBColors.color9); // We gonna start this party off right with the Bots Control panel and set its button color
             OpenChildForm(_botsForm);                  // I don't usually like to incite violence on children, but this time, open them kids up!
             SaveCurrentConfig();                       // Save me from myself... or save to the config.
 
@@ -343,7 +345,7 @@ namespace SysBot.Pokemon.WinForms
             if (!_botsForm.BotPanel.Controls.OfType<BotController>().Any(c => c.IsRunning()) && (ModifierKeys & Keys.Alt) == 0)
             // If not running and no Alt key pressed
             {
-                WinFormsUtil.Alert("Nothing is currently running."); // Derp
+                WinFormsUtil.Alert("Nothing's running, genius."); // Derp
                 return;
             }
 
@@ -642,7 +644,6 @@ namespace SysBot.Pokemon.WinForms
             }
         }
 
-
         // Resize the BotController controls when the panel is resized, focused on width
         private void FLP_Bots_Resize(object sender, EventArgs e)
         {
@@ -671,7 +672,7 @@ namespace SysBot.Pokemon.WinForms
         // Method to activate Bots button and change its color, loading BotsForm class
         private void Bots_Click(object sender, EventArgs e)
         {
-            ActivateButton(sender, RGBColors.color4); // Change the color of the active Bots button
+            ActivateButton(sender, RGBColors.color9); // Change the color of the active Bots button
             OpenChildForm(_botsForm);                 // Load the BotsForm in the main panel
         }
 
@@ -756,6 +757,12 @@ namespace SysBot.Pokemon.WinForms
             public static Color color4 = Color.FromArgb(95, 77, 221);   // Dark Purple
             public static Color color5 = Color.FromArgb(249, 88, 155);  // Light Pink
             public static Color color6 = Color.FromArgb(24, 161, 251);  // Light Blue
+            public static Color color7 = Color.FromArgb(100, 149, 237); // Corn Flower Blue
+            public static Color color8 = Color.FromArgb(60, 179, 113);  // Medium Sea Green
+            public static Color color9 = Color.FromArgb(147, 112, 219); // Medium Purple
+            public static Color color10 = Color.FromArgb(176, 196, 222);// Light Steel Blue
+            public static Color color11 = Color.FromArgb(240, 255, 240);// Honeydew
+            public static Color color12 = Color.FromArgb(230, 230, 250);// Lavender
         }
 
         // Method to slide and fade in the child forms (Bots, Hub, Logs) when it is opened
@@ -794,15 +801,15 @@ namespace SysBot.Pokemon.WinForms
         // Animation method for Bots, Hub, and Logs button hover effect
         private async void AnimateButtonHover(FontAwesome.Sharp.IconButton button, bool hover)
         {
-            float targetScale = hover ? 1.1f : 1.0f;                       // Target scale for hover effect
-            float step = 0.02f * (hover ? 1 : -1);                         // Step size for scaling
+            float targetScale = hover ? 0.1f : 0.4f;                       // Target scale for hover effect
+            float step = 0.01f * (hover ? 1 : -1);                         // Step size for scaling
             float currentScale = button.Tag is float scale ? scale : 1.0f; // Get current scale from Tag or default to 1.0f
 
             while ((hover && currentScale < targetScale) || (!hover && currentScale > targetScale)) // While scaling towards target
             {
                 currentScale = Math.Clamp(currentScale + step, 1.0f, 1.1f);                         // Clamp the scale between 1.0 and 1.1
                 button.Tag = currentScale;                                                          // Store the current scale in the button's Tag property
-                button.Font = new Font(button.Font.FontFamily, 11F * currentScale, FontStyle.Bold); // Adjust font size based on scale
+                button.Font = new Font(button.Font.FontFamily, 10.2F * currentScale, FontStyle.Regular); // Adjust font size based on scale
                 await Task.Delay(10);                                                               // Delay for 10 milliseconds for smoother animation
             }
         }
@@ -821,9 +828,9 @@ namespace SysBot.Pokemon.WinForms
         private void SetupHoverAnimation(IconButton button, Color baseColor, Color hoverColor)
         {
             Timer fadeTimer = new Timer();                  // Create a new timer for the hover animation
-            fadeTimer.Interval = 15;                        // Lower value = smoother effect
-            float t = 0f;                                   // Current interpolation value (0 to 1)
-            float speed = 0.03f;                            // Lower value = slower fade
+            fadeTimer.Interval = 25;                        // Lower value = smoother effect
+            float t = 1f;                                   // Current interpolation value (0 to 1)
+            float speed = 0.05f;                            // Lower value = slower fade
             bool hovering = false;                          // Whether the mouse is hovering over the button
 
             // Start the fade timer when the button is hovered over or not
@@ -857,9 +864,9 @@ namespace SysBot.Pokemon.WinForms
         private void SetupTopButtonHoverAnimation(IconPictureBox button, Color hoverColor)
         {
             Color baseColor = button.BackColor;            // Default color for the buttons before hover
-            float fadeSpeed = 0.02f;                       // Speed of the fade animation, lower value = slower fade
-            Timer fadeTimer = new Timer { Interval = 15 }; // Timer for the fade animation, lower value = smoother effect
-            float step = 0f;                               // Current step in the fade animation, higher values = slower fade
+            float fadeSpeed = 0.01f;                       // Speed of the fade animation, lower value = slower fade
+            Timer fadeTimer = new Timer { Interval = 10 }; // Timer for the fade animation, lower value = smoother effect
+            float step = 1f;                               // Current step in the fade animation, higher values = slower fade
             bool hovering = false;                         // Whether the mouse is hovering over the button
 
             // Start the fade timer when the button is hovered over or not
@@ -893,9 +900,9 @@ namespace SysBot.Pokemon.WinForms
 
             Timer t = new Timer();            // Create a new timer for the hover animation
             Color startColor = ThemeManager.CurrentColors.PanelBase; // Current color of the button
-            float fadeSpeed = 0.02f;          // 0.02 = 750ms fade, higher values = slower fade
-            float step = 0.0f;                // Current step in the fade animation, higher values = slower fade
-            t.Interval = 15;                  // Around 60fps, lower value = smoother effect
+            float fadeSpeed = 0.04f;          // 0.02 = 750ms fade, higher values = slower fade
+            float step = 0.1f;                // Current step in the fade animation, higher values = slower fade
+            t.Interval = 10;                  // Around 60fps, lower value = smoother effect
 
             // Set up the timer tick event for the hover animation
             t.Tick += (s, e) =>

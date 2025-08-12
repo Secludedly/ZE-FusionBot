@@ -43,7 +43,7 @@ static class Program
         splash.Show();
         var splashThread = new Thread(new ThreadStart(() =>
         {
-        Thread.Sleep(2500); // How long in milliseconds the splash screen should be displayed
+        Thread.Sleep(1650); // How long in milliseconds the splash screen should be displayed
         splash.Invoke(new Action(() => splash.Close()));
         }));
         splashThread.Start();

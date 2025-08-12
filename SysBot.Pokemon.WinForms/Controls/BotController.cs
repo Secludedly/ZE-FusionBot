@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -28,11 +29,16 @@ public partial class BotController : UserControl
     private Panel _progressBarContainer;
     private Panel _progressFill;
     private Timer _progressAnimationTimer;
+    private Timer _shimmerTimer;
+    private Timer _sparkleTimer;
     private int _targetProgress = 0;
     private int _currentProgress = 0;
     private Color _glowColor = Color.Cyan;
-    private readonly Color _startColor = Color.Cyan;
-    private readonly Color _endColor = Color.FromArgb(255, 0, 255);
+    private int _shimmerX;
+    private int _sparkleX = -50;
+    private int _sparkleWidth = 50;
+    private Color _startColor = Color.FromArgb(0, 122, 204);
+    private Color _endColor = Color.FromArgb(153, 50, 204);
     private bool _holdAt100 = false;
     private Timer _holdTimer;
 
@@ -84,6 +90,64 @@ public partial class BotController : UserControl
         _progressAnimationTimer = new Timer { Interval = 15 };
         _progressAnimationTimer.Tick += (_, _) => AnimateProgress();
         _progressAnimationTimer.Start();
+
+        // Sparkle animation timer
+        _sparkleTimer = new Timer { Interval = 20 }; // ~50 FPS
+        _sparkleTimer.Tick += (s, e) =>
+        {
+            _sparkleX += 8; // move sparkle speed
+            if (_sparkleX > _progressFill.Width + _sparkleWidth)
+                _sparkleX = -_sparkleWidth;
+            _progressFill.Invalidate();
+        };
+        _sparkleTimer.Start();
+    }
+
+    private void AnimateSparkle()
+    {
+        _sparkleX += 2; // move sparkle to the right
+
+        if (_sparkleX > _progressFill.Width + _sparkleWidth)
+            _sparkleX = -_sparkleWidth; // reset to start from left again
+
+        _progressFill.Invalidate(); // redraw sparkle
+    }
+
+    private void _progressFill_Paint(object sender, PaintEventArgs e)
+    {
+        if (_progressFill.Width <= 0)
+            return;
+
+        Rectangle rect = new Rectangle(_sparkleX, 0, _sparkleWidth, _progressFill.Height);
+
+        using var shimmerBrush = new LinearGradientBrush(
+            rect,
+            Color.FromArgb(180, Color.White),
+            Color.FromArgb(0, Color.White),
+            LinearGradientMode.Horizontal
+        );
+
+        int filledWidth = _progressFill.Width;
+        Rectangle clipRect = new Rectangle(0, 0, filledWidth, _progressFill.Height);
+
+        var oldClip = e.Graphics.Clip;
+        e.Graphics.SetClip(clipRect);
+        e.Graphics.FillRectangle(shimmerBrush, rect);
+        e.Graphics.SetClip(oldClip, System.Drawing.Drawing2D.CombineMode.Replace);
+    }
+
+    protected override void OnHandleCreated(EventArgs e)
+    {
+        base.OnHandleCreated(e);
+        _progressFill.Paint += _progressFill_Paint;
+    }
+
+    private void AnimateShimmer()
+    {
+        int glowWidth = 70; // same as above
+        _shimmerX += 4;
+        if (_shimmerX > Width) _shimmerX = -glowWidth;
+        Invalidate();
     }
 
     public void SetTradeProgress(int percent)
@@ -127,7 +191,7 @@ public partial class BotController : UserControl
         if (_currentProgress == 100)
         {
             _holdAt100 = true;
-            _progressFill.BackColor = Color.Lime; // or Color.FromArgb(0, 255, 0) for neon green
+            _progressFill.BackColor = Color.FromArgb(127, 255, 212); // or Color.FromArgb(0, 255, 0) for neon green
 
             _holdTimer = new Timer { Interval = 6000 }; // 6 seconds
             _holdTimer.Tick += (s, e) =>
@@ -148,6 +212,38 @@ public partial class BotController : UserControl
         _progressFill.BackColor = ControlPaint.Light(interpolated, brightnessPulse / 100f);
     }
 
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        base.OnPaint(e);
+
+        // Draw background bar
+        using (SolidBrush backBrush = new SolidBrush(Color.FromArgb(20, 19, 57)))
+        {
+            e.Graphics.FillRectangle(backBrush, 0, Height - 4, Width, 4);
+        }
+
+        // Progress fill
+        int fillWidth = (Width * _currentProgress) / 100;
+        if (fillWidth > 0)
+        {
+            using (SolidBrush fillBrush = new SolidBrush(InterpolateColor(_startColor, _endColor, _currentProgress / 100f)))
+            {
+                e.Graphics.FillRectangle(fillBrush, 0, Height - 4, fillWidth, 4);
+            }
+
+            // Shimmer effect
+            int glowWidth = 70; // or whatever length you want
+            using (LinearGradientBrush shimmerBrush = new LinearGradientBrush(
+                new Rectangle(_shimmerX, Height - 4, glowWidth, 4),
+                Color.FromArgb(180, Color.White),
+                Color.FromArgb(0, Color.White),
+                LinearGradientMode.Horizontal))
+            {
+                e.Graphics.FillRectangle(shimmerBrush, _shimmerX, Height - 4, glowWidth, 4);
+            }
+        }
+    }
+
     private Color InterpolateColor(Color start, Color end, float progress)
     {
         int r = (int)(start.R + (end.R - start.R) * progress);
@@ -160,7 +256,17 @@ public partial class BotController : UserControl
     {
         RCMenu.Items.Clear();
 
-        // Primary control commands
+        // Your color map for the menu text
+        var colorMap = new Dictionary<string, Color>
+    {
+        { "Start Bot", Color.LimeGreen },
+        { "Stop Bot", Color.Red },
+        { "Restart Bot", Color.LightBlue },
+        { "Reboot + Stop", Color.Orange },
+        { "Turn Screen On", Color.LightGray },
+        { "Turn Screen Off", Color.DimGray }
+    };
+
         AddMenuItem("Start Bot", BotControlCommand.Start);
         AddMenuItem("Stop Bot", BotControlCommand.Stop);
         AddMenuItem("Idle Bot", BotControlCommand.Idle);
@@ -168,24 +274,92 @@ public partial class BotController : UserControl
 
         RCMenu.Items.Add(new ToolStripSeparator());
 
-        // Maintenance / remote control
         AddMenuItem("Restart Bot", BotControlCommand.Restart);
         AddMenuItem("Reboot + Stop", BotControlCommand.RebootAndStop);
 
         RCMenu.Items.Add(new ToolStripSeparator());
 
-        // Screen commands
         AddMenuItem("Turn Screen On", BotControlCommand.ScreenOn);
         AddMenuItem("Turn Screen Off", BotControlCommand.ScreenOff);
 
         RCMenu.Items.Add(new ToolStripSeparator());
 
-        // Final command
         var remove = new ToolStripMenuItem("Remove Bot");
         remove.Click += (_, __) => TryRemove();
         RCMenu.Items.Add(remove);
 
         RCMenu.Opening += RcMenuOnOpening;
+
+        // Set the custom renderer here
+        RCMenu.Renderer = new ColoredMenuRenderer(colorMap);
+    }
+
+    private void ColoredMenuItem_DrawItem(object sender, DrawItemEventArgs e)
+    {
+        if (sender is not ToolStripMenuItem item)
+            return;
+
+        Color textColor = item.Tag is Color c ? c : SystemColors.MenuText;
+
+        // Draw background (normal or selected)
+        if ((e.State & DrawItemState.Selected) == DrawItemState.Selected)
+        {
+            e.Graphics.FillRectangle(SystemBrushes.Highlight, e.Bounds);
+            textColor = SystemColors.HighlightText; // invert text color on hover
+        }
+        else
+        {
+            e.Graphics.FillRectangle(SystemBrushes.Menu, e.Bounds);
+        }
+
+        // Draw text left aligned vertically centered
+        TextRenderer.DrawText(
+            e.Graphics,
+            item.Text,
+            e.Font,
+            e.Bounds,
+            textColor,
+            TextFormatFlags.VerticalCenter | TextFormatFlags.Left);
+
+        // Draw focus rectangle if needed
+        if ((e.State & DrawItemState.Focus) == DrawItemState.Focus)
+        {
+            e.DrawFocusRectangle();
+        }
+    }
+
+    private void ColoredMenuItem_MeasureItem(object sender, MeasureItemEventArgs e)
+    {
+        if (sender is ToolStripMenuItem item)
+        {
+            Size textSize = TextRenderer.MeasureText(item.Text, item.Font);
+            e.ItemWidth = textSize.Width;
+            e.ItemHeight = textSize.Height;
+        }
+    }
+
+    private class ColoredMenuRenderer : ToolStripProfessionalRenderer
+    {
+        private readonly Dictionary<string, Color> _colorMap;
+
+        public ColoredMenuRenderer(Dictionary<string, Color> colorMap)
+        {
+            _colorMap = colorMap;
+        }
+
+        protected override void OnRenderItemText(ToolStripItemTextRenderEventArgs e)
+        {
+            if (_colorMap.TryGetValue(e.Item.Text, out Color color))
+            {
+                // Use highlight text color if item is selected (hover)
+                e.TextColor = e.Item.Selected ? SystemColors.HighlightText : color;
+            }
+            else
+            {
+                e.TextColor = e.Item.Selected ? SystemColors.HighlightText : SystemColors.ControlText;
+            }
+            base.OnRenderItemText(e);
+        }
     }
 
     private void AddMenuItem(string label, BotControlCommand cmd)
@@ -199,7 +373,6 @@ public partial class BotController : UserControl
         item.Click += (_, __) => SendCommand(cmd);
         RCMenu.Items.Add(item);
     }
-
 
     public void Initialize(IPokeBotRunner runner, PokeBotState cfg)
     {

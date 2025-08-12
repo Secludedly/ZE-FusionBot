@@ -16,6 +16,7 @@ namespace SysBot.Pokemon.WinForms
         private Button nextButton;
         private Button prevButton;
         private Label resultLabel;
+        private Label placeholderLabel;
 
         private List<int> matchIndices = new();
         private int currentMatchIndex = -1;
@@ -36,10 +37,33 @@ namespace SysBot.Pokemon.WinForms
                 ContextMenuStrip = CreateContextMenu()
             };
 
+            placeholderLabel = new Label
+            {
+                Text = "Nothing currently logged...",
+                ForeColor = Color.Cyan,
+                BackColor = Color.Transparent,
+                AutoSize = false,
+                TextAlign = ContentAlignment.MiddleCenter,
+                Dock = DockStyle.Fill,
+                Font = new Font("Ubuntu Mono", 10, FontStyle.Regular)
+            };
+
+            var logsPanel = new Panel { Dock = DockStyle.Fill };
+            logsPanel.Controls.Add(placeholderLabel);
+            logsPanel.Controls.Add(LogsBox);
+
             var topPanel = CreateSearchPanel();
 
-            Controls.Add(LogsBox);
+            // Add the panels in correct order
+            Controls.Add(logsPanel);   // ✅ instead of LogsBox directly
             Controls.Add(topPanel);
+
+            LogsBox.TextChanged += LogsBox_TextChanged;
+        }
+
+        private void LogsBox_TextChanged(object sender, EventArgs e)
+        {
+            placeholderLabel.Visible = string.IsNullOrEmpty(LogsBox.Text);
         }
 
         private Panel CreateSearchPanel()
@@ -61,21 +85,12 @@ namespace SysBot.Pokemon.WinForms
             };
             searchBox.Enter += SearchBox_Enter;
             searchBox.Leave += SearchBox_Leave;
-            searchBox.KeyDown += SearchBox_KeyDown;
-
-            enterButton = new FancyButton
-            {
-                Text = "Enter",
-                Location = new Point(210, 2),
-                Height = 25,
-                Font = new Font("Montserrat-Regular", 8)
-            };
-            enterButton.Click += (s, e) => PerformSearch(SearchDirection.Current);
+            searchBox.TextChanged += SearchBox_TextChanged;
 
             nextButton = new FancyButton
             {
-                Text = "Next",
-                Location = new Point(290, 2), // was 210
+                Text = "NEXT",
+                Location = new Point(210, 2), // was 210
                 Height = 25,
                 Font = new Font("Montserrat-Regular", 8)
             };
@@ -83,8 +98,8 @@ namespace SysBot.Pokemon.WinForms
 
             prevButton = new FancyButton
             {
-                Text = "Prev",
-                Location = new Point(370, 2), // was 290
+                Text = "PREV",
+                Location = new Point(290, 2), // was 290
                 Height = 25,
                 Font = new Font("Montserrat-Regular", 8)
             };
@@ -92,8 +107,8 @@ namespace SysBot.Pokemon.WinForms
 
             var clearButton = new FancyButton
             {
-                Text = "Clear",
-                Location = new Point(450, 2),
+                Text = "CLEAR",
+                Location = new Point(370, 2), // was 370
                 Height = 25,
                 Font = new Font("Montserrat-Regular", 8)
             };
@@ -109,7 +124,7 @@ namespace SysBot.Pokemon.WinForms
             resultLabel = new Label
             {
                 AutoSize = true,
-                Location = new Point(550, 6),
+                Location = new Point(470, 6), // was 550
                 ForeColor = Color.White,
                 Font = new Font("Montserrat-Regular", 8)
             };
@@ -124,14 +139,13 @@ namespace SysBot.Pokemon.WinForms
             return panel;
         }
 
-        private void SearchBox_KeyDown(object sender, KeyEventArgs e)
+        private void SearchBox_TextChanged(object sender, EventArgs e)
         {
-            if (e.KeyCode == Keys.Enter)
-            {
-                DoSearch(searchBox.Text);
-                e.Handled = true;
-                e.SuppressKeyPress = true;
-            }
+            // Don’t trigger when it’s the placeholder text
+            if (searchBox.Text == "Search logs...")
+                return;
+
+            DoSearch(searchBox.Text);
         }
 
         private void DoSearch(string term)
@@ -182,7 +196,10 @@ namespace SysBot.Pokemon.WinForms
             int matchPos = matchIndices[currentMatchIndex];
             LogsBox.Select(matchPos, searchBox.Text.Length);
             LogsBox.ScrollToCaret();
-            LogsBox.Focus();
+
+            if (!searchBox.Focused)
+                LogsBox.Focus();
+
 
             resultLabel.Text = $"Match {currentMatchIndex + 1} of {matchIndices.Count}";
         }
@@ -249,12 +266,16 @@ namespace SysBot.Pokemon.WinForms
             MoveToMatch(move);
         }
 
-
         private ContextMenuStrip CreateContextMenu()
         {
             var contextMenu = new ContextMenuStrip();
             contextMenu.Items.Add(new ToolStripMenuItem("Copy", null, (sender, e) => LogsBox.Copy()));
             contextMenu.Items.Add(new ToolStripMenuItem("Clear", null, (sender, e) => LogsBox.Clear()));
+            contextMenu.Items.Add(new ToolStripMenuItem("Select All", null, (sender, e) =>
+            {
+                LogsBox.SelectAll();
+            }));
+
             return contextMenu;
         }
     }

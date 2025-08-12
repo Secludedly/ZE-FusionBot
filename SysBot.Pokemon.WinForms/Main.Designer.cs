@@ -96,7 +96,7 @@ namespace SysBot.Pokemon.WinForms
             btnLogs.Dock = DockStyle.Top;
             btnLogs.FlatAppearance.BorderSize = 0;
             btnLogs.FlatStyle = FlatStyle.Flat;
-            btnLogs.Font = new Font("Ubuntu Mono", 10.8F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            btnLogs.Font = new Font("Enter The Grid", 10.2F, FontStyle.Regular, GraphicsUnit.Point, 0);
             btnLogs.ForeColor = Color.White;
             btnLogs.IconChar = IconChar.TextHeight;
             btnLogs.IconColor = Color.White;
@@ -107,7 +107,7 @@ namespace SysBot.Pokemon.WinForms
             btnLogs.Padding = new Padding(10, 0, 20, 0);
             btnLogs.Size = new Size(220, 60);
             btnLogs.TabIndex = 3;
-            btnLogs.Text = "Bot Logs";
+            btnLogs.Text = "Logs";
             btnLogs.TextAlign = ContentAlignment.MiddleLeft;
             btnLogs.TextImageRelation = TextImageRelation.ImageBeforeText;
             btnLogs.UseVisualStyleBackColor = true;
@@ -118,7 +118,7 @@ namespace SysBot.Pokemon.WinForms
             btnHub.Dock = DockStyle.Top;
             btnHub.FlatAppearance.BorderSize = 0;
             btnHub.FlatStyle = FlatStyle.Flat;
-            btnHub.Font = new Font("Ubuntu Mono", 10.8F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            btnHub.Font = new Font("Enter The Grid", 10.2F, FontStyle.Regular, GraphicsUnit.Point, 0);
             btnHub.ForeColor = Color.White;
             btnHub.IconChar = IconChar.BarChart;
             btnHub.IconColor = Color.White;
@@ -129,7 +129,7 @@ namespace SysBot.Pokemon.WinForms
             btnHub.Padding = new Padding(10, 0, 20, 0);
             btnHub.Size = new Size(220, 60);
             btnHub.TabIndex = 2;
-            btnHub.Text = "Bot Hub";
+            btnHub.Text = "Hub";
             btnHub.TextAlign = ContentAlignment.MiddleLeft;
             btnHub.TextImageRelation = TextImageRelation.ImageBeforeText;
             btnHub.UseVisualStyleBackColor = true;
@@ -150,7 +150,7 @@ namespace SysBot.Pokemon.WinForms
             btnBots.Dock = DockStyle.Top;
             btnBots.FlatAppearance.BorderSize = 0;
             btnBots.FlatStyle = FlatStyle.Flat;
-            btnBots.Font = new Font("Ubuntu Mono", 10.8F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            btnBots.Font = new Font("Enter The Grid", 10.2F, FontStyle.Regular, GraphicsUnit.Point, 0);
             btnBots.ForeColor = Color.White;
             btnBots.IconChar = IconChar.AngleRight;
             btnBots.IconColor = Color.White;
@@ -161,7 +161,7 @@ namespace SysBot.Pokemon.WinForms
             btnBots.Padding = new Padding(10, 0, 20, 0);
             btnBots.Size = new Size(220, 60);
             btnBots.TabIndex = 1;
-            btnBots.Text = "Bot Controls";
+            btnBots.Text = "Controller";
             btnBots.TextAlign = ContentAlignment.MiddleLeft;
             btnBots.TextImageRelation = TextImageRelation.ImageBeforeText;
             btnBots.UseVisualStyleBackColor = true;
@@ -211,7 +211,6 @@ namespace SysBot.Pokemon.WinForms
             // 
             pictureLogo.BackColor = Color.Transparent;
             pictureLogo.BackgroundImageLayout = ImageLayout.Stretch;
-            pictureLogo.Cursor = Cursors.Default;
             pictureLogo.Image = (Image)resources.GetObject("pictureLogo.Image");
             pictureLogo.Location = new Point(12, 12);
             pictureLogo.Name = "pictureLogo";
@@ -317,11 +316,11 @@ namespace SysBot.Pokemon.WinForms
             // lblTitleChildForm
             // 
             lblTitleChildForm.AutoSize = true;
-            lblTitleChildForm.Font = new Font("bubbleboddy light", 22.2F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            lblTitleChildForm.Font = new Font("Gnuolane Rg", 22.1999989F, FontStyle.Regular, GraphicsUnit.Point, 0);
             lblTitleChildForm.ForeColor = Color.White;
-            lblTitleChildForm.Location = new Point(58, 12);
+            lblTitleChildForm.Location = new Point(54, 9);
             lblTitleChildForm.Name = "lblTitleChildForm";
-            lblTitleChildForm.Size = new Size(172, 38);
+            lblTitleChildForm.Size = new Size(144, 44);
             lblTitleChildForm.TabIndex = 0;
             lblTitleChildForm.Text = "LOADING ...";
             // 

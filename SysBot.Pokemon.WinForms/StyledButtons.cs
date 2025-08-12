@@ -8,37 +8,55 @@ public class FancyButton : Button
 {
     [Browsable(false)]
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-    public Color StartColor { get; set; } = Color.FromArgb(56, 56, 131);  // light blue with pink undertones
+    public Color StartColor { get; set; } = Color.FromArgb(56, 56, 131);  // not used but kept
+
     [Browsable(false)]
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-    public Color EndColor { get; set; } = Color.FromArgb(165, 137, 182);    // pinkish tone
+    public Color EndColor { get; set; } = Color.FromArgb(165, 137, 182);    // not used but kept
+
     [Browsable(false)]
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-    public Color HoverColor { get; set; } = Color.FromArgb(180, 210, 250);  // lighter blue on hover
+    public Color HoverColor { get; set; } = Color.FromArgb(180, 210, 250);  // not used but kept
+
     [Browsable(false)]
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-    public Color HoverStartColor { get; set; } = Color.FromArgb(20, 30, 90);
+    public Color HoverStartColor { get; set; } = Color.FromArgb(20, 30, 90); // not used but kept
+
     [Browsable(false)]
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-    public Color HoverEndColor { get; set; } = Color.FromArgb(160, 90, 200);
+    public Color HoverEndColor { get; set; } = Color.FromArgb(160, 90, 200);  // not used but kept
+
     [Browsable(false)]
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-    public Color ClickColor { get; set; } = Color.FromArgb(60, 30, 90);     // dark purple on click
+    public Color ClickColor { get; set; } = Color.FromArgb(60, 30, 90);     // not used but kept
+
+    [Browsable(false)]
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public int GlowOpacity { get; set; } = 120; // 0-255 max opacity
+
+    [Browsable(false)]
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public Color GlowColor { get; set; } = Color.Cyan;
 
     private bool isHovered = false;
     private bool isClicked = false;
 
-    // Shake state variables
+    // Shake state
     private Timer shakeTimer;
     private int shakeCounter = 0;
     private Point originalLocation;
 
-    // Animation fields for hover gradient
+    // Animation timer drives glow pulse (runs always) and animation offset (not used here)
     private Timer animationTimer;
     private int animationOffset = 0;
-    private bool animationForward = true; // Direction flag for ping-pong
-    private const int animationSpeed = 2; // pixels per tick
-    private const int animationRange = 100; // width of animated gradient sweep
+    private bool animationForward = true;
+
+    private const int animationSpeed = 2;  // pixels per tick
+    private const int animationRange = 100;
+
+    // Glow alpha pulsing 0–180
+    private int glowAlpha = 0;
+    private bool glowIncreasing = true;
 
     public FancyButton()
     {
@@ -46,11 +64,39 @@ public class FancyButton : Button
         FlatAppearance.BorderSize = 0;
         BackColor = Color.Transparent;
         ForeColor = Color.White;
-        Font = new Font("Verdana", 9, FontStyle.Regular);
+        Font = new Font("Enter The Grid", 10F, FontStyle.Regular);
 
         DoubleBuffered = true;
 
-        // Check for LogsForm container and override colors
+        // Keep glow animation running all the time, start timer in constructor
+        animationTimer = new Timer();
+        animationTimer.Interval = 74;
+        animationTimer.Tick += AnimationTimer_Tick;
+        animationTimer.Start();
+
+        shakeTimer = new Timer();
+        shakeTimer.Interval = 90;
+        shakeTimer.Tick += ShakeTimer_Tick;
+
+        MouseEnter += FancyButton_MouseEnter;
+        MouseLeave += FancyButton_MouseLeave;
+        MouseDown += (s, e) =>
+        {
+            if (e.Button == MouseButtons.Left)
+            {
+                isClicked = true;
+                Invalidate();
+            }
+        };
+        MouseUp += (s, e) =>
+        {
+            if (e.Button == MouseButtons.Left)
+            {
+                isClicked = false;
+                Invalidate();
+            }
+        };
+
         this.HandleCreated += (s, e) =>
         {
             if (FindForm() is SysBot.Pokemon.WinForms.LogsForm)
@@ -65,56 +111,40 @@ public class FancyButton : Button
             }
             else
             {
-                // fallback default text color
                 ForeColor = Color.White;
             }
         };
-
-        // Shake timer setup
-        shakeTimer = new Timer();
-        shakeTimer.Interval = 120;
-        shakeTimer.Tick += ShakeTimer_Tick;
-
-        // Animation timer setup
-        animationTimer = new Timer();
-        animationTimer.Interval = 30; // ~33 FPS
-        animationTimer.Tick += AnimationTimer_Tick;
-
-        MouseEnter += FancyButton_MouseEnter;
-        MouseLeave += FancyButton_MouseLeave;
-        MouseDown += (s, e) => { if (e.Button == MouseButtons.Left) { isClicked = true; Invalidate(); } };
-        MouseUp += (s, e) => { if (e.Button == MouseButtons.Left) { isClicked = false; Invalidate(); } };
     }
 
     private void AnimationTimer_Tick(object? sender, EventArgs e)
     {
-        if (animationForward)
+        // Animate glow alpha pulsing 0-180 constantly (no gradient anim here)
+        const int glowStep = 10;
+        if (glowIncreasing)
         {
-            animationOffset += animationSpeed;
-            if (animationOffset >= animationRange)
+            glowAlpha += glowStep;
+            if (glowAlpha >= 180)
             {
-                animationOffset = animationRange;
-                animationForward = false;
+                glowAlpha = 180;
+                glowIncreasing = false;
             }
         }
         else
         {
-            animationOffset -= animationSpeed;
-            if (animationOffset <= 0)
+            glowAlpha -= glowStep;
+            if (glowAlpha <= 0)
             {
-                animationOffset = 0;
-                animationForward = true;
+                glowAlpha = 0;
+                glowIncreasing = true;
             }
         }
+
         Invalidate();
     }
 
     private void FancyButton_MouseEnter(object sender, EventArgs e)
     {
         isHovered = true;
-        animationOffset = 0;
-        animationForward = true;
-        animationTimer.Start();
 
         originalLocation = Location;
         shakeCounter = 0;
@@ -127,12 +157,14 @@ public class FancyButton : Button
     {
         isHovered = false;
         isClicked = false;
-        animationTimer.Stop();
-        animationOffset = 0;
-        animationForward = true;
+
+        // Do NOT stop animationTimer here so glow continues forever
 
         shakeTimer.Stop();
         Location = originalLocation;
+
+        // If you want glow to keep pulsing, comment out next line:
+        // glowAlpha = 0;
 
         Invalidate();
     }
@@ -149,15 +181,32 @@ public class FancyButton : Button
     protected override void OnPaint(PaintEventArgs e)
     {
         var g = e.Graphics;
-        g.SmoothingMode = SmoothingMode.None;
-        g.InterpolationMode = InterpolationMode.NearestNeighbor;
-        g.PixelOffsetMode = PixelOffsetMode.None;
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+        g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+        g.PixelOffsetMode = PixelOffsetMode.HighQuality;
 
         g.Clear(Parent?.BackColor ?? SystemColors.Control);
 
         int borderThickness = 2;
+        int glowThickness = 6;
 
-        // Fill rectangle inset to avoid overlap with borders
+        // 1) Draw the animated glow border *outside* the normal border (always, because animationTimer runs all the time)
+        if (glowAlpha > 0)
+        {
+            for (int i = 0; i < glowThickness; i++)
+            {
+                int alpha = (int)((glowAlpha * (GlowOpacity / 255f)) * (1.0 - (float)i / glowThickness));
+                using var glowPen = new Pen(Color.FromArgb(alpha, GlowColor), 1);
+                var glowRect = new Rectangle(
+                    i,
+                    i,
+                    Width - 1 - 2 * i,
+                    Height - 1 - 2 * i);
+                g.DrawRectangle(glowPen, glowRect);
+            }
+        }
+
+        // 2) Draw solid near-black/dark gray fill inset by borderThickness
         Rectangle fillRect = new Rectangle(
             borderThickness,
             borderThickness,
@@ -165,55 +214,10 @@ public class FancyButton : Button
             Height - (2 * borderThickness)
         );
 
-        if (isHovered && !isClicked)
-        {
-            // Animated gradient fill on hover: midnight blue to purple moving horizontally ping-pong style
-            Rectangle animatedRect = new Rectangle(
-                fillRect.X - animationOffset,
-                fillRect.Y,
-                fillRect.Width + animationRange,
-                fillRect.Height
-            );
+        using var brush = new SolidBrush(Color.FromArgb(20, 19, 57));
+        g.FillRectangle(brush, fillRect);
 
-            using (var brush = new LinearGradientBrush(
-                animatedRect,
-                HoverStartColor,
-                HoverEndColor,
-                LinearGradientMode.Horizontal))
-            {
-                g.FillRectangle(brush, fillRect);
-            }
-        }
-        else
-        {
-            // Static gradient fill
-            Color start = isClicked ? ClickColor : StartColor;
-            Color end = isClicked ? ClickColor : EndColor;
-
-            using (var brush = new LinearGradientBrush(fillRect, start, end, 45f))
-            {
-                g.FillRectangle(brush, fillRect);
-            }
-        }
-
-        // Border colors
-        Color topLeft = Color.FromArgb(60, 80, 150);          // Soft indigo-blue shadow
-        Color bottomRight = Color.FromArgb(190, 200, 255);    // Light icy purple
-
-        // Draw borders with thickness 2, avoiding corner overlap
-        using (var pen = new Pen(topLeft, borderThickness))
-        {
-            g.DrawLine(pen, 0, 0, Width - 1, 0);           // Top border
-            g.DrawLine(pen, 0, 0, 0, Height - 1);          // Left border
-        }
-
-        using (var pen = new Pen(bottomRight, borderThickness))
-        {
-            g.DrawLine(pen, 0, Height - borderThickness, Width - borderThickness, Height - borderThickness);  // Bottom border
-            g.DrawLine(pen, Width - borderThickness, 0, Width - borderThickness, Height - borderThickness);   // Right border
-        }
-
-        // Draw text centered
+        // 3) Draw the button text centered
         TextRenderer.DrawText(
             g,
             Text,

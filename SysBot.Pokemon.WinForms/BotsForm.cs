@@ -34,12 +34,12 @@ namespace SysBot.Pokemon.WinForms
 
         private readonly List<BotController> BotControls = new();
 
-        private Button _B_Start;
-        private Button _B_Stop;
-        private Button _B_RebootStop;
-        private Button _updater;
-        private Button _B_New;
-        private Button _B_Reload;
+        private FancyButton _B_Start;
+        private FancyButton _B_Stop;
+        private FancyButton _B_RebootStop;
+        private FancyButton _updater;
+        private FancyButton _B_New;
+        private FancyButton _B_Reload;
         private ToolTip _toolTips;
 
 
@@ -73,44 +73,49 @@ namespace SysBot.Pokemon.WinForms
 
             // Buttons
             _B_Start = new FancyButton { Text = "START", Location = new Point(10, 7), Size = new Size(100, 40) };
+            _B_Start.GlowColor = Color.LimeGreen;
             _toolTips.SetToolTip(_B_Start, "Start all bots together that are listed.");
-            _toolTips.AutoPopDelay = 5000;      // How long it stays visible
+            _toolTips.AutoPopDelay = 2500;      // How long it stays visible
             _toolTips.InitialDelay = 500;       // Delay before it shows up
             _toolTips.ReshowDelay = 1000;        // Delay between tooltips
             _toolTips.ShowAlways = true;        // Show even if the form isn’t active
 
             _B_Stop = new FancyButton { Text = "STOP", Location = new Point(120, 7), Size = new Size(100, 40) };
+            _B_Stop.GlowColor = Color.Red;
             _toolTips.SetToolTip(_B_Stop, "Stop all running bots together that are listed.");
-            _toolTips.AutoPopDelay = 5000;      // How long it stays visible
+            _toolTips.AutoPopDelay = 2500;      // How long it stays visible
             _toolTips.InitialDelay = 2000;       // Delay before it shows up
             _toolTips.ReshowDelay = 1000;        // Delay between tooltips
             _toolTips.ShowAlways = true;        // Show even if the form isn’t active
 
             _B_RebootStop = new FancyButton { Text = "REBOOT", Location = new Point(230, 7), Size = new Size(100, 40) };
+            _B_RebootStop.GlowColor = Color.Magenta;
             _toolTips.SetToolTip(_B_RebootStop, "Reboot game and stop all bots listed.");
-            _toolTips.AutoPopDelay = 5000;      // How long it stays visible
+            _toolTips.AutoPopDelay = 2500;      // How long it stays visible
             _toolTips.InitialDelay = 2000;       // Delay before it shows up
             _toolTips.ReshowDelay = 1000;        // Delay between tooltips
             _toolTips.ShowAlways = true;        // Show even if the form isn’t active
 
             _updater = new FancyButton { Text = "UPDATE", Location = new Point(340, 7), Size = new Size(100, 40) };
             _toolTips.SetToolTip(_updater, "Check for program updates.");
-            _toolTips.AutoPopDelay = 5000;      // How long it stays visible
+            _toolTips.AutoPopDelay = 2500;      // How long it stays visible
             _toolTips.InitialDelay = 2000;       // Delay before it shows up
             _toolTips.ReshowDelay = 1000;        // Delay between tooltips
             _toolTips.ShowAlways = true;        // Show even if the form isn’t active
 
             _B_New = new FancyButton { Text = "+", Location = new Point(423, 56), Size = new Size(54, 30) };
+            _B_New.GlowColor = Color.White;
             _B_New.Font = new Font(_B_New.Font.FontFamily, 10, FontStyle.Bold);
             _toolTips.SetToolTip(_B_New, "Create a new bot slot.");
-            _toolTips.AutoPopDelay = 5000;      // How long it stays visible
+            _toolTips.AutoPopDelay = 2500;      // How long it stays visible
             _toolTips.InitialDelay = 2000;       // Delay before it shows up
             _toolTips.ReshowDelay = 1000;        // Delay between tooltips
             _toolTips.ShowAlways = true;        // Show even if the form isn’t active
 
             _B_Reload = new FancyButton { Text = "RELOAD", Location = new Point(625, 40), Size = new Size(100, 40) };
+            _B_Reload.GlowColor = Color.DarkOrange;
             _toolTips.SetToolTip(_B_Reload, "Reload the application cleanly.");
-            _toolTips.AutoPopDelay = 5000;      // How long it stays visible
+            _toolTips.AutoPopDelay = 2500;      // How long it stays visible
             _toolTips.InitialDelay = 2000;       // Delay before it shows up
             _toolTips.ReshowDelay = 1000;        // Delay between tooltips
             _toolTips.ShowAlways = true;        // Show even if the form isn’t active

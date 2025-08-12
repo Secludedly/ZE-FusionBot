@@ -35,8 +35,10 @@
   <ItemGroup>
     <None Remove="Fonts\bahnschrift.ttf" />
     <None Remove="Fonts\Bobbleboddy_light.ttf" />
+    <None Remove="Fonts\Enter-The-Grid.ttf" />
     <None Remove="Fonts\gadugi.ttf" />
     <None Remove="Fonts\gadugib.ttf" />
+    <None Remove="Fonts\GNUOLANE RG.TTF" />
     <None Remove="Fonts\Montserrat-Bold.ttf" />
     <None Remove="Fonts\Montserrat-Regular.ttf" />
     <None Remove="Fonts\segoeui.ttf" />
@@ -60,8 +62,10 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Fonts\bahnschrift.ttf" />
+    <EmbeddedResource Include="Fonts\Enter-The-Grid.ttf" />
     <EmbeddedResource Include="Fonts\gadugi.ttf" />
     <EmbeddedResource Include="Fonts\gadugib.ttf" />
+    <EmbeddedResource Include="Fonts\GNUOLANE RG.TTF" />
     <EmbeddedResource Include="Fonts\Montserrat-Bold.ttf" />
     <EmbeddedResource Include="Fonts\Montserrat-Regular.ttf" />
     <EmbeddedResource Include="Fonts\segoeui.ttf" />
