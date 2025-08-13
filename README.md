@@ -313,7 +313,7 @@ Weight: 45
 Met Location: 30024
 Game: Scarlet
 Moves: Random
-Ribbons: All
+Ribbons: All```
 
 ---
 
