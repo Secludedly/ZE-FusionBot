@@ -275,6 +275,46 @@ Showdown Template
 - Paste a PKM in chat to receive info + legal formats.
 - Thank the bot — it might reply!
 
+
+## 📝 Batch Commands to Showdown Format
+
+`ZE FusionBot` supports converting batch commands from Discord messages into official Showdown format. This allows easy bulk Pokémon trading with full customization of stats, moves, ribbons, and other metadata.
+
+### Supported Batch Command Mappings
+
+| Batch Command | Showdown Format Equivalent | Notes |
+|---------------|---------------------------|-------|
+| `.Scale=` | `Size:` | Accepts keywords (Small, Medium, Large) or numeric values. |
+| `.WeightScalar=` | `Weight:` | Accepts size keywords or numeric values. |
+| `.HeightScalar=` | `Height:` | Accepts size keywords or numeric values. |
+| `.OriginalTrainerFriendship=` | `OT Friendship:` | Value 1–255. |
+| `.HandlingTrainerFriendship=` | `HT Friendship:` | Value 1–255. |
+| `.MetDate=` | `Met Date:` | Supports flexible date formats. |
+| `.EggDate=` | `EggDay / EggMonth / EggYear:` | Accepts “Egg Met Date:” input and converts automatically. |
+| `~=Version=` | `Game:` or `Version:` | Supports full game names or abbreviations. |
+| `.MetLocation=` | `Met Location:` | Numeric IDs currently supported; resolves location internally. |
+| `.HyperTrainFlags=` | `HyperTrain:` | Boolean value: true / false. |
+| `.Moves=` | `Moves:` | “Random” generates random moves. |
+| `.RelearnMoves=` | `Relearn Moves:` | “All” or “None” accepted. |
+| `.Ribbons=` | `Ribbons:` | “All” or specific ribbons supported. |
+| `.RibbonMark[mark]=True` | `Mark:` | Mark names without spaces (e.g., BestFriends). |
+| `.Ribbon[name]=True` | `Ribbon:` | Ribbon names without spaces (e.g., BattleChampion). |
+| `.SetEVs=` | `Set EVs:` | Accepts specific values, `Random`, or `Suggest`. |
+| `.SetIVs=` | `Set IVs:` | Accepts specific values, `Random`, or presets like `1IV`–`6IV`. |
+| `.GV_[STAT]=` | `GVs:` | Supports HP, Atk, Def, SpA, SpD, Spe. |
+
+### Example Usage
+
+```text
+Set EVs: Random
+Set IVs: 5IV
+Size: Medium
+Weight: 45
+Met Location: 30024
+Game: Scarlet
+Moves: Random
+Ribbons: All
+
 ---
 
 ## 🔗 Other Projects
