@@ -26,7 +26,7 @@
 
 `ZE FusionBot` is a powerful and open-source SysBot.NET fork, initially tailored for the Discord server [Zeraora's Emporium](https://FreeMons.Org). While originally built for internal use, it has transformed into a beautiful, community-powered GUI with dozens of integrated forks and unique enhancements.
 
-At its core, FusionBot is powered by [Gengar's](https://github.com/bdawg1989) [PokeBot](https://github.com/bdawg1989/PokeBot) but significantly extended and redesigned with major community-driven features.
+At its core, FusionBot is powered by [hexbyt3's](https://github.com/bdawg1989) [PokeBot](https://github.com/bdawg1989/PokeBot) but significantly extended and redesigned with major community-driven features.
 
 ---
 
@@ -39,6 +39,7 @@ At its core, FusionBot is powered by [Gengar's](https://github.com/bdawg1989) [P
 - Smart Auto-Correct and Auto-Legalization.
 - DM embeds with GIFs, Channel Status notifications, Announcement System, Keyword Response.
 - Built-in metrics: Queue tracking, trade counters, medal system.
+- Multi-Language request support.
 
 ---
 
@@ -49,27 +50,38 @@ At its core, FusionBot is powered by [Gengar's](https://github.com/bdawg1989) [P
 - Fully redesigned icons, fonts, buttons, and layout.
 - Bot controller with sections for Address, Status, Trade Type, and Log time.
 - No native window titlebars — drag by top panel. Minimal, modern design.
+- Animated glow around controller buttons to indicate their use.
+- Progress bar in the controller that shows a visual glow during the trade process.
+
 
 ---
 
 ## 🖼️ GUI Previews
 
 <p align="center">
-    <img src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/README_BotControlProgress.gif">
+    <img src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/README_GeneralOverlook.gif" style="max-width: 100%; height: auto;">
 </p>
 <p align="center">
-    <img src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/README_BotLogs.gif">
+    <img src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/README_Environment.gif" style="max-width: 100%; height: auto;">
 </p>
 <p align="center">
-    <img src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/README_Program.gif">
+    <img src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/README_ContextMenu.gif" style="max-width: 100%; height: auto;">
 </p>
 <p align="center">
-    <img src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/README_ReloadGameMode.gif">
+    <img src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/README_Themes.gif" style="max-width: 100%; height: auto;">
 </p>
 <p align="center">
-    <img src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/README_Context.gif">
+    <img src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/README_Logs.gif" style="max-width: 100%; height: auto;">
 </p>
-
+<p align="center">
+    <img src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/README_ImageLogo.gif" style="max-width: 100%; height: auto;">
+</p>
+<p align="center">
+    <img src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/README_Update.gif" style="max-width: 100%; height: auto;">
+</p>
+<p align="center">
+    <img src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/README_Progress.gif" style="max-width: 100%; height: auto;">
+</p>
 
 ---
 
@@ -147,7 +159,9 @@ At its core, FusionBot is powered by [Gengar's](https://github.com/bdawg1989) [P
     <img width="49%" src="https://i.imgur.com/SPe1iOa.png" alt="img6"/>
 </p>
 <p align="center">
-    <img width="100%" src="https://i.imgur.com/Xn1IMJ6.png" alt="img7"/>
+    <img width="49%" src="https://i.imgur.com/Xn1IMJ6.png" alt="img7"/>
+&nbsp;
+	<img width="49%" src="https://i.imgur.com/N9n5jva.jpeg" alt="img8"/>
 </p>
 </details>
 
