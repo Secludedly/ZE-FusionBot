@@ -138,8 +138,6 @@ public static class ReusableActions
         });
     }
 
-
-
     public static string GetFormattedShowdownText(PKM pkm)
     {
         var newShowdown = new List<string>();
@@ -149,24 +147,41 @@ public static class ReusableActions
 
         if (pkm.IsEgg)
             newShowdown.Add("\nPokémon is an egg");
+
         if (pkm.Ball > (int)Ball.None)
             newShowdown.Insert(newShowdown.FindIndex(z => z.Contains("Nature")), $"Ball: {(Ball)pkm.Ball} Ball");
+
         if (pkm.IsShiny)
         {
             var index = newShowdown.FindIndex(x => x.Contains("Shiny: Yes"));
             if (pkm.ShinyXor == 0 || pkm.FatefulEncounter)
                 newShowdown[index] = "Shiny: Square\r";
-            else newShowdown[index] = "Shiny: Star\r";
+            else
+                newShowdown[index] = "Shiny: Star\r";
         }
 
-        newShowdown.InsertRange(1, [
-            $"OT: {pkm.OriginalTrainerName}",
-            $"TID: {pkm.DisplayTID}",
-            $"SID: {pkm.DisplaySID}",
-            $"OTGender: {(Gender)pkm.OriginalTrainerGender}",
-            $"Language: {(LanguageID)pkm.Language}"]);
+        // Find the index of the line that contains "Nature"
+        int natureIndex = newShowdown.FindIndex(line => line.Contains("Nature"));
+
+        // If found, insert your OT/TID/etc after it. Otherwise, append to the end.
+        int insertIndex = natureIndex >= 0 ? natureIndex + 1 : newShowdown.Count;
+
+        newShowdown.InsertRange(insertIndex, new[]
+        {
+    $"OT: {pkm.OriginalTrainerName}",
+    $"TID: {pkm.DisplayTID}",
+    $"SID: {pkm.DisplaySID}",
+    $"OTGender: {(Gender)pkm.OriginalTrainerGender}",
+    $"Language: {(LanguageID)pkm.Language}",
+    $"MetDate: {pkm.MetDate:yyyy-MM-dd}",
+    $"MetLocation: {pkm.MetLocation}",
+    $"MetLevel: {pkm.MetLevel}",
+    $"Version: {(GameVersion)pkm.Version}"
+});
+
         return Format.Code(string.Join("\n", newShowdown).TrimEnd());
     }
+
 
     private static readonly string[] separator = [ ",", ", ", " " ];
 
