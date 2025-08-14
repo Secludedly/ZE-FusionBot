@@ -1,9 +1,9 @@
 using SysBot.Base;
+using SysBot.Pokemon;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
-using Discord;
 using Discord.WebSocket;
 
 namespace SysBot.Pokemon
@@ -18,29 +18,18 @@ namespace SysBot.Pokemon
         };
 
         private Dictionary<ulong, TradeCodeDetails>? _tradeCodeDetails;
+        private readonly MilestoneService _milestones;
 
-        // Milestone image URLs
-        private readonly Dictionary<int, string> _milestoneImages = new()
+        public TradeCodeStorage()
+            : this(new MilestoneService())
         {
-            { 1, "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/001.png" },
-            { 50, "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/050.png" },
-            { 100, "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/100.png" },
-            { 150, "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/150.png" },
-            { 200, "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/200.png" },
-            { 250, "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/250.png" },
-            { 300, "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/300.png" },
-            { 350, "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/350.png" },
-            { 400, "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/400.png" },
-            { 450, "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/450.png" },
-            { 500, "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/500.png" },
-            { 550, "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/550.png" },
-            { 600, "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/600.png" },
-            { 650, "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/650.png" },
-            { 700, "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/700.png" },
-            // Add more milestone images...
-        };
+        }
 
-        public TradeCodeStorage() => LoadFromFile();
+        public TradeCodeStorage(MilestoneService milestones)
+        {
+            _milestones = milestones ?? new MilestoneService();
+            LoadFromFile();
+        }
 
         public bool DeleteTradeCode(ulong trainerID)
         {
@@ -53,41 +42,52 @@ namespace SysBot.Pokemon
             return false;
         }
 
+        /// <summary>
+        /// Retrieves the user's trade code, increments trade count,
+        /// persists, and triggers milestone message if applicable.
+        /// </summary>
         public int GetTradeCode(ulong trainerID, ISocketMessageChannel channel, SocketUser user)
         {
             LoadFromFile();
+
             if (_tradeCodeDetails != null && _tradeCodeDetails.TryGetValue(trainerID, out var details))
             {
                 details.TradeCount++;
                 SaveToFile();
 
-                // Check if trade count is a milestone and send embed
-                CheckTradeMilestone(details.TradeCount, channel, user);
+                // Milestone check for this count
+                TriggerMilestoneIfAny(details.TradeCount, channel, user);
                 return details.Code;
             }
+
+            // New user: create code + first milestone (1)
             var code = GenerateRandomTradeCode();
-            if (_tradeCodeDetails == null)
+            _tradeCodeDetails ??= new Dictionary<ulong, TradeCodeDetails>();
+            _tradeCodeDetails[trainerID] = new TradeCodeDetails
             {
-                _tradeCodeDetails = new Dictionary<ulong, TradeCodeDetails>();
-            }
-            _tradeCodeDetails[trainerID] = new TradeCodeDetails { Code = code, TradeCount = 1 };
+                Code = code,
+                TradeCount = 1
+            };
             SaveToFile();
 
-            // Check for first trade milestone
-            CheckTradeMilestone(1, channel, user);
+            TriggerMilestoneIfAny(1, channel, user);
             return code;
         }
 
         public int GetTradeCount(ulong trainerID)
         {
             LoadFromFile();
-            return _tradeCodeDetails != null && _tradeCodeDetails.TryGetValue(trainerID, out var details) ? details.TradeCount : 0;
+            return _tradeCodeDetails != null && _tradeCodeDetails.TryGetValue(trainerID, out var details)
+                ? details.TradeCount
+                : 0;
         }
 
         public TradeCodeDetails? GetTradeDetails(ulong trainerID)
         {
             LoadFromFile();
-            return _tradeCodeDetails != null && _tradeCodeDetails.TryGetValue(trainerID, out var details) ? details : null;
+            return _tradeCodeDetails != null && _tradeCodeDetails.TryGetValue(trainerID, out var details)
+                ? details
+                : null;
         }
 
         public void UpdateTradeDetails(ulong trainerID, string ot, int tid, int sid)
@@ -114,45 +114,53 @@ namespace SysBot.Pokemon
             return false;
         }
 
+        /// <summary>
+        /// Convenience for the medals command: returns the earned milestone counts
+        /// (e.g., [1, 50, 100, ...]) for this trainer.
+        /// </summary>
+        public List<int> GetEarnedMilestoneCounts(ulong trainerID)
+        {
+            LoadFromFile();
+            if (_tradeCodeDetails != null && _tradeCodeDetails.TryGetValue(trainerID, out var details))
+                return _milestones.GetEarnedMilestones(details.TradeCount);
+
+            return new List<int>();
+        }
+
         private static int GenerateRandomTradeCode()
         {
             var settings = new TradeSettings();
             return settings.GetRandomTradeCode();
         }
 
-        private void CheckTradeMilestone(int tradeCount, ISocketMessageChannel channel, SocketUser user)
+        private void TriggerMilestoneIfAny(int tradeCount, ISocketMessageChannel channel, SocketUser user)
         {
-            if (_milestoneImages.ContainsKey(tradeCount))
+            if (_milestones.IsMilestone(tradeCount))
             {
-                SendMilestoneEmbed(tradeCount, channel, user);
+                // Fire-and-forget so we don't block message handling
+                _ = _milestones.SendMilestoneEmbedAsync(channel, user, tradeCount);
             }
-        }
-
-        private async void SendMilestoneEmbed(int tradeCount, ISocketMessageChannel channel, SocketUser user)
-        {
-            var embedBuilder = new EmbedBuilder()
-                .WithTitle($"🎉 Congratulations, {user.Username}! 🎉")
-                .WithColor(Color.Gold)
-                .WithImageUrl(_milestoneImages[tradeCount]);
-
-            embedBuilder.WithDescription(
-                tradeCount == 1
-                    ? "Congratulations on your very first trade!\nCollect medals by trading with the bot!\nEvery 50 trades is a new medal!\nHow many can you collect?\nSee your current medals with **ml**."
-                    : $"You’ve completed {tradeCount} trades!\n*Keep up the great work!*");
-
-            await channel.SendMessageAsync(embed: embedBuilder.Build());
         }
 
         private void LoadFromFile()
         {
-            if (File.Exists(FileName))
+            try
             {
-                string json = File.ReadAllText(FileName);
-                _tradeCodeDetails = JsonSerializer.Deserialize<Dictionary<ulong, TradeCodeDetails>>(json, SerializerOptions);
+                if (File.Exists(FileName))
+                {
+                    string json = File.ReadAllText(FileName);
+                    _tradeCodeDetails = JsonSerializer.Deserialize<Dictionary<ulong, TradeCodeDetails>>(json, SerializerOptions)
+                                       ?? new Dictionary<ulong, TradeCodeDetails>();
+                }
+                else
+                {
+                    _tradeCodeDetails = new Dictionary<ulong, TradeCodeDetails>();
+                }
             }
-            else
+            catch (Exception ex)
             {
-                _tradeCodeDetails = new Dictionary<ulong, TradeCodeDetails>();
+                LogUtil.LogInfo(nameof(TradeCodeStorage), $"Error loading trade codes file: {ex.Message}");
+                _tradeCodeDetails ??= new Dictionary<ulong, TradeCodeDetails>();
             }
         }
 
@@ -165,37 +173,16 @@ namespace SysBot.Pokemon
             }
             catch (IOException ex)
             {
-                LogUtil.LogInfo("TradeCodeStorage", $"Error saving trade codes to file: {ex.Message}");
+                LogUtil.LogInfo(nameof(TradeCodeStorage), $"Error saving trade codes to file: {ex.Message}");
             }
             catch (UnauthorizedAccessException ex)
             {
-                LogUtil.LogInfo("TradeCodeStorage", $"Access denied while saving trade codes to file: {ex.Message}");
+                LogUtil.LogInfo(nameof(TradeCodeStorage), $"Access denied while saving trade codes to file: {ex.Message}");
             }
             catch (Exception ex)
             {
-                LogUtil.LogInfo("TradeCodeStorage", $"An error occurred while saving trade codes to file: {ex.Message}");
+                LogUtil.LogInfo(nameof(TradeCodeStorage), $"An error occurred while saving trade codes to file: {ex.Message}");
             }
-        }
-
-        public List<string> GetEarnedMedals(ulong trainerID)
-        {
-            LoadFromFile();
-
-            // Check if user exists and retrieve their trade details
-            if (_tradeCodeDetails != null && _tradeCodeDetails.TryGetValue(trainerID, out var details))
-            {
-                var earnedMedals = new List<string>();
-                foreach (var milestone in _milestoneImages.Keys)
-                {
-                    if (details.TradeCount >= milestone)
-                    {
-                        earnedMedals.Add(_milestoneImages[milestone]);
-                    }
-                }
-                return earnedMedals;
-            }
-
-            return new List<string>(); // Return empty if no medals are earned or user not found
         }
 
         public class TradeCodeDetails
