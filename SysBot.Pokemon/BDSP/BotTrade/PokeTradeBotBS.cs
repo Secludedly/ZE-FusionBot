@@ -12,7 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using static SysBot.Base.SwitchButton;
 using static SysBot.Pokemon.BasePokeDataOffsetsBS;
-using static SysBot.Pokemon.SpecialRequests;
+using static SysBot.Pokemon.TradeHub.SpecialRequests;
 
 namespace SysBot.Pokemon;
 
