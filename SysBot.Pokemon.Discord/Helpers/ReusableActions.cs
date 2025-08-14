@@ -173,10 +173,10 @@ public static class ReusableActions
     $"SID: {pkm.DisplaySID}",
     $"OTGender: {(Gender)pkm.OriginalTrainerGender}",
     $"Language: {(LanguageID)pkm.Language}",
-    $"MetDate: {pkm.MetDate:yyyy-MM-dd}",
-    $"MetLocation: {pkm.MetLocation}",
-    $"MetLevel: {pkm.MetLevel}",
-    $"Version: {(GameVersion)pkm.Version}"
+    $".MetDate={pkm.MetDate:yyyy-MM-dd}",
+    $".MetLocation={pkm.MetLocation}",
+    $".MetLevel={pkm.MetLevel}",
+    $".Version={(GameVersion)pkm.Version}"
 });
 
         return Format.Code(string.Join("\n", newShowdown).TrimEnd());
