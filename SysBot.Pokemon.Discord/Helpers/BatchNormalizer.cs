@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
 using PKHeX.Core;
@@ -22,7 +23,6 @@ namespace SysBot.Pokemon.Discord.Helpers
             { "Weight", "WeightScalar" },
             { "Height", "HeightScalar" },
             { "Met Date", "MetDate" },
-            { "Egg Met Date", "EggDate" },
             { "Met Location", "MetLocation" },
             { "Game", "Version" },
             { "Hypertrain", "HyperTrainFlags" },
@@ -53,8 +53,7 @@ namespace SysBot.Pokemon.Discord.Helpers
                 { "HeightScalar", ProcessHeightScalar },
                 { "OriginalTrainerFriendship", ProcessFriendshipOT },
                 { "HandlingTrainerFriendship", ProcessFriendshipHT },
-                { "MetDate", val => ProcessDate("MetDate", val) },
-                { "EggDate", ProcessEggMetDate },
+                { "MetDate", ProcessMetDate },
                 { "Version", ProcessVersion },
                 { "MetLocation", ProcessMetLocation },
                 { "HyperTrainFlags", ProcessHyperTrainFlags },
@@ -81,10 +80,18 @@ namespace SysBot.Pokemon.Discord.Helpers
             { "XS", (0, 15) }, { "S", (16, 47) }, { "AV", (48, 207) }, { "L", (208, 239) }, { "XL", (240, 255) }
         };
 
+        // Replace your AcceptedDateFormats with this:
         private static readonly string[] AcceptedDateFormats =
         {
-            "yyyyMMdd", "MMddyyyy", "yyyy/MM/dd", "MM/dd/yyyy", "yyyy-MM-dd", "MM-dd-yyyy"
-        };
+    "yyyyMMdd",
+    "MMddyyyy",
+    // slash-separated (variable digits)
+    "M/d/yyyy", "MM/dd/yyyy",
+    "yyyy/M/d", "yyyy/MM/dd",
+    // dash-separated (variable digits)
+    "M-d-yyyy", "MM-dd-yyyy",
+    "yyyy-M-d", "yyyy-MM-dd"
+};
 
         private static readonly Dictionary<string, int> GameKeywords = new(StringComparer.OrdinalIgnoreCase)
         {
@@ -107,21 +114,18 @@ namespace SysBot.Pokemon.Discord.Helpers
 
         public static string NormalizeBatchCommands(string content)
         {
-            // Special-case handling for Alcremie toppings
             content = HandleAlcremieToppings(content);
 
-            var lines = content.Split('\n');
+            var lines = content.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
 
             for (int i = 0; i < lines.Length; i++)
             {
                 if (!TrySplitCommand(lines[i], out var key, out var value))
                     continue;
 
-                // Normalize alias
                 if (BatchCommandAliasMap.TryGetValue(key, out var normalizedKey))
                     key = normalizedKey;
 
-                // Process with handler
                 if (CommandProcessors.TryGetValue(key, out var processor))
                 {
                     lines[i] = processor(value);
@@ -174,24 +178,11 @@ namespace SysBot.Pokemon.Discord.Helpers
 
         // .MetDate= → Met Date:
         // See the AcceptedDateFormats dictionary
-        private static string ProcessDate(string key, string val) =>
-            TryParseFlexibleDate(val, out var formatted)
-                ? $".{key}={formatted}"
-                : string.Empty;
-
-        // Converts .EggDay=, .EggMonth=, & .EggYear= into a single .EggDate= line that acccepts "Egg Met Date:" as a command
-        // It accepts the same date formats in the AccceptedDateFormats dictionary
-        private static string ProcessEggMetDate(string val)
+        private static string ProcessMetDate(string val)
         {
+            val = val.Trim();
             if (TryParseFlexibleDate(val, out var formatted))
-            {
-                int year = int.Parse(formatted.Substring(0, 4));
-                int month = int.Parse(formatted.Substring(4, 2));
-                int day = int.Parse(formatted.Substring(6, 2));
-                int eggYear = year % 100;
-
-                return $".EggMonth={month}\n.EggDay={day}\n.EggYear={eggYear}";
-            }
+                return $".MetDate={formatted}";
             return string.Empty;
         }
 
@@ -255,9 +246,9 @@ namespace SysBot.Pokemon.Discord.Helpers
         private static string ProcessRibbon(string val) =>
             $".Ribbon{val.Replace(" ", "")}=True";
 
-        // Creates a ".SetEVs=" batch command that can be written as "Set EVs:" that accepts "Random" or "Suggest" as special values
-        // "Set EVs: Random" value randomizes EVs across all stats
-        // "Set EVs: Suggest" generates a suggested EV spread like 252/252/4
+        // Creates an ".EVs=" batch command that can be written as "EVs:" that accepts "Random" or "Suggest" as special values
+        // "EVs: Random" value randomizes EVs across all stats
+        // "EVs: Suggest" generates a suggested EV spread like 252/252/4
         private static readonly string[] EvStats = { "HP", "ATK", "DEF", "SPA", "SPD", "SPE" };
         private static string ProcessEVs(string val)
         {
@@ -314,10 +305,10 @@ namespace SysBot.Pokemon.Discord.Helpers
             return FormatEVs(evs);
         }
 
-        // Creates a ".SetIVs=" batch command that can be written as "Set IVs:" that accepts "Random" or "1IV", "2IV", "3IV", "4IV", "5IV", "6IV"
-        // "Set IVs: Random" randomizes IVs across all stats
-        // "Set IVs: 1IV" sets one random stat to 31 IVs, the rest are random
-        // "Set IVs: 6IV" sets all stats to 31 IVs
+        // Creates an ".IVs=" batch command that can be written as "IVs:" that accepts "Random" or "1IV", "2IV", "3IV", "4IV", "5IV", "6IV"
+        // "IVs: Random" randomizes IVs across all stats
+        // "IVs: 1IV" sets one random stat to 31 IVs, the rest are random
+        // "IVs: 6IV" sets all stats to 31 IVs
         private static readonly string[] IvStats = { "HP", "ATK", "DEF", "SPA", "SPD", "SPE" };
         private static string ProcessIVs(string val)
         {
@@ -399,16 +390,22 @@ namespace SysBot.Pokemon.Discord.Helpers
             return true;
         }
 
+        // Update the parser to use InvariantCulture and allow spaces:
         private static bool TryParseFlexibleDate(string input, out string formatted)
         {
-            foreach (var format in AcceptedDateFormats)
+            input = input.Trim();
+
+            if (DateTime.TryParseExact(
+                    input,
+                    AcceptedDateFormats,
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.AllowWhiteSpaces,
+                    out var date))
             {
-                if (DateTime.TryParseExact(input, format, null, System.Globalization.DateTimeStyles.None, out var date))
-                {
-                    formatted = date.ToString("yyyyMMdd");
-                    return true;
-                }
+                formatted = date.ToString("yyyyMMdd", CultureInfo.InvariantCulture);
+                return true;
             }
+
             formatted = string.Empty;
             return false;
         }
