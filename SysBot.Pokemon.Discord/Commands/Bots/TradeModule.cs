@@ -41,7 +41,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         // Check if the user is already in the queue
         if (Info.IsUserInQueue(userID))
         {
-            _ = ReplyAndDeleteAsync("You already have an existing trade in the queue. Please wait until it is processed.", 2);
+            _ = ReplyAndDeleteAsync("You already have an existing trade in the queue. Please wait until it is processed.", 6);
             return;
         }
 
@@ -53,7 +53,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         await QueueHelper<T>.AddToQueueAsync(Context, code, trainerName, sig, new T(), PokeRoutineType.FixOT, PokeTradeType.FixOT, Context.User, false, 1, 1, false, false, lgcode).ConfigureAwait(false);
         if (Context.Message is IUserMessage userMessage)
         {
-            _ = DeleteMessagesAfterDelayAsync(userMessage, null, 2);
+            _ = DeleteMessagesAfterDelayAsync(userMessage, null, 6);
         }
     }
 
@@ -68,7 +68,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         // Check if the user is already in the queue
         if (Info.IsUserInQueue(userID))
         {
-            _ = ReplyAndDeleteAsync("You already have an existing trade in the queue. Please wait until it is processed.", 2);
+            _ = ReplyAndDeleteAsync("You already have an existing trade in the queue. Please wait until it is processed.", 6);
             return;
         }
 
@@ -79,7 +79,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         await QueueHelper<T>.AddToQueueAsync(Context, code, trainerName, sig, new T(), PokeRoutineType.FixOT, PokeTradeType.FixOT, Context.User, false, 1, 1, false, false, lgcode).ConfigureAwait(false);
         if (Context.Message is IUserMessage userMessage)
         {
-            _ = DeleteMessagesAfterDelayAsync(userMessage, null, 2);
+            _ = DeleteMessagesAfterDelayAsync(userMessage, null, 6);
         }
     }
 
@@ -110,7 +110,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         // Check if the user is already in the queue
         if (Info.IsUserInQueue(userID))
         {
-            _ = ReplyAndDeleteAsync("You already have an existing trade in the queue. Please wait until it is processed.", 2);
+            _ = ReplyAndDeleteAsync("You already have an existing trade in the queue. Please wait until it is processed.", 6);
             return;
         }
 
@@ -132,7 +132,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         // Check if the user is already in the queue
         if (Info.IsUserInQueue(userID))
         {
-            _ = ReplyAndDeleteAsync("You already have an existing trade in the queue. Please wait until it is processed.", 2);
+            _ = ReplyAndDeleteAsync("You already have an existing trade in the queue. Please wait until it is processed.", 6);
             return;
         }
 
@@ -144,7 +144,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         }
         else
         {
-            _ = ReplyAndDeleteAsync($"Couldn't recognize language: {language}.", 2, Context.Message);
+            _ = ReplyAndDeleteAsync($"Couldn't recognize language: {language}.", 6, Context.Message);
             return;
         }
 
@@ -210,7 +210,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         // Check if the user is already in the queue
         if (Info.IsUserInQueue(userID))
         {
-            _ = ReplyAndDeleteAsync("You already have an existing trade in the queue. Please wait until it is processed.", 2);
+            _ = ReplyAndDeleteAsync("You already have an existing trade in the queue. Please wait until it is processed.", 6);
             return;
         }
 
@@ -223,7 +223,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
 
         if (pkm.HeldItem == 0)
         {
-            _ = ReplyAndDeleteAsync($"{Context.User.Username}, the item you entered wasn't recognized.", 2, Context.Message);
+            _ = ReplyAndDeleteAsync($"{Context.User.Username}, the item you entered wasn't recognized.", 6, Context.Message);
             return;
         }
 
@@ -242,7 +242,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
 
         if (Context.Message is IUserMessage userMessage)
         {
-            _ = DeleteMessagesAfterDelayAsync(userMessage, null, 2);
+            _ = DeleteMessagesAfterDelayAsync(userMessage, null, 6);
         }
     }
 
@@ -284,7 +284,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         // Check if the user is already in the queue
         if (Info.IsUserInQueue(userID))
         {
-            _ = ReplyAndDeleteAsync("You already have an existing trade in the queue. Please wait until it is processed.", 2);
+            _ = ReplyAndDeleteAsync("You already have an existing trade in the queue. Please wait until it is processed.", 6);
             return;
         }
         content = ReusableActions.StripCodeBlock(content);
@@ -306,7 +306,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
 
                 if (pkm is not T pk)
                 {
-                    _ = ReplyAndDeleteAsync("I wasn't able to create an egg for that.", 2, Context.Message);
+                    _ = ReplyAndDeleteAsync("I wasn't able to create an egg for that.", 5, Context.Message);
                     return;
                 }
 
@@ -328,16 +328,16 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
                 var sig = Context.User.GetFavor();
                 await AddTradeToQueueAsync(code, Context.User.Username, pk, sig, Context.User).ConfigureAwait(false);
 
-                _ = DeleteMessagesAfterDelayAsync(null, Context.Message, 2);
+                _ = DeleteMessagesAfterDelayAsync(null, Context.Message, 5);
             }
             catch (Exception ex)
             {
                 LogUtil.LogSafe(ex, nameof(TradeModule<T>));
-                _ = ReplyAndDeleteAsync("An error occurred while processing the request.", 2, Context.Message);
+                _ = ReplyAndDeleteAsync("An error occurred while processing the request.", 6, Context.Message);
             }
             if (Context.Message is IUserMessage userMessage)
             {
-                _ = DeleteMessagesAfterDelayAsync(userMessage, null, 2);
+                _ = DeleteMessagesAfterDelayAsync(userMessage, null, 5);
             }
         });
 
@@ -376,7 +376,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             var clearResult = Info.ClearTrade(userID);
             if (clearResult == QueueResultRemove.CurrentlyProcessing || clearResult == QueueResultRemove.NotInQueue)
             {
-                _ = ReplyAndDeleteAsync("You already have an existing trade in the queue that cannot be cleared. Please wait until it is processed.", 2);
+                _ = ReplyAndDeleteAsync("You already have an existing trade in the queue that cannot be cleared. Please wait until it is processed.", 6);
                 return;
             }
         }
@@ -400,7 +400,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         if (set.InvalidLines.Count != 0)
         {
             var msg = $"Unable to parse Showdown Set:\n{string.Join("\n", set.InvalidLines)}";
-            _ = ReplyAndDeleteAsync(msg, 2, Context.Message);
+            _ = ReplyAndDeleteAsync(msg, 5, Context.Message);
             return;
         }
 
@@ -510,11 +510,11 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             {
                 LogUtil.LogSafe(ex, nameof(TradeModule<T>));
                 var msg = $"Oops! An unexpected problem happened with this Showdown Set:\n```{string.Join("\n", set.GetSetLines())}```";
-                _ = ReplyAndDeleteAsync(msg, 2, Context.Message);
+                _ = ReplyAndDeleteAsync(msg, 5, Context.Message);
             }
             if (Context.Message is IUserMessage userMessage)
             {
-                _ = DeleteMessagesAfterDelayAsync(userMessage, null, 0);
+                _ = DeleteMessagesAfterDelayAsync(userMessage, null, 5);
             }
         });
 
@@ -545,7 +545,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         await HideTradeAsyncAttach(code, sig, Context.User, ignoreAutoOT: ignoreAutoOT).ConfigureAwait(false);
         if (Context.Message is IUserMessage userMessage)
         {
-            _ = DeleteMessagesAfterDelayAsync(userMessage, null, 2);
+            _ = DeleteMessagesAfterDelayAsync(userMessage, null, 5);
         }
     }
 
@@ -580,7 +580,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             var clearResult = Info.ClearTrade(userID);
             if (clearResult == QueueResultRemove.CurrentlyProcessing || clearResult == QueueResultRemove.NotInQueue)
             {
-                _ = ReplyAndDeleteAsync("You already have an existing trade in the queue that cannot be cleared. Please wait until it is processed.", 2);
+                _ = ReplyAndDeleteAsync("You already have an existing trade in the queue that cannot be cleared. Please wait until it is processed.", 5);
                 return;
             }
         }
@@ -604,7 +604,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         if (set.InvalidLines.Count != 0)
         {
             var msg = $"Unable to parse Showdown Set:\n{string.Join("\n", set.InvalidLines)}";
-            _ = ReplyAndDeleteAsync(msg, 2, Context.Message);
+            _ = ReplyAndDeleteAsync(msg, 6, Context.Message);
             return;
         }
 
@@ -691,7 +691,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
                     string userMention = Context.User.Mention;
                     string messageContent = $"{userMention}, here's the report for your request:";
                     var message = await Context.Channel.SendMessageAsync(text: messageContent, embed: embedBuilder.Build()).ConfigureAwait(false);
-                    _ = DeleteMessagesAfterDelayAsync(message, Context.Message, 30);
+                    _ = DeleteMessagesAfterDelayAsync(message, Context.Message, 60);
                     return;
                 }
 
@@ -725,11 +725,11 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             {
                 LogUtil.LogSafe(ex, nameof(TradeModule<T>));
                 var msg = $"Oops! An unexpected problem happened with this Showdown Set:\n```{string.Join("\n", set.GetSetLines())}```";
-                _ = ReplyAndDeleteAsync(msg, 2, null);
+                _ = ReplyAndDeleteAsync(msg, 6, null);
             }
             if (Context.Message is IUserMessage userMessage)
             {
-                _ = DeleteMessagesAfterDelayAsync(userMessage, null, 2);
+                _ = DeleteMessagesAfterDelayAsync(userMessage, null, 6);
             }
         });
 
@@ -763,7 +763,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         }).ConfigureAwait(false);
         if (Context.Message is IUserMessage userMessage)
         {
-            _ = DeleteMessagesAfterDelayAsync(userMessage, null, 2);
+            _ = DeleteMessagesAfterDelayAsync(userMessage, null, 6);
         }
     }
 
@@ -790,7 +790,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
                     var clearResult = Info.ClearTrade(userID);
                     if (clearResult is QueueResultRemove.CurrentlyProcessing or QueueResultRemove.NotInQueue)
                     {
-                        _ = ReplyAndDeleteAsync("You already have an existing trade in the queue that cannot be cleared. Please wait until it is processed.", 2);
+                        _ = ReplyAndDeleteAsync("You already have an existing trade in the queue that cannot be cleared. Please wait until it is processed.", 6);
                         return;
                     }
                 }
@@ -884,7 +884,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
                 await ProcessBatchContainer(batchPokemonList, batchTradeCode, trades.Count);
 
                 if (Context.Message is IUserMessage userMessage)
-                    _ = DeleteMessagesAfterDelayAsync(userMessage, null, 2);
+                    _ = DeleteMessagesAfterDelayAsync(userMessage, null, 6);
             }
             catch (Exception ex)
             {
@@ -1038,7 +1038,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         // First, check if batch trades are allowed
         if (!SysCord<T>.Runner.Config.Trade.TradeConfiguration.AllowBatchTrades)
         {
-            _ = ReplyAndDeleteAsync("Batch trades are currently disabled.", 2);
+            _ = ReplyAndDeleteAsync("Batch trades are currently disabled.", 6);
             return;
         }
 
@@ -1053,13 +1053,13 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         var attachment = Context.Message.Attachments.FirstOrDefault();
         if (attachment == default)
         {
-            _ = ReplyAndDeleteAsync("No attachment provided!", 2);
+            _ = ReplyAndDeleteAsync("No attachment provided!", 6);
             return;
         }
 
         if (!attachment.Filename.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
         {
-            _ = ReplyAndDeleteAsync("Invalid file format. Please provide a .zip file.", 2);
+            _ = ReplyAndDeleteAsync("Invalid file format. Please provide a .zip file.", 6);
             return;
         }
 
@@ -1073,7 +1073,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         // Check if batch mode is allowed and if the number of trades exceeds the limit
         if (maxTradesAllowed < 1 || entries.Count > maxTradesAllowed)
         {
-            _ = ReplyAndDeleteAsync($"You can only process up to {maxTradesAllowed} trades at a time. Please reduce the number of Pokémon in your .zip file.", 5, Context.Message);
+            _ = ReplyAndDeleteAsync($"You can only process up to {maxTradesAllowed} trades at a time. Please reduce the number of Pokémon in your .zip file.", 6, Context.Message);
             return;
         }
 
@@ -1094,7 +1094,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         }
         if (Context.Message is IUserMessage userMessage)
         {
-            _ = DeleteMessagesAfterDelayAsync(userMessage, null, 2);
+            _ = DeleteMessagesAfterDelayAsync(userMessage, null, 6);
         }
     }
 
@@ -1218,7 +1218,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
                     string userMention = Context.User.Mention;
                     string messageContent = $"{userMention}, here's the report for your request:";
                     var message = await Context.Channel.SendMessageAsync(text: messageContent, embed: embedBuilder.Build()).ConfigureAwait(false);
-                    _ = DeleteMessagesAfterDelayAsync(message, Context.Message, 30);
+                    _ = DeleteMessagesAfterDelayAsync(message, Context.Message, 60);
                     return;
                 }
 
@@ -1269,7 +1269,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
                 {
                     if (AbstractTrade<T>.HasAdName(pk, out string ad))
                     {
-                        await ReplyAndDeleteAsync("Detected Adname in the Pokémon's name or trainer name, which is not allowed.", 5);
+                        await ReplyAndDeleteAsync("Detected Adname in the Pokémon's name or trainer name, which is not allowed.", 6);
                         return;
                     }
                 }
@@ -1298,7 +1298,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         // Check if the events folder path is not set or empty
         if (string.IsNullOrEmpty(eventsFolderPath))
         {
-            _ = ReplyAndDeleteAsync("This bot does not have this feature set up.", 2, Context.Message);
+            _ = ReplyAndDeleteAsync("This bot does not have this feature set up.", 6, Context.Message);
             return;
         }
 
@@ -1338,7 +1338,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         if (!filteredEventFiles.Any())
         {
             replyMessage = await ReplyAsync($"No events found matching the filter '{filter}'.");
-            _ = DeleteMessagesAfterDelayAsync(replyMessage, Context.Message, 10);
+            _ = DeleteMessagesAfterDelayAsync(replyMessage, Context.Message, 6);
         }
         else
         {
@@ -1392,7 +1392,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         // Check if the user is already in the queue
         if (Info.IsUserInQueue(userID))
         {
-            _ = ReplyAndDeleteAsync("You already have an existing trade in the queue. Please wait until it is processed.", 2, Context.Message);
+            _ = ReplyAndDeleteAsync("You already have an existing trade in the queue. Please wait until it is processed.", 6, Context.Message);
             return;
         }
 
@@ -1407,13 +1407,13 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             // Check if the events folder path is not set or empty
             if (string.IsNullOrEmpty(eventsFolderPath))
             {
-                _ = ReplyAndDeleteAsync("This bot does not have this feature set up.", 2, Context.Message);
+                _ = ReplyAndDeleteAsync("This bot does not have this feature set up.", 5, Context.Message);
                 return;
             }
 
             if (index < 1 || index > eventFiles.Count)
             {
-                _ = ReplyAndDeleteAsync("Invalid event index. Please use a valid event number from the `.le` command.", 2, Context.Message);
+                _ = ReplyAndDeleteAsync("Invalid event index. Please use a valid event number from the `.le` command.", 6, Context.Message);
                 return;
             }
 
@@ -1430,7 +1430,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             var pk = GetRequest(download);
             if (pk == null)
             {
-                _ = ReplyAndDeleteAsync("Failed to convert event file to the required PKM type.", 2, Context.Message);
+                _ = ReplyAndDeleteAsync("Failed to convert event file to the required PKM type.", 6, Context.Message);
                 return;
             }
 
@@ -1443,13 +1443,13 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         }
         catch (Exception ex)
         {
-            _ = ReplyAndDeleteAsync($"An error occurred: {ex.Message}", 2, Context.Message);
+            _ = ReplyAndDeleteAsync($"An error occurred: {ex.Message}", 6, Context.Message);
         }
         finally
         {
             if (Context.Message is IUserMessage userMessage)
             {
-                _ = DeleteMessagesAfterDelayAsync(userMessage, null, 2);
+                _ = DeleteMessagesAfterDelayAsync(userMessage, null, 6);
             }
         }
     }
@@ -1466,7 +1466,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         // Check if the battleready folder path is not set or empty
         if (string.IsNullOrEmpty(battleReadyFolderPath))
         {
-            _ = ReplyAndDeleteAsync("This bot does not have this feature set up.", 2, Context.Message);
+            _ = ReplyAndDeleteAsync("This bot does not have this feature set up.", 6, Context.Message);
             return;
         }
 
@@ -1560,7 +1560,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         // Check if the user is already in the queue
         if (Info.IsUserInQueue(userID))
         {
-            _ = ReplyAndDeleteAsync("You already have an existing trade in the queue. Please wait until it is processed.", 2, Context.Message);
+            _ = ReplyAndDeleteAsync("You already have an existing trade in the queue. Please wait until it is processed.", 6, Context.Message);
             return;
         }
 
@@ -1575,13 +1575,13 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             // Check if the battleready folder path is not set or empty
             if (string.IsNullOrEmpty(battleReadyFolderPath))
             {
-                _ = ReplyAndDeleteAsync("This bot does not have this feature set up.", 2, Context.Message);
+                _ = ReplyAndDeleteAsync("This bot does not have this feature set up.", 6, Context.Message);
                 return;
             }
 
             if (index < 1 || index > battleReadyFiles.Count)
             {
-                _ = ReplyAndDeleteAsync("Invalid battle-ready file index. Please use a valid file number from the `.blr` command.", 2, Context.Message);
+                _ = ReplyAndDeleteAsync("Invalid battle-ready file index. Please use a valid file number from the `.blr` command.", 6, Context.Message);
                 return;
             }
 
@@ -1598,7 +1598,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             var pk = GetRequest(download);
             if (pk == null)
             {
-                _ = ReplyAndDeleteAsync("Failed to convert battle-ready file to the required PKM type.", 2, Context.Message);
+                _ = ReplyAndDeleteAsync("Failed to convert battle-ready file to the required PKM type.", 6, Context.Message);
                 return;
             }
 
@@ -1611,13 +1611,13 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         }
         catch (Exception ex)
         {
-            _ = ReplyAndDeleteAsync($"An error occurred: {ex.Message}", 2, Context.Message);
+            _ = ReplyAndDeleteAsync($"An error occurred: {ex.Message}", 5, Context.Message);
         }
         finally
         {
             if (Context.Message is IUserMessage userMessage)
             {
-                _ = DeleteMessagesAfterDelayAsync(userMessage, null, 2);
+                _ = DeleteMessagesAfterDelayAsync(userMessage, null, 5);
             }
         }
     }
@@ -1877,7 +1877,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
 
         _ = Task.Run(async () =>
         {
-            await Task.Delay(90_000);
+            await Task.Delay(60_000);
             await message0.DeleteAsync();
             await message1.DeleteAsync();
             await message2.DeleteAsync();
