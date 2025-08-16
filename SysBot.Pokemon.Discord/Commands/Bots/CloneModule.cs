@@ -1,6 +1,8 @@
 using Discord;
 using Discord.Commands;
 using PKHeX.Core;
+using SysBot.Base;
+using System;
 using System.Threading.Tasks;
 
 namespace SysBot.Pokemon.Discord;
@@ -16,44 +18,43 @@ public class CloneModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
     [RequireQueueRole(nameof(DiscordManager.RolesClone))]
     public async Task CloneAsync(int code)
     {
-        // Check if the user is already in the queue
         var userID = Context.User.Id;
         if (Info.IsUserInQueue(userID))
         {
-            await ReplyAsync("You already have an existing trade in the queue. Please wait until it is processed.").ConfigureAwait(false);
+            await SafeReplyAsync("You already have an existing trade in the queue. Please wait until it is processed.");
             return;
         }
+
         var sig = Context.User.GetFavor();
         var lgcode = Info.GetRandomLGTradeCode();
 
-        // Add to queue asynchronously
-        _ = QueueHelper<T>.AddToQueueAsync(Context, code, Context.User.Username, sig, new T(), PokeRoutineType.Clone, PokeTradeType.Clone, Context.User, false, 1, 1, false, false, lgcode);
+        _ = QueueHelper<T>.AddToQueueAsync(
+            Context,
+            code,
+            Context.User.Username,
+            sig,
+            new T(),
+            PokeRoutineType.Clone,
+            PokeTradeType.Clone,
+            Context.User,
+            false, 1, 1, false, false, lgcode
+        );
 
-        // Immediately send a confirmation message without waiting
-        var confirmationMessage = await ReplyAsync("Processing your clone request...").ConfigureAwait(false);
+        var confirmationMessage = await SafeReplyAsync("Processing your clone request...");
 
-        // Use a fire-and-forget approach for the delay and deletion
-        _ = Task.Delay(2000).ContinueWith(async _ =>
-        {
-            if (Context.Message is IUserMessage userMessage)
-                await userMessage.DeleteAsync().ConfigureAwait(false);
-
-            if (confirmationMessage != null)
-                await confirmationMessage.DeleteAsync().ConfigureAwait(false);
-        }).ConfigureAwait(false);
+        _ = SafeDeleteMessagesAsync(Context.Message as IUserMessage, confirmationMessage, 2000);
     }
 
     [Command("clone")]
     [Alias("c")]
     [Summary("Clones the Pokémon you show via Link Trade.")]
     [RequireQueueRole(nameof(DiscordManager.RolesClone))]
-    public async Task CloneAsync([Summary("Trade Code")][Remainder] string code)
+    public async Task CloneAsync([Remainder] string code)
     {
-        // Check if the user is already in the queue
         var userID = Context.User.Id;
         if (Info.IsUserInQueue(userID))
         {
-            await ReplyAsync("You already have an existing trade in the queue. Please wait until it is processed.").ConfigureAwait(false);
+            await SafeReplyAsync("You already have an existing trade in the queue. Please wait until it is processed.");
             return;
         }
 
@@ -61,21 +62,20 @@ public class CloneModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         var sig = Context.User.GetFavor();
         var lgcode = Info.GetRandomLGTradeCode();
 
-        // Add to queue asynchronously
-        _ = QueueHelper<T>.AddToQueueAsync(Context, tradeCode == 0 ? Info.GetRandomTradeCode(userID, Context.Channel, Context.User) : tradeCode, Context.User.Username, sig, new T(), PokeRoutineType.Clone, PokeTradeType.Clone, Context.User, false, 1, 1, false, false, lgcode);
+        _ = QueueHelper<T>.AddToQueueAsync(
+            Context,
+            tradeCode == 0 ? Info.GetRandomTradeCode(userID, Context.Channel, Context.User) : tradeCode,
+            Context.User.Username,
+            sig,
+            new T(),
+            PokeRoutineType.Clone,
+            PokeTradeType.Clone,
+            Context.User,
+            false, 1, 1, false, false, lgcode
+        );
 
-        // Immediately send a confirmation message without waiting
-        var confirmationMessage = await ReplyAsync("Processing your clone request...").ConfigureAwait(false);
-
-        // Use a fire-and-forget approach for the delay and deletion
-        _ = Task.Delay(2000).ContinueWith(async _ =>
-        {
-            if (Context.Message is IUserMessage userMessage)
-                await userMessage.DeleteAsync().ConfigureAwait(false);
-
-            if (confirmationMessage != null)
-                await confirmationMessage.DeleteAsync().ConfigureAwait(false);
-        }).ConfigureAwait(false);
+        var confirmationMessage = await SafeReplyAsync("Processing your clone request...");
+        _ = SafeDeleteMessagesAsync(Context.Message as IUserMessage, confirmationMessage, 2000);
     }
 
     [Command("clone")]
@@ -103,6 +103,48 @@ public class CloneModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             x.Value = msg;
             x.IsInline = false;
         });
-        await ReplyAsync("These are the users who are currently waiting:", embed: embed.Build()).ConfigureAwait(false);
+
+        await SafeReplyAsync("These are the users who are currently waiting:", embed: embed.Build());
     }
+
+    #region Helpers
+
+    private async Task<IUserMessage?> SafeReplyAsync(string text, Embed? embed = null)
+    {
+        try
+        {
+            return await ReplyAsync(text, embed: embed).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            LogUtil.LogSafe(ex, nameof(CloneModule<T>));
+            return null;
+        }
+    }
+
+    private async Task SafeDeleteMessagesAsync(IUserMessage? original, IUserMessage? confirmation, int delayMs)
+    {
+        try
+        {
+            await Task.Delay(delayMs).ConfigureAwait(false);
+
+            if (original != null)
+            {
+                try { await original.DeleteAsync().ConfigureAwait(false); }
+                catch (Exception ex) { LogUtil.LogSafe(ex, nameof(CloneModule<T>)); }
+            }
+
+            if (confirmation != null)
+            {
+                try { await confirmation.DeleteAsync().ConfigureAwait(false); }
+                catch (Exception ex) { LogUtil.LogSafe(ex, nameof(CloneModule<T>)); }
+            }
+        }
+        catch (Exception ex)
+        {
+            LogUtil.LogSafe(ex, nameof(CloneModule<T>));
+        }
+    }
+
+    #endregion
 }

@@ -183,7 +183,9 @@ namespace SysBot.Pokemon.Discord.Helpers
             val = val.Trim();
             if (TryParseFlexibleDate(val, out var formatted))
                 return $".MetDate={formatted}";
-            return string.Empty;
+
+            var today = DateTime.Now.ToString("yyyyMMdd", CultureInfo.InvariantCulture);
+            return $".MetDate={today}";
         }
 
         // ~=Version= → Game: or Version:

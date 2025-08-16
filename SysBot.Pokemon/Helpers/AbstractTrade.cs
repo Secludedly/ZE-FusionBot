@@ -156,6 +156,7 @@ namespace SysBot.Pokemon.Helpers
         // https://github.com/Koi-3088/ForkBot.NET/blob/KoiTest/SysBot.Pokemon/Helpers/TradeExtensions.cs
         public static void EggTrade(PKM pk, IBattleTemplate template, bool nicknameEgg = true)
         {
+            // Set egg nickname
             if (nicknameEgg)
             {
                 pk.IsNicknamed = true;
@@ -185,33 +186,56 @@ namespace SysBot.Pokemon.Helpers
                 _ => 60002, //PK8
             };
 
-            pk.MetDate = DateOnly.FromDateTime(DateTime.Now);
-            pk.EggMetDate = pk.MetDate;
+            pk.EggMetDate = DateOnly.FromDateTime(DateTime.Now);
             pk.HeldItem = 0;
             pk.CurrentLevel = 1;
             pk.EXP = 0;
             pk.MetLevel = 1;
             pk.MetLocation = pk switch
             {
-                PB8 => 65535,
-                PK9 => 0,
-                _ => 30002, //PK8
+                PB8 => 65535, // BDSP hatched location (unset)
+                PK9 => 0, // SV hatched location (unset)
+                _ => 30002, // SwSh hatched location (unset)
             };
 
+            // Set MetDate based on MetLocation
+            // For unhatched eggs:
+            // - PK9 (SV): MetLocation 0 requires MetDate fields to be 0
+            // - PB8 (BDSP): MetLocation 65535 requires MetDate fields to be 0
+            // - PK8 (SwSh): MetLocation 30002 can have a valid MetDate
+            if (pk.MetLocation == 0 || pk.MetLocation == 65535)
+            {
+                pk.MetYear = 0;
+                pk.MetMonth = 0;
+                pk.MetDay = 0;
+            }
+            else
+            {
+                pk.MetDate = pk.EggMetDate;
+            }
+
+            // Clear trainer data
             pk.CurrentHandler = 0;
-            pk.OriginalTrainerFriendship = 1;
             pk.HandlingTrainerName = "";
             ClearHandlingTrainerTrash(pk);
             pk.HandlingTrainerFriendship = 0;
             pk.ClearMemories();
+
+            // Clear battle stats
             pk.StatNature = pk.Nature;
             pk.SetEVs([0, 0, 0, 0, 0, 0]);
 
+            // Handle PID/EC relationship
+            if (pk.Format >= 6 && pk.PID == pk.EncryptionConstant)
+            {
+                pk.EncryptionConstant = pk.PID ^ 0x80000000;
+            }
+
+            // Clear markings and ribbons
             MarkingApplicator.SetMarkings(pk);
             RibbonApplicator.RemoveAllValidRibbons(pk);
 
-            pk.ClearRelearnMoves();
-
+            // Handle game-specific properties
             if (pk is PK8 pk8)
             {
                 pk8.HandlingTrainerLanguage = 0;
@@ -219,7 +243,7 @@ namespace SysBot.Pokemon.Helpers
                 pk8.HandlingTrainerMemory = 0;
                 pk8.HandlingTrainerMemoryFeeling = 0;
                 pk8.HandlingTrainerMemoryIntensity = 0;
-                pk8.DynamaxLevel = pk8.GetSuggestedDynamaxLevel(pk8, 0);
+                pk8.DynamaxLevel = 0; // Eggs don't have dynamax level
             }
             else if (pk is PB8 pb8)
             {

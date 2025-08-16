@@ -272,7 +272,6 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         var code = Info.GetRandomTradeCode(userID, Context.Channel, Context.User);
         await TradeEggAsync(code, egg).ConfigureAwait(false);
     }
-
     [Command("egg")]
     [Alias("Egg")]
     [Summary("Trades an egg generated from the provided Pokémon name.")]
@@ -280,17 +279,24 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
     public async Task TradeEggAsync([Summary("Trade Code")] int code, [Summary("Showdown Set")][Remainder] string content)
     {
         var userID = Context.User.Id;
-
-        // Check if the user is already in the queue
         if (Info.IsUserInQueue(userID))
         {
             _ = ReplyAndDeleteAsync("You already have an existing trade in the queue. Please wait until it is processed.", 6);
             return;
         }
+
+        if (content.Contains("Met Date", StringComparison.OrdinalIgnoreCase) &&
+    content.Contains("Invalid", StringComparison.OrdinalIgnoreCase))
+        {
+            await ReplyAsync("Your Met Date isn’t valid. Please use formats like YYYYMMDD or MM/DD/YYYY.");
+            return;
+        }
+
         content = ReusableActions.StripCodeBlock(content);
         content = BatchNormalizer.NormalizeBatchCommands(content);
         var set = new ShowdownSet(content);
         var template = AutoLegalityWrapper.GetTemplate(set);
+
         _ = Task.Run(async () =>
         {
             try
@@ -299,18 +305,16 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
                 var pkm = sav.GetLegal(template, out var result);
                 if (pkm == null)
                 {
-                    var response = await ReplyAsync("Set took too long to legalize.");
+                    await ReplyAsync("Set took too long to legalize.");
                     return;
                 }
                 pkm = EntityConverter.ConvertToType(pkm, typeof(T), out _) ?? pkm;
-
                 if (pkm is not T pk)
                 {
                     _ = ReplyAndDeleteAsync("I wasn't able to create an egg for that.", 5, Context.Message);
                     return;
                 }
-
-                bool versionSpecified = content.Contains(".Version=", StringComparison.OrdinalIgnoreCase);
+                bool versionSpecified = content.Contains("~=Version=", StringComparison.OrdinalIgnoreCase);
                 if (!versionSpecified)
                 {
                     if (pk is PB8 pb8)
@@ -324,7 +328,6 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
                 }
                 pk.IsNicknamed = false;
                 AbstractTrade<T>.EggTrade(pk, template);
-
                 var sig = Context.User.GetFavor();
                 await AddTradeToQueueAsync(code, Context.User.Username, pk, sig, Context.User).ConfigureAwait(false);
 
@@ -335,15 +338,11 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
                 LogUtil.LogSafe(ex, nameof(TradeModule<T>));
                 _ = ReplyAndDeleteAsync("An error occurred while processing the request.", 6, Context.Message);
             }
-            if (Context.Message is IUserMessage userMessage)
-            {
-                _ = DeleteMessagesAfterDelayAsync(userMessage, null, 5);
-            }
         });
-
-        // Return immediately to avoid blocking
-        await Task.CompletedTask;
+        if (Context.Message is IUserMessage userMessage)
+            _ = DeleteMessagesAfterDelayAsync(userMessage, null, 5);
     }
+
 
     [Command("hidetrade")]
     [Alias("ht")]
