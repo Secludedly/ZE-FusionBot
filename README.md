@@ -278,42 +278,47 @@ Showdown Template
 
 ## 📝 Batch Commands to Showdown Format
 
-`ZE FusionBot` supports converting batch commands from Discord messages into official Showdown format. This allows easy bulk Pokémon trading with full customization of stats, moves, ribbons, and other metadata.
+`ZE FusionBot` supports converting batch commands from Discord messages into official Showdown Set formats. This allows easy bulk Pokémon trading with full customization of stats, moves, ribbons, and other metadata.
 
 ### Supported Batch Command Mappings
 
 | Batch Command | Showdown Format Equivalent | Notes |
 |---------------|---------------------------|-------|
-| `.Scale=` | `Size:` | Accepts keywords (Small, Medium, Large) or numeric values. |
-| `.WeightScalar=` | `Weight:` | Accepts size keywords or numeric values. |
-| `.HeightScalar=` | `Height:` | Accepts size keywords or numeric values. |
+| `.Scale=` | `Scale:` or `Size:` | Accepts keywords (XXXS, XXS, XS, S, AV, L, XL, XXL, XXXL) or numeric values 1-255. |
+| `.WeightScalar=` | `Weight:` | Accepts keywords (XS, S, AV, L, XL) or numeric values 1-255. |
+| `.HeightScalar=` | `Height:` | Accepts keywords (XS, S, AV, L, XL) or numeric values 1-255. |
 | `.OriginalTrainerFriendship=` | `OT Friendship:` | Value 1–255. |
 | `.HandlingTrainerFriendship=` | `HT Friendship:` | Value 1–255. |
 | `.MetDate=` | `Met Date:` | Supports flexible date formats. |
-| `.EggDate=` | `EggDay / EggMonth / EggYear:` | Accepts “Egg Met Date:” input and converts automatically. |
 | `~=Version=` | `Game:` or `Version:` | Supports full game names or abbreviations. |
-| `.MetLocation=` | `Met Location:` | Numeric IDs currently supported; resolves location internally. |
-| `.HyperTrainFlags=` | `HyperTrain:` | Boolean value: true / false. |
+| `.MetLocation=` | `Met Location:` | Only numeric IDs currently supported. |
+| `.HyperTrainFlags=` | `HyperTrain:` | True / False. |
 | `.Moves=` | `Moves:` | “Random” generates random moves. |
 | `.RelearnMoves=` | `Relearn Moves:` | “All” or “None” accepted. |
-| `.Ribbons=` | `Ribbons:` | “All” or specific ribbons supported. |
+| `.Ribbons=` | `Ribbons:` | “All” or “None” supported. |
 | `.RibbonMark[mark]=True` | `Mark:` | Mark names without spaces (e.g., BestFriends). |
 | `.Ribbon[name]=True` | `Ribbon:` | Ribbon names without spaces (e.g., BattleChampion). |
-| `.SetEVs=` | `Set EVs:` | Accepts specific values, `Random`, or `Suggest`. |
-| `.SetIVs=` | `Set IVs:` | Accepts specific values, `Random`, or presets like `1IV`–`6IV`. |
+| `.SetEVs=` | `Set EVs:` | Accepts `Random`, or `Suggest`. |
+| `.SetIVs=` | `Set IVs:` | Accepts `Random`, or presets like `1IV`–`6IV`. |
 | `.GV_[STAT]=` | `GVs:` | Supports HP, Atk, Def, SpA, SpD, Spe. |
 
 ### Example Usage
 
 ```markdown
-Set EVs: Random
+Set EVs: Suggest
 Set IVs: 5IV
-Size: Medium
+Scale: XL
 Weight: 45
+Height: AV
+OT Friendship: 128
+HT Friendship: 128
 Met Location: 30024
-Game: Scarlet
+Game: PLA
 Moves: Random
+Relearn Moves: All
+Mark: BestFriends
 Ribbons: All
+GVs: 7 HP / 7 Atk / 7 Def / 7 SpA / 7 SpD / 7 Spe
 ```
 
 ---
