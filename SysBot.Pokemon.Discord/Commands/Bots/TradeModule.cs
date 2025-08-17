@@ -481,8 +481,33 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
 
                 AbstractTrade<T>.CheckAndSetUnrivaledDate(pk);
 
-                if (pk.WasEgg)
-                    pk.EggMetDate = pk.MetDate;
+                if (pk.IsEgg)
+                {
+                    // Egg handling consistent with .egg command
+                    switch (pk)
+                    {
+                        case PK9 pk9: // Scarlet/Violet
+                            pk9.MetLocation = 0;
+                            pk9.MetDate = default; // must be 0
+                            pk9.EggMetDate = DateOnly.FromDateTime(DateTime.Now);
+                            break;
+
+                        case PB8 pb8: // BDSP
+                            pb8.MetLocation = 65535;
+                            pb8.EggMetDate = DateOnly.FromDateTime(DateTime.Now);
+                            break;
+
+                        case PK8 pk8: // Sword/Shield
+                            pk8.MetLocation = 30002;
+                            pk8.EggMetDate = DateOnly.FromDateTime(DateTime.Now);
+                            pk8.DynamaxLevel = 0; // important: eggs can't have dynamax level
+                            break;
+
+                        default:
+                            pk.EggMetDate = DateOnly.FromDateTime(DateTime.Now);
+                            break;
+                    }
+                }
 
                 pk.Language = finalLanguage;
 
@@ -696,8 +721,33 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
 
                 AbstractTrade<T>.CheckAndSetUnrivaledDate(pk);
 
-                if (pk.WasEgg)
-                    pk.EggMetDate = pk.MetDate;
+                if (pk.IsEgg)
+                {
+                    // Egg handling consistent with .egg command
+                    switch (pk)
+                    {
+                        case PK9 pk9: // Scarlet/Violet
+                            pk9.MetLocation = 0;
+                            pk9.MetDate = default; // must be 0
+                            pk9.EggMetDate = DateOnly.FromDateTime(DateTime.Now);
+                            break;
+
+                        case PB8 pb8: // BDSP
+                            pb8.MetLocation = 65535;
+                            pb8.EggMetDate = DateOnly.FromDateTime(DateTime.Now);
+                            break;
+
+                        case PK8 pk8: // Sword/Shield
+                            pk8.MetLocation = 30002;
+                            pk8.EggMetDate = DateOnly.FromDateTime(DateTime.Now);
+                            pk8.DynamaxLevel = 0; // important: eggs can't have dynamax level
+                            break;
+
+                        default:
+                            pk.EggMetDate = DateOnly.FromDateTime(DateTime.Now);
+                            break;
+                    }
+                }
 
                 pk.Language = finalLanguage;
 
@@ -915,6 +965,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             return Task.FromResult<(T?, string?, ShowdownSet?, string?)>((null, reason, set, null));
         }
         var la = new LegalityAnalysis(pkm);
+
         // Handle eggs similar to regular trade commands
         if (isEgg && pkm is T eggPk)
         {
@@ -935,6 +986,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             pkm = eggPk;
             la = new LegalityAnalysis(pkm);
         }
+
         if (pkm is not T pk || !la.Valid)
         {
             var spec = GameInfo.Strings.Species[template.Species];
@@ -942,6 +994,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             result == "VersionMismatch" ? "Request refused: PKHeX and Auto-Legality Mod version mismatch." :
             $"I wasn't able to create a {spec} from that set.";
             string? legalizationHint = null;
+
             if (result == "Failed")
             {
                 legalizationHint = AutoLegalityWrapper.GetLegalizationHint(template, sav, pkm);
@@ -950,19 +1003,49 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
                     legalizationHint = $"{spec} cannot be shiny. Please try again.";
                 }
             }
+
             return Task.FromResult<(T?, string?, ShowdownSet?, string?)>((null, reason, set, legalizationHint));
         }
+
         // Apply standard processing
         if (pk is PA8)
             pk.HeldItem = (int)HeldItem.None;
         else if (pk.HeldItem == 0 && !pk.IsEgg)
             pk.HeldItem = (int)SysCord<T>.Runner.Config.Trade.TradeConfiguration.DefaultHeldItem;
-        if (pk.WasEgg)
-            pk.EggMetDate = pk.MetDate;
+
+        if (pk.IsEgg)
+        {
+            // Egg handling consistent with .egg command
+            switch (pk)
+            {
+                case PK9 pk9: // Scarlet/Violet
+                    pk9.MetLocation = 0;
+                    pk9.MetDate = default; // must be 0
+                    pk9.EggMetDate = DateOnly.FromDateTime(DateTime.Now);
+                    break;
+
+                case PB8 pb8: // BDSP
+                    pb8.MetLocation = 65535;
+                    pb8.EggMetDate = DateOnly.FromDateTime(DateTime.Now);
+                    break;
+
+                case PK8 pk8: // Sword/Shield
+                    pk8.MetLocation = 30002;
+                    pk8.EggMetDate = DateOnly.FromDateTime(DateTime.Now);
+                    pk8.DynamaxLevel = 0; // important: eggs can't have dynamax level
+                    break;
+
+                default:
+                    pk.EggMetDate = DateOnly.FromDateTime(DateTime.Now);
+                    break;
+            }
+        }
+
         pk.Language = finalLanguage;
         if (!set.Nickname.Equals(pk.Nickname) && string.IsNullOrEmpty(set.Nickname))
             pk.ClearNickname();
         pk.ResetPartyStats();
+
         // Check for spam/ad names
         if (Info.Hub.Config.Trade.TradeConfiguration.EnableSpamCheck)
         {
@@ -973,6 +1056,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         }
         return Task.FromResult<(T?, string?, ShowdownSet?, string?)>((pk, null, set, null));
     }
+
     private static Embed BuildErrorEmbed(List<BatchTradeError> errors, int totalTrades)
     {
         var embed = new EmbedBuilder()
@@ -1244,8 +1328,33 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
 
                 AbstractTrade<T>.CheckAndSetUnrivaledDate(pk);
 
-                if (pkm.WasEgg)
-                    pkm.EggMetDate = pkm.MetDate;
+                if (pk.IsEgg)
+                {
+                    // Egg handling consistent with .egg command
+                    switch (pk)
+                    {
+                        case PK9 pk9: // Scarlet/Violet
+                            pk9.MetLocation = 0;
+                            pk9.MetDate = default; // must be 0
+                            pk9.EggMetDate = DateOnly.FromDateTime(DateTime.Now);
+                            break;
+
+                        case PB8 pb8: // BDSP
+                            pb8.MetLocation = 65535;
+                            pb8.EggMetDate = DateOnly.FromDateTime(DateTime.Now);
+                            break;
+
+                        case PK8 pk8: // Sword/Shield
+                            pk8.MetLocation = 30002;
+                            pk8.EggMetDate = DateOnly.FromDateTime(DateTime.Now);
+                            pk8.DynamaxLevel = 0; // important: eggs can't have dynamax level
+                            break;
+
+                        default:
+                            pk.EggMetDate = DateOnly.FromDateTime(DateTime.Now);
+                            break;
+                    }
+                }
 
                 pk.Language = finalLanguage;
 
