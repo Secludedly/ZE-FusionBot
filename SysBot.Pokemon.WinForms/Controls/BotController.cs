@@ -259,32 +259,35 @@ public partial class BotController : UserControl
         // Your color map for the menu text
         var colorMap = new Dictionary<string, Color>
     {
-        { "Start Bot", Color.LimeGreen },
-        { "Stop Bot", Color.Red },
-        { "Restart Bot", Color.LightBlue },
-        { "Reboot + Stop", Color.Orange },
-        { "Turn Screen On", Color.LightGray },
-        { "Turn Screen Off", Color.DimGray }
+        { "▶️ Start Bot", Color.LimeGreen },
+        { "⏹️ Stop Bot", Color.IndianRed },
+        { "⏸️ Idle Bot", Color.White },
+        { "🔼 Resume Bot", Color.White },
+        { "🔁 Restart Bot", Color.White },
+        { "🔄 Reboot + Stop", Color.White },
+        { "💡 Turn Screen On", Color.White },
+        { "🌑 Turn Screen Off", Color.White },
+        { "⛔ Remove Bot", Color.IndianRed }
     };
 
-        AddMenuItem("Start Bot", BotControlCommand.Start);
-        AddMenuItem("Stop Bot", BotControlCommand.Stop);
-        AddMenuItem("Idle Bot", BotControlCommand.Idle);
-        AddMenuItem("Resume Bot", BotControlCommand.Resume);
+        AddMenuItem("▶️ Start Bot", BotControlCommand.Start);
+        AddMenuItem("⏹️ Stop Bot", BotControlCommand.Stop);
+        AddMenuItem("⏸️ Idle Bot", BotControlCommand.Idle);
+        AddMenuItem("🔼 Resume Bot", BotControlCommand.Resume);
 
         RCMenu.Items.Add(new ToolStripSeparator());
 
-        AddMenuItem("Restart Bot", BotControlCommand.Restart);
-        AddMenuItem("Reboot + Stop", BotControlCommand.RebootAndStop);
+        AddMenuItem("🔁 Restart Bot", BotControlCommand.Restart);
+        AddMenuItem("🔄 Reboot + Stop", BotControlCommand.RebootAndStop);
 
         RCMenu.Items.Add(new ToolStripSeparator());
 
-        AddMenuItem("Turn Screen On", BotControlCommand.ScreenOn);
-        AddMenuItem("Turn Screen Off", BotControlCommand.ScreenOff);
+        AddMenuItem("💡 Turn Screen On", BotControlCommand.ScreenOn);
+        AddMenuItem("🌑 Turn Screen Off", BotControlCommand.ScreenOff);
 
         RCMenu.Items.Add(new ToolStripSeparator());
 
-        var remove = new ToolStripMenuItem("Remove Bot");
+        var remove = new ToolStripMenuItem("⛔ Remove Bot");
         remove.Click += (_, __) => TryRemove();
         RCMenu.Items.Add(remove);
 
@@ -341,24 +344,53 @@ public partial class BotController : UserControl
     private class ColoredMenuRenderer : ToolStripProfessionalRenderer
     {
         private readonly Dictionary<string, Color> _colorMap;
+        private readonly Color _backgroundColor = Color.FromArgb(20, 19, 57);
+        private readonly int _leftPadding = 22; // padding from left edge
 
         public ColoredMenuRenderer(Dictionary<string, Color> colorMap)
         {
             _colorMap = colorMap;
         }
 
+        protected override void OnRenderToolStripBackground(ToolStripRenderEventArgs e)
+        {
+            using var brush = new SolidBrush(_backgroundColor);
+            e.Graphics.FillRectangle(brush, e.AffectedBounds);
+        }
+
+        protected override void OnRenderMenuItemBackground(ToolStripItemRenderEventArgs e)
+        {
+            Color bg = e.Item.Selected ? Color.Cyan : _backgroundColor;
+            using var brush = new SolidBrush(bg);
+            e.Graphics.FillRectangle(brush, e.Item.ContentRectangle);
+        }
+
         protected override void OnRenderItemText(ToolStripItemTextRenderEventArgs e)
         {
             if (_colorMap.TryGetValue(e.Item.Text, out Color color))
-            {
-                // Use highlight text color if item is selected (hover)
                 e.TextColor = e.Item.Selected ? SystemColors.HighlightText : color;
-            }
             else
-            {
                 e.TextColor = e.Item.Selected ? SystemColors.HighlightText : SystemColors.ControlText;
-            }
+
+            // Adjust text rectangle to remove checkmark/image margin
+            e.TextRectangle = new Rectangle(
+                e.Item.ContentRectangle.Left + _leftPadding,
+                e.Item.ContentRectangle.Top,
+                e.Item.ContentRectangle.Width - _leftPadding,
+                e.Item.ContentRectangle.Height
+            );
+
             base.OnRenderItemText(e);
+        }
+
+        protected override void OnRenderItemCheck(ToolStripItemImageRenderEventArgs e)
+        {
+            // Skip drawing the checkmark box entirely
+        }
+
+        protected override void OnRenderImageMargin(ToolStripRenderEventArgs e)
+        {
+            // Skip the image margin area entirely
         }
     }
 

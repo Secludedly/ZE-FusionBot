@@ -45,7 +45,7 @@ namespace SysBot.Pokemon.WinForms
                 AutoSize = false,
                 TextAlign = ContentAlignment.MiddleCenter,
                 Dock = DockStyle.Fill,
-                Font = new Font("Ubuntu Mono", 10, FontStyle.Regular)
+                Font = new Font("Ubuntu Mono", 10, FontStyle.Italic)
             };
 
             var logsPanel = new Panel { Dock = DockStyle.Fill };
@@ -72,25 +72,47 @@ namespace SysBot.Pokemon.WinForms
             {
                 Dock = DockStyle.Top,
                 Height = 30,
-                BackColor = Color.FromArgb(20, 20, 50)
+                BackColor = Color.FromArgb(20, 20, 50) // top panel background
             };
 
+            // TextBox inside the border panel
             searchBox = new TextBox
             {
-                Width = 200,
-                Location = new Point(5, 3),
-                Font = new Font("Montserrat-Regular", 8, FontStyle.Italic),
+                BorderStyle = BorderStyle.None,
+                BackColor = Color.FromArgb(40, 39, 77),
                 ForeColor = Color.Gray,
-                Text = "Search logs..."
+                Font = new Font("Montserrat-Regular", 9, FontStyle.Italic),
+                Text = "Search...",
+                Location = new Point(6, 5),
+                Size = new Size(198, 28),
             };
-            searchBox.Enter += SearchBox_Enter;
-            searchBox.Leave += SearchBox_Leave;
+
+            searchBox.Enter += (s, e) =>
+            {
+                if (searchBox.Text == "Search...")
+                {
+                    searchBox.Text = "";
+                    searchBox.ForeColor = Color.White;
+                    searchBox.Font = new Font("Montserrat-Regular", 9, FontStyle.Regular);
+                }
+            };
+
+            searchBox.Leave += (s, e) =>
+            {
+                if (string.IsNullOrWhiteSpace(searchBox.Text))
+                {
+                    searchBox.Text = "Search...";
+                    searchBox.ForeColor = Color.Gray;
+                    searchBox.Font = new Font("Montserrat-Regular", 9, FontStyle.Italic);
+                }
+            };
+
             searchBox.TextChanged += SearchBox_TextChanged;
 
             nextButton = new FancyButton
             {
                 Text = "NEXT",
-                Location = new Point(210, 2), // was 210
+                Location = new Point(210, 2 - 1), // was 210
                 Height = 25,
                 Font = new Font("Montserrat-Regular", 8)
             };
@@ -99,7 +121,7 @@ namespace SysBot.Pokemon.WinForms
             prevButton = new FancyButton
             {
                 Text = "PREV",
-                Location = new Point(290, 2), // was 290
+                Location = new Point(290, 2 - 1), // was 290
                 Height = 25,
                 Font = new Font("Montserrat-Regular", 8)
             };
@@ -108,7 +130,7 @@ namespace SysBot.Pokemon.WinForms
             var clearButton = new FancyButton
             {
                 Text = "CLEAR",
-                Location = new Point(370, 2), // was 370
+                Location = new Point(370, 2 - 1), // was 370
                 Height = 25,
                 Font = new Font("Montserrat-Regular", 8)
             };
@@ -124,7 +146,7 @@ namespace SysBot.Pokemon.WinForms
             resultLabel = new Label
             {
                 AutoSize = true,
-                Location = new Point(470, 6), // was 550
+                Location = new Point(470, 6 - 2), // was 550
                 ForeColor = Color.White,
                 Font = new Font("Montserrat-Regular", 8)
             };

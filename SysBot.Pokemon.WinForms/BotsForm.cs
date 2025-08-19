@@ -130,21 +130,23 @@ namespace SysBot.Pokemon.WinForms
             _TB_IP = new TextBox { Location = new Point(12, 57), Width = 120, BackColor = Color.FromArgb(20, 19, 57), ForeColor = whiteText };
             _NUD_Port = new NumericUpDown { Location = new Point(144, 57), Width = 65, Maximum = 65535, Minimum = 0, Value = 6000, BackColor = Color.FromArgb(20, 19, 57), ForeColor = whiteText };
 
-            _CB_Protocol = new ComboBox { Location = new Point(221, 57), Width = 60, DropDownStyle = ComboBoxStyle.DropDownList, BackColor = Color.FromArgb(20, 19, 57), ForeColor = whiteText };
+            _CB_Protocol = new ComboBox { Location = new Point(221, 57), Width = 62, DropDownStyle = ComboBoxStyle.DropDownList, BackColor = Color.FromArgb(20, 19, 57), ForeColor = whiteText };
             var protocols = ((SwitchProtocol[])Enum.GetValues(typeof(SwitchProtocol)))
                 .Select(z => new { Text = z.ToString(), Value = (int)z }).ToArray();
             _CB_Protocol.DisplayMember = "Text";
             _CB_Protocol.ValueMember = "Value";
             _CB_Protocol.DataSource = protocols;
             _CB_Protocol.SelectedValue = (int)SwitchProtocol.WiFi;
+            StyleComboBox(_CB_Protocol);
 
-            _CB_Routine = new ComboBox { Location = new Point(292, 57), Width = 120, DropDownStyle = ComboBoxStyle.DropDownList, BackColor = Color.FromArgb(20, 19, 57), ForeColor = whiteText };
+            _CB_Routine = new ComboBox { Location = new Point(294, 57), Width = 120, DropDownStyle = ComboBoxStyle.DropDownList, BackColor = Color.FromArgb(20, 19, 57), ForeColor = whiteText };
             var routines = ((PokeRoutineType[])Enum.GetValues(typeof(PokeRoutineType)))
                 .Select(z => new { Text = z.ToString(), Value = (int)z }).ToArray();
             _CB_Routine.DisplayMember = "Text";
             _CB_Routine.ValueMember = "Value";
             _CB_Routine.DataSource = routines;
             _CB_Routine.SelectedValue = (int)PokeRoutineType.FlexTrade;
+            StyleComboBox(_CB_Routine);
 
             _CB_GameMode = new ComboBox { Location = new Point(625, 5), Size = new Size(100, 40), DropDownStyle = ComboBoxStyle.DropDownList, BackColor = Color.FromArgb(20, 19, 57), ForeColor = whiteText };
             _CB_GameMode.Items.AddRange(new object[] { "SWSH", "BDSP", "PLA", "SV", "LGPE" });
@@ -159,6 +161,7 @@ namespace SysBot.Pokemon.WinForms
                 e.Graphics.DrawString(text, cb.Font, brush, e.Bounds);
             };
             _CB_GameMode.SelectedIndexChanged += CB_GameMode_SelectedIndexChanged;
+            StyleComboBox(_CB_GameMode);
 
             _FLP_Bots = new FlowLayoutPanel
             {
@@ -366,6 +369,37 @@ namespace SysBot.Pokemon.WinForms
             _NUD_Port.Value = details.Port;
             _CB_Protocol.SelectedValue = (int)details.Protocol;
             _CB_Routine.SelectedValue = (int)cfg.InitialRoutine;
-        } 
+        }
+
+        private void StyleComboBox(ComboBox cb)
+        {
+            Color darkBG = Color.FromArgb(20, 19, 57);
+            Color whiteText = Color.White;
+
+            cb.BackColor = darkBG;
+            cb.ForeColor = whiteText;
+            cb.DrawMode = DrawMode.OwnerDrawFixed;
+            cb.FlatStyle = FlatStyle.Flat;
+
+            cb.DrawItem += (s, e) =>
+            {
+                if (e.Index < 0) return;
+
+                ComboBox combo = (ComboBox)s;
+                e.DrawBackground();
+
+                // darker shade when selected
+                Color bgColor = (e.State & DrawItemState.Selected) == DrawItemState.Selected
+                    ? Color.FromArgb(40, 39, 87)
+                    : darkBG;
+
+                using (SolidBrush bg = new SolidBrush(bgColor))
+                    e.Graphics.FillRectangle(bg, e.Bounds);
+
+                string text = combo.GetItemText(combo.Items[e.Index]);
+                using (SolidBrush brush = new SolidBrush(whiteText))
+                    e.Graphics.DrawString(text, combo.Font, brush, e.Bounds);
+            };
+        }
     }
 }

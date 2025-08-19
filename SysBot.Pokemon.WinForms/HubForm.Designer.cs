@@ -40,7 +40,8 @@ namespace SysBot.Pokemon.WinForms
             PG_Hub.CategorySplitterColor = Color.FromArgb(249, 88, 155);
             PG_Hub.CommandsBackColor = Color.FromArgb(10, 10, 40);
             PG_Hub.CommandsDisabledLinkColor = Color.Silver;
-            PG_Hub.DisabledItemForeColor = Color.FromArgb(10, 10, 40);
+            PG_Hub.CommandsForeColor = SystemColors.ControlText;
+            PG_Hub.DisabledItemForeColor = Color.White;
             PG_Hub.Dock = System.Windows.Forms.DockStyle.Fill;
             PG_Hub.Font = new Font("Trebuchet MS", 9F);
             PG_Hub.HelpBackColor = Color.FromArgb(30, 30, 60);
@@ -50,9 +51,12 @@ namespace SysBot.Pokemon.WinForms
             PG_Hub.Location = new Point(0, 0);
             PG_Hub.Name = "PG_Hub";
             PG_Hub.SelectedItemWithFocusBackColor = Color.Orchid;
+            PG_Hub.SelectedItemWithFocusForeColor = Color.White;
             PG_Hub.Size = new Size(739, 305);
             PG_Hub.TabIndex = 0;
             PG_Hub.ViewBackColor = Color.FromArgb(10, 10, 40);
+            PG_Hub.ViewBorderColor = Color.Black;
+            PG_Hub.ViewForeColor = Color.White;
             // 
             // HubForm
             // 
