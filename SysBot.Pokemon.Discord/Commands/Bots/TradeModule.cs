@@ -7,6 +7,7 @@ using SysBot.Base;
 using SysBot.Pokemon.Discord.Helpers;
 using SysBot.Pokemon.Helpers;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -14,6 +15,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using static SysBot.Pokemon.TradeSettings.TradeSettingsCategory;
 
@@ -816,9 +818,295 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         }
     }
 
+    // Dictionaries for the TextTrade command's pending trades and queue status
+    private static readonly ConcurrentDictionary<ulong, List<string>> _pendingTextTrades = new();
+    private static readonly ConcurrentDictionary<ulong, bool> _usersInQueue = new();
+    private static readonly ConcurrentDictionary<ulong, bool> _batchQueueMessageSent = new();
+
+    [Command("tt")]
+    [Summary("Upload a .txt or .csv file of Showdown sets, then select which Pokémon to trade.")]
+    [RequireQueueRole(nameof(DiscordManager.RolesTrade))]
+    public async Task TextTradeAsync([Remainder] string args = "")
+    {
+        await ProcessTextTradeBatchAsync(Context.User.Id, (SocketUser)Context.User, args);
+    }
+
+    private async Task ProcessTextTradeBatchAsync(ulong userId, SocketUser user, string args)
+    {
+        if (_usersInQueue.ContainsKey(userId))
+        {
+            await ReplyAsync("You already have an existing trade in the queue. Please wait until it is finished processing.");
+            return;
+        }
+
+        // ===== JOB 1: File Upload =====
+        if (Context.Message.Attachments.Count > 0 && string.IsNullOrWhiteSpace(args))
+        {
+            var file = Context.Message.Attachments.First();
+            if (!file.Filename.EndsWith(".txt", StringComparison.OrdinalIgnoreCase) &&
+                !file.Filename.EndsWith(".csv", StringComparison.OrdinalIgnoreCase))
+            {
+                await ReplyAsync("Only `.txt` or `.csv` files are supported for TextTrade.");
+                return;
+            }
+
+            // Supports sets being separated by "---" or by double new lines
+            var data = await new HttpClient().GetStringAsync(file.Url);
+            var rawBlocks = Regex.Split(data, @"(?:---|\r?\n\s*\r?\n)+")
+                 .Select(b => b.Trim())
+                 .Where(b => !string.IsNullOrWhiteSpace(b))
+                 .ToList();
+
+            // Get valid species names (string form)
+            var validSpecies = Enum.GetNames(typeof(Species))
+                .Where(n => n != "None")
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            var blocks = new List<string>();
+
+            foreach (var block in rawBlocks)
+            {
+                var firstLine = block.Split('\n')[0].Trim();
+
+                // Extract text before "@"
+                string candidate = firstLine.Contains("@")
+                    ? firstLine.Split('@')[0].Trim()
+                    : firstLine;
+
+                // Remove gender markers like (M) or (F)
+                candidate = Regex.Replace(candidate, @"\s*\(M\)|\s*\(F\)", "", RegexOptions.IgnoreCase).Trim();
+
+                // Special handling: Egg formats
+                if (candidate.Contains("Egg", StringComparison.OrdinalIgnoreCase))
+                {
+                    blocks.Add(block);
+                    continue;
+                }
+
+                // Only accept if it's an actual Pokémon species
+                if (validSpecies.Contains(candidate))
+                    blocks.Add(block);
+            }
+
+            if (blocks.Count == 0)
+            {
+                await ReplyAsync("No valid Pokémon sets found in the uploaded file.");
+                return;
+            }
+
+            _pendingTextTrades[userId] = blocks;
+
+            // Initial embed for the user to select from
+            var embed = new EmbedBuilder()
+                .WithTitle("📄 Text Trade Detected!")
+                .WithDescription($"Detected **{blocks.Count}** Pokémon sets from **{file.Filename}**")
+                .WithColor(Color.Blue);
+
+            for (int i = 0; i < blocks.Count; i++)
+            {
+                var firstLine = blocks[i].Split('\n')[0];
+                var species = firstLine.Split('@')[0].Trim();
+
+                string icons = "";
+
+                // ✨ Shiny check
+                if (blocks[i].IndexOf("Shiny: Yes", StringComparison.OrdinalIgnoreCase) >= 0)
+                    icons += "✨ ";
+
+                // 🚩 Level check
+                var levelMatch = Regex.Match(blocks[i], @"Level:\s*(\d+)", RegexOptions.IgnoreCase);
+                if (levelMatch.Success && int.TryParse(levelMatch.Groups[1].Value, out int lvl))
+                {
+                    if (lvl < 5 || lvl > 100)
+                        icons += "🚩 ";
+                }
+
+                // ⚪ Item check (missing @ on first line)
+                if (!firstLine.Contains("@"))
+                    icons += "⚪ ";
+
+                // 🧾 OT/TID/SID check
+                if (blocks[i].Contains("OT:", StringComparison.OrdinalIgnoreCase) ||
+                    blocks[i].Contains("TID:", StringComparison.OrdinalIgnoreCase) ||
+                    blocks[i].Contains("SID:", StringComparison.OrdinalIgnoreCase))
+                    icons += "🧾 ";
+
+                // 🥚 Egg check
+                if (firstLine.Contains("Egg", StringComparison.OrdinalIgnoreCase))
+                    icons += "🥚 ";
+
+                embed.AddField(
+                    $"{i + 1}. {species} {icons}",
+                    $"Use `tt {i + 1}` to trade this Pokémon",
+                    false
+                );
+            }
+
+            // Footer legend
+            embed.AddField("Multiple Pokémon", "Use `tt 1 2 3 etc.`, to trade **no more than 6 Pokémon**", false);
+            embed.WithFooter("✨ = Shiny | 🚩 = Fishy | ⚪ = No Held Item | 🧾 = Has OT/TID/SID | 🥚 = Egg\n⏳ Make a selection within 60s or the TextTrade is canceled automatically.");
+            await ReplyAsync(embed: embed.Build());
+
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(60000);
+                if (_pendingTextTrades.TryRemove(userId, out _))
+                    await ReplyAsync($"⌛ {user.Mention}, your TextTrade request expired after 60 seconds.");
+            });
+
+            return;
+        }
+
+        // ===== JOB 2: Selection =====
+        if (!_pendingTextTrades.TryGetValue(userId, out var sets))
+        {
+            await ReplyAsync("You haven’t uploaded a file yet or it expired. Attach a `.txt` or `.csv` first.");
+            return;
+        }
+
+        var selections = args.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                             .Select(t => int.TryParse(t, out int idx) ? idx : 0)
+                             .Where(idx => idx > 0 && idx <= sets.Count)
+                             .ToList();
+
+        if (selections.Count == 0)
+        {
+            await ReplyAsync("Invalid selection. Use `tt 1` or `tt 1 2` (max 6 Pokémon).");
+            return;
+        }
+
+        if (selections.Count > 6)
+        {
+            await ReplyAsync("You can only trade up to 6 Pokémon at a time.");
+            return;
+        }
+
+        // Mark the user as in queue
+        _usersInQueue[userId] = true;
+
+        // Generate a unique batch trade code and piggyback off the batch trade logic
+        int batchTradeCode = Info.GetRandomTradeCode(userId, Context.Channel, user);
+
+        // Send the batch DM exactly once without spamming DMs
+        if (!_batchQueueMessageSent.ContainsKey(userId))
+        {
+            _batchQueueMessageSent[userId] = true;
+            await EmbedHelper.SendTradeCodeEmbedAsync(user, batchTradeCode);
+        }
+
+        // Queue all selected Pokémon and treat like a batch
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                int tradeNumber = 1;
+                foreach (var idx in selections)
+                {
+                    // Use ReusableActions to clean and normalize each block
+                    // Use BatchNormalizer to ensure consistent command formatting with custom class
+                    string showdownBlock = sets[idx - 1];
+                    showdownBlock = ReusableActions.StripCodeBlock(showdownBlock);
+                    showdownBlock = BatchNormalizer.NormalizeBatchCommands(showdownBlock);
+
+                    await ProcessSingleTextTradeAsync(showdownBlock, batchTradeCode, tradeNumber, selections.Count, user);
+
+                    tradeNumber++;
+                    await Task.Delay(1000); // delay to avoid spamming
+                }
+            }
+            finally
+            {
+                // Cleanup for queue, pending trades, and batch message flag
+                _pendingTextTrades.TryRemove(userId, out _);
+                _usersInQueue.TryRemove(userId, out _);
+                _batchQueueMessageSent.TryRemove(userId, out _);
+            }
+        });
+    }
+
+    // Process a single Pokémon trade based on the TextTrade batch method
+    private async Task ProcessSingleTextTradeAsync(string tradeContent, int batchTradeCode, int tradeNumber, int totalTrades, SocketUser user)
+    {
+        // Pre-checks content and ignores AutoOT if OT/TID/SID present
+        tradeContent = ReusableActions.StripCodeBlock(tradeContent);
+        bool ignoreAutoOT = tradeContent.Contains("OT:") || tradeContent.Contains("TID:") || tradeContent.Contains("SID:");
+
+        // Showdown parsing logic to get the set
+        if (!ShowdownParsing.TryParseAnyLanguage(tradeContent, out ShowdownSet? set) || set == null || set.Species == 0)
+        {
+            await ReplyAsync($"{user.Mention}, could not parse the Pokémon set. Skipping trade.");
+            return;
+        }
+
+        // Determine final language and legal template
+        byte finalLanguage = LanguageHelper.GetFinalLanguage(tradeContent, set, (byte)Info.Hub.Config.Legality.GenerateLanguage, AbstractTrade<T>.DetectShowdownLanguage);
+        var template = AutoLegalityWrapper.GetTemplate(set);
+
+        if (set.InvalidLines.Count != 0)
+        {
+            await ReplyAsync($"{user.Mention}, invalid lines found:\n{string.Join("\n", set.InvalidLines)}");
+            return;
+        }
+
+        // Generate PKM via ALM
+        PKM? pkm = null;
+        string result = "Unknown";
+
+        await Task.Run(() =>
+        {
+            try
+            {
+                // Use language-specific sav to get the legal PKM
+                var sav = LanguageHelper.GetTrainerInfoWithLanguage<T>((LanguageID)finalLanguage);
+                pkm = sav.GetLegal(template, out result);
+            }
+            catch (Exception ex)
+            {
+                LogUtil.LogSafe(ex, nameof(ProcessSingleTextTradeAsync));
+            }
+        });
+
+        if (pkm == null)
+        {
+            await EmbedHelper.SendTradeCanceledEmbedAsync(user, $"Failed to generate Pokémon: {result}");
+            return;
+        }
+
+        // Egg & Held Item fixes
+        if (pkm.IsEgg) AbstractTrade<T>.CheckAndSetUnrivaledDate(pkm);
+        if (pkm.HeldItem == 0 && !pkm.IsEgg)
+            pkm.HeldItem = (int)SysCord<T>.Runner.Config.Trade.TradeConfiguration.DefaultHeldItem;
+
+        // Spam and/or Admon check
+        if (Info.Hub.Config.Trade.TradeConfiguration.EnableSpamCheck && AbstractTrade<T>.HasAdName((T)pkm, out string ad))
+        {
+            await ReplyAndDeleteAsync($"{user.Mention}, detected invalid Adname in Pokémon or Trainer name.", 5);
+            return;
+        }
+
+        // If LG, utilize LG code method
+        var lgCode = Info.GetRandomLGTradeCode();
+
+        // Add to queue
+        await AddTradeToQueueAsync(
+            batchTradeCode,
+            Context.User.Username,
+            (T)pkm,
+            Context.User.GetFavor(),
+            Context.User,
+            isBatchTrade: true,
+            batchTradeNumber: tradeNumber,
+            totalBatchTrades: totalTrades,
+            lgcode: lgCode,
+            tradeType: PokeTradeType.Batch,
+            ignoreAutoOT: ignoreAutoOT,
+            setEdited: false
+        ).ConfigureAwait(false);
+    }
+
     [Command("batchTrade")]
     [Alias("bt")]
-    [Summary("Makes the bot trade multiple Pokémon from the provided list, up to a maximum of 4 trades.")]
+    [Summary("Makes the bot trade multiple Pokémon from the provided list, up to a maximum of 6 trades.")]
     [RequireQueueRole(nameof(DiscordManager.RolesTrade))]
     public async Task BatchTradeAsync([Summary("List of Showdown Sets separated by '---'")][Remainder] string content)
     {

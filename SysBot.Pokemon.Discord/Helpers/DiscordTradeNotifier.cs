@@ -50,6 +50,8 @@ public class DiscordTradeNotifier<T> : IPokeTradeNotifier<T>
         _uniqueTradeID = DiscordTradeNotifier<T>.GetUniqueTradeID();
     }
 
+    private static readonly HashSet<int> _batchDMsSent = new();
+
     public Action<PokeRoutineExecutor<T>>? OnFinish { private get; set; }
 
     public void UpdateBatchProgress(int currentBatchNumber, T currentPokemon, int uniqueTradeID)
@@ -137,14 +139,22 @@ public class DiscordTradeNotifier<T> : IPokeTradeNotifier<T>
     }
     public async Task SendInitialQueueUpdate()
     {
+        // Only send once per batch
+        if (_batchDMsSent.Contains(Code))
+            return;
+
+        _batchDMsSent.Add(Code);
+
         var position = Hub.Queues.Info.CheckPosition(_traderID, _uniqueTradeID, PokeRoutineType.LinkTrade);
         var currentPosition = position.Position < 1 ? 1 : position.Position;
         var botct = Hub.Bots.Count;
         var currentETA = currentPosition > botct ? Hub.Config.Queues.EstimateDelay(currentPosition, botct) : 0;
         _lastReportedPosition = currentPosition;
+
         var batchDescription = TotalBatchTrades > 1
-        ? $"Your batch trade request ({TotalBatchTrades} Pokémon) has been queued.\n\n⚠️ **Important Instructions:**\n• Stay in the trade for all {TotalBatchTrades} trades\n• Have all {TotalBatchTrades} Pokémon ready to trade\n• Do not exit until you see the completion message\n\nPosition in queue: **{currentPosition}**"
-        : $"Your trade request has been queued. Position in queue: **{currentPosition}**";
+            ? $"Your batch trade request ({TotalBatchTrades} Pokémon) has been queued.\n\n⚠️ **Important Instructions:**\n• Stay in the trade for all {TotalBatchTrades} trades\n• Have all {TotalBatchTrades} Pokémon ready to trade\n• Do not exit until you see the completion message\n\nPosition in queue: **{currentPosition}**"
+            : $"Your trade request has been queued. Position in queue: **{currentPosition}**";
+
         var initialEmbed = new EmbedBuilder
         {
             Color = Color.Green,
@@ -156,11 +166,15 @@ public class DiscordTradeNotifier<T> : IPokeTradeNotifier<T>
             },
             Timestamp = DateTimeOffset.Now
         }.Build();
+
         await Trader.SendMessageAsync(embed: initialEmbed).ConfigureAwait(false);
+
         _initialUpdateSent = true;
-        // Start sending periodic updates about queue position
+
+        // Start periodic updates
         StartPeriodicUpdates();
     }
+
 
     public void TradeInitialize(PokeRoutineExecutor<T> routine, PokeTradeDetail<T> info)
     {

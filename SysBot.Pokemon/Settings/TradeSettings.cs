@@ -94,6 +94,12 @@ public class TradeSettings : IBotStateSettings, ICountSettings
         [Category(TradeConfig), Description("Toggle to give users the option to use the BatchNormalizer, which utilizes Showdown in place of batch commands. See https://shorter.me/62oaO for details."), DisplayName("Batch Commands to Showdown")]
         public bool BatchNormalizer { get; set; } = true;
 
+        [Category(TradeConfig), Description("Toggle to allow or disallow txt/csv trades."), DisplayName("Allow Text Trades")]
+        public bool AllowTextTrades { get; set; } = true;
+
+        [Category(TradeConfig), Description("Maximum amount of Pokemon to parse for txt/csv trades, up to 6."), DisplayName("Maximum Text Trades")]
+        public int MaxTextTrades { get; set; } = 6;
+
         [Category(TradeConfig), Description("Dump Trade: If enabled, Dumping routine will output legality check information to the user."), DisplayName("Dump Trade Legality Check")]
         public bool DumpTradeLegalityCheck { get; set; } = true;
         public bool EnableSpamCheck { get; set; }
