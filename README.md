@@ -267,9 +267,9 @@ At its core, FusionBot is powered by [hexbyt3's](https://github.com/bdawg1989) [
 | `setScreenOffAll` | screenOffAll, scrOffAll | Turn off screen for all bots. | `setScreenOffAll` | Sudo, Owner |
 | `peek` | repeek | Take and send a screenshot. | `peek` | Sudo, Owner |
 | `video` | Video | Record a GIF from the Switch. | `video` | Sudo, Owner |
-| `startSysdvr` | dvrstart, startdvr, sysdvrstart, dvr, stream | Start SysDVR streaming. | `startSysdvr` | Sudo, Owner |
-| `sysDvr` | — | Show instructions for SysDVR. | `sysDvr` | Sudo, Owner |
-| `startController` | controllerstart, startcontrol, controlstart, startremote, remotestart, sbr, controller | Start Switch Remote controller. | `startController` | Sudo, Owner |
+| `startSysdvr` | dvrstart, startdvr, sysdvrstart, dvr, stream | Start SysDVR streaming. | `startSysdvr` | Owner |
+| `sysDvr` | — | Show instructions for SysDVR. | `sysDvr` | Owner |
+| `startController` | controllerstart, startcontrol, controlstart, startremote, remotestart, sbr, controller | Start Switch Remote controller. | `startController` | Owner |
 
 ## 📡 Bot Management
 
@@ -291,7 +291,8 @@ At its core, FusionBot is powered by [hexbyt3's](https://github.com/bdawg1989) [
 
 | Command | Aliases | Summary | Example | Permission |
 |---------|---------|---------|---------|------------|
-| `announce` | Announce | Send an announcement to Echo channels. | `announce <msg>` | Sudo, Owner |
+| `announce` | Announce | Send an announcement to Echo channels. | `announce <msg>` | Owner |
+| `dm` | - | Send a DM to a user as the bot. | `dm @user <msg>` | Owner |
 | `addEmbedChannel` | aec | Assign a channel for bot embeds. | `addEmbedChannel #channel` | Sudo, Owner |
 | `echoInfo` | — | Dump echo message settings. | `echoInfo` | Sudo, Owner |
 | `echoClear` | rec | Clear echo settings for current channel. | `echoClear` | Sudo, Owner |
