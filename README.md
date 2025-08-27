@@ -223,6 +223,7 @@ Showdown Template
 - `rt` — Receive random VGC team zip.
 - `srp <game> <page>` — List valid events by game.
 - `dt <LinkCode> <IVToBe0> <Language> <Nature>` — Trade Ditto.
+- `tt` — Trade TXT & CSV files full of Showdown Sets.
 
 ### 🤖 Bot Admin Tools
 
