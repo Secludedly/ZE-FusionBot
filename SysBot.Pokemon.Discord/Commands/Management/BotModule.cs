@@ -96,7 +96,7 @@ namespace SysBot.Pokemon.Discord
         }
 
         [Command("botIdle")]
-        [Alias("botPause")]
+        [Alias("botPause", "idle")]
         [Summary("Commands the currently running bot to Idle.")]
         [RequireSudo]
         public async Task IdleBotAsync([Summary("IP address of the bot")] string? ip = null)

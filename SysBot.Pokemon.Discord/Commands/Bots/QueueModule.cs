@@ -25,7 +25,7 @@ public class QueueModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
 
     [Command("queueClearAll")]
     [Alias("qca", "tca")]
-    [Summary("Clears all users from the trade queues.")]
+    [Summary("Clears all users from all of the trade queues.")]
     [RequireSudo]
     public async Task ClearAllTradesAsync()
     {
@@ -35,7 +35,7 @@ public class QueueModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
 
     [Command("queueClear")]
     [Alias("qc", "tc")]
-    [Summary("Clears the user from the trade queues. Will not remove a user if they are being processed.")]
+    [Summary("Allows a user to remove themselves from the trade queues. Will not remove a user if they are being processed.")]
     public async Task ClearTradeAsync()
     {
         string msg = ClearTrade(Context.User.Id);
@@ -44,7 +44,7 @@ public class QueueModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
 
     [Command("queueClearUser")]
     [Alias("qcu", "tcu")]
-    [Summary("Clears the user from the trade queues. Will not remove a user if they are being processed.")]
+    [Summary("Clears a specified user from the trade queues (requires sudo). Will not remove a user if they are being processed.")]
     [RequireSudo]
     public async Task ClearTradeUserAsync([Summary("Discord user ID")] ulong id)
     {
@@ -54,7 +54,7 @@ public class QueueModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
 
     [Command("queueClearUser")]
     [Alias("qcu", "tcu")]
-    [Summary("Clears the user from the trade queues. Will not remove a user if they are being processed.")]
+    [Summary("Clears a specified user from the trade queues (requires sudo). Will not remove a user if they are being processed.")]
     [RequireSudo]
     public async Task ClearTradeUserAsync([Summary("Username of the person to clear")] string _)
     {
@@ -67,7 +67,7 @@ public class QueueModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
 
     [Command("queueClearUser")]
     [Alias("qcu", "tcu")]
-    [Summary("Clears the user from the trade queues. Will not remove a user if they are being processed.")]
+    [Summary("Clears a specified user from the trade queues (requires sudo). Will not remove a user if they are being processed.")]
     [RequireSudo]
     public async Task ClearTradeUserAsync()
     {
@@ -128,7 +128,7 @@ public class QueueModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
     }
 
     [Command("queueToggle")]
-    [Alias("qt", "tt")]
+    [Alias("qt")]
     [Summary("Toggles on/off the ability to join the trade queue.")]
     [RequireSudo]
     public Task ToggleQueueTradeAsync()

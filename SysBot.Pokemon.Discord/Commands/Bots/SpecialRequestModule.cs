@@ -56,9 +56,9 @@ namespace SysBot.Pokemon.Discord
             };
         }
 
-        [Command("specialrequestpokemon")]
-        [Alias("srp")]
-        [Summary("Lists available wondercard events from the specified generation or game or requests a specific event if a number is provided.")]
+        [Command("specialRequest")]
+        [Alias("srp", "sr")]
+        [Summary("Lists available Wondercard events from the specified generation, or game. Requests a specific event if a number is provided.")]
         public async Task ListSpecialEventsAsync(string generationOrGame, [Remainder] string args = "")
         {
             var botPrefix = SysCord<T>.Runner.Config.Discord.CommandPrefix;
@@ -104,8 +104,8 @@ namespace SysBot.Pokemon.Discord
             await CleanupMessagesAsync().ConfigureAwait(false);
         }
 
-        [Command("specialrequestpokemon")]
-        [Alias("srp")]
+        [Command("specialRequest")]
+        [Alias("srp", "sr")]
         [Summary("Downloads wondercard event attachments from the specified generation and adds to trade queue.")]
         [RequireQueueRole(nameof(DiscordManager.RolesTrade))]
         public async Task SpecialEventRequestAsync(string generationOrGame, [Remainder] string args = "")
@@ -273,9 +273,9 @@ namespace SysBot.Pokemon.Discord
             return EntityConverter.ConvertToType(pkm, typeof(T), out _) as T;
         }
 
-        [Command("geteventpokemon")]
-        [Alias("gep")]
-        [Summary("Downloads the requested event as a pk file and sends it to the user. Optionally, specify the language.")]
+        [Command("getEvent")]
+        [Alias("gep", "ge")]
+        [Summary("Downloads the requested event as a PKM file and sends it to the user. Optionally, specify the language.")]
         public async Task GetEventPokemonAsync(string generationOrGame, int eventIndex, byte? language = null)
         {
             try

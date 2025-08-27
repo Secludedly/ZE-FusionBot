@@ -68,7 +68,7 @@ namespace SysBot.Pokemon.Discord
 
         [Command("Announce", RunMode = RunMode.Async)]
         [Alias("announce")]
-        [Summary("Sends an announcement to all EchoChannels added by the aec command.")]
+        [Summary("Sends an announcement to all EchoChannels added to the bot.")]
         [RequireOwner]
         public async Task AnnounceAsync([Remainder] string announcement)
         {
@@ -180,7 +180,7 @@ namespace SysBot.Pokemon.Discord
 
         [Command("addEmbedChannel")]
         [Alias("aec")]
-        [Summary("Makes the bot post raid embeds to the channel.")]
+        [Summary("Assigns a channel for the bot to post embeds to.")]
         [RequireSudo]
         public async Task AddEchoAsync()
         {
@@ -279,7 +279,7 @@ namespace SysBot.Pokemon.Discord
 
         [Command("echoClear")]
         [Alias("rec")]
-        [Summary("Clears the special message echo settings in that specific channel.")]
+        [Summary("Clears the special Echo message settings in that specific channel.")]
         [RequireSudo]
         public async Task ClearEchosAsync()
         {
@@ -297,7 +297,7 @@ namespace SysBot.Pokemon.Discord
 
         [Command("echoClearAll")]
         [Alias("raec")]
-        [Summary("Clears all the special message Echo channel settings.")]
+        [Summary("Clears all of the special Echo message settings from all channels.")]
         [RequireSudo]
         public async Task ClearEchosAllAsync()
         {

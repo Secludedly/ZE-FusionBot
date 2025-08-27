@@ -1,4 +1,4 @@
-﻿using Discord;
+using Discord;
 using Discord.Commands;
 using PKHeX.Core;
 using SysBot.Base;
@@ -13,7 +13,7 @@ public class HubModule<T> : ModuleBase<SocketCommandContext> where T : PKM, new(
 {
     [Command("status")]
     [Alias("stats")]
-    [Summary("Gets the status of the bot environment.")]
+    [Summary("Gets the status of the current bot environment.")]
     public async Task GetStatusAsync()
     {
         var me = SysCord<T>.Runner;

@@ -56,7 +56,7 @@ public class SeedCheckModule<T> : ModuleBase<SocketCommandContext> where T : PKM
     }
 
     [Command("seedCheck")]
-    [Alias("checkMySeed", "checkSeed", "seed", "s", "sc", "specialrequest", "sr")]
+    [Alias("checkMySeed", "checkSeed", "seed", "s", "sc")]
     [Summary("Checks the seed for a Pokémon.")]
     [RequireQueueRole(nameof(DiscordManager.RolesSeed))]
     public async Task SeedCheckAsync(int code)

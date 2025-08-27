@@ -269,7 +269,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
 
     [Command("egg")]
     [Alias("Egg")]
-    [Summary("Trades an egg generated from the provided Pokémon name.")]
+    [Summary("Trades an egg via the provided Pokémon set.")]
     public async Task TradeEgg([Remainder] string egg)
     {
         var userID = Context.User.Id;
@@ -825,7 +825,8 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
     private static readonly ConcurrentDictionary<ulong, bool> _usersInQueue = new();
     private static readonly ConcurrentDictionary<ulong, bool> _batchQueueMessageSent = new();
 
-    [Command("tt")]
+    [Command("textTrade")]
+    [Alias("tt", "text")]
     [Summary("Upload a .txt or .csv file of Showdown sets, then select which Pokémon to trade.")]
     [RequireQueueRole(nameof(DiscordManager.RolesTrade))]
     public async Task TextTradeAsync([Remainder] string args = "")
@@ -1119,7 +1120,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         ).ConfigureAwait(false);
     }
 
-    [Command("textview")]
+    [Command("textView")]
     [Alias("tv")]
     [Summary("View a specific Pokémon set from your pending TextTrade file by number.")]
     public async Task TextViewAsync([Remainder] string args = "")
@@ -1447,7 +1448,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
                       .ToList();
     }
 
-    [Command("batchtradezip")]
+    [Command("batchTradeZip")]
     [Alias("btz")]
     [Summary("Makes the bot trade multiple Pokémon from the provided .zip file, up to a maximum of 6 trades.")]
     [RequireQueueRole(nameof(DiscordManager.RolesTrade))]
@@ -1729,7 +1730,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         await Task.CompletedTask;
     }
 
-    [Command("listevents")]
+    [Command("listEvents")]
     [Alias("le")]
     [Summary("Lists available event files, filtered by a specific letter or substring, and sends the list via DM.")]
     public async Task ListEventsAsync([Remainder] string args = "")
@@ -1824,9 +1825,9 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         }
     }
 
-    [Command("eventrequest")]
+    [Command("eventRequest")]
     [Alias("er")]
-    [Summary("Downloads event attachments from the specified EventsFolder and adds to trade queue.")]
+    [Summary("Downloads event attachments from the specified bot owner's EventsFolder and adds to trade queue.")]
     [RequireQueueRole(nameof(DiscordManager.RolesTrade))]
     public async Task EventRequestAsync(int index)
     {
@@ -1897,7 +1898,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         }
     }
 
-    [Command("battlereadylist")]
+    [Command("battleReadyList")]
     [Alias("brl")]
     [Summary("Lists available battle-ready files, filtered by a specific letter or substring, and sends the list via DM.")]
     public async Task BattleReadyListAsync([Remainder] string args = "")
@@ -1991,7 +1992,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         }
     }
 
-    [Command("battlereadyrequest")]
+    [Command("battleReadyRequest")]
     [Alias("brr", "br")]
     [Summary("Downloads battle-ready attachments from the specified folder and adds to trade queue.")]
     [RequireQueueRole(nameof(DiscordManager.RolesTrade))]
@@ -2280,7 +2281,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         }
     }
 
-    [Command("homeready")]
+    [Command("homeReady")]
     [Alias("hr")]
     [Summary("Displays instructions on how to use the HOME-Ready module.")]
     private async Task HomeReadyInstructionsAsync()
@@ -2326,7 +2327,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         });
     }
 
-    [Command("homereadyrequest")]
+    [Command("homeReadyRequest")]
     [Alias("hrr")]
     [Summary("Downloads HOME-ready attachments from the specified folder and adds it to the trade queue.")]
     [RequireQueueRole(nameof(DiscordManager.RolesTrade))]
@@ -2398,7 +2399,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
 
     }
 
-    [Command("homereadylist")]
+    [Command("homeReadylist")]
     [Alias("hrl")]
     [Summary("Lists available HOME-ready files, filtered by a specific letter or substring, then sends the list to the channel.")]
     private async Task HOMEListAsync([Remainder] string args = "")

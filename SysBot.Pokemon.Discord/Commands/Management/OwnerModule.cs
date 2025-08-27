@@ -22,9 +22,9 @@ namespace SysBot.Pokemon.Discord;
 public class OwnerModule<T> : SudoModule<T> where T : PKM, new()
 {
 
-    [Command("listguilds")]
+    [Command("listGuilds")]
     [Alias("lg", "servers", "listservers")]
-    [Summary("Lists all guilds the bot is part of.")]
+    [Summary("Lists all guilds/servers the bot is part of.")]
     [RequireSudo]
     public async Task ListGuilds(int page = 1)
     {
@@ -58,7 +58,7 @@ public class OwnerModule<T> : SudoModule<T> where T : PKM, new()
         }
     }
 
-    [Command("blacklistserver")]
+    [Command("blacklistServer")]
     [Alias("bls")]
     [Summary("Adds a server ID to the bot's server blacklist.")]
     [RequireOwner]
@@ -87,7 +87,7 @@ public class OwnerModule<T> : SudoModule<T> where T : PKM, new()
         await ReplyAsync($"Left the server '{server.Name}' and added it to the blacklist.");
     }
 
-    [Command("unblacklistserver")]
+    [Command("unblacklistServer")]
     [Alias("ubls")]
     [Summary("Removes a server ID from the bot's server blacklist.")]
     [RequireOwner]
@@ -200,7 +200,7 @@ public class OwnerModule<T> : SudoModule<T> where T : PKM, new()
         await Context.Guild.LeaveAsync().ConfigureAwait(false);
     }
 
-    [Command("leaveguild")]
+    [Command("leaveGuild")]
     [Alias("lg")]
     [Summary("Leaves guild based on supplied ID.")]
     [RequireOwner]
@@ -224,7 +224,7 @@ public class OwnerModule<T> : SudoModule<T> where T : PKM, new()
         await guild.LeaveAsync().ConfigureAwait(false);
     }
 
-    [Command("leaveall")]
+    [Command("leaveAll")]
     [Summary("Leaves all servers the bot is currently in.")]
     [RequireOwner]
     // ReSharper disable once UnusedParameter.Global
@@ -281,7 +281,7 @@ public class OwnerModule<T> : SudoModule<T> where T : PKM, new()
     }
 
     [Command("video")]
-    [Alias("video")]
+    [Alias("Video")]
     [Summary("Take and send a GIF from the currently configured Switch.")]
     [RequireSudo]
     public async Task RePeekGIF()
@@ -390,7 +390,7 @@ public class OwnerModule<T> : SudoModule<T> where T : PKM, new()
 
     [Command("kill")]
     [Alias("shutdown")]
-    [Summary("Causes the entire process to end itself!")]
+    [Summary("Causes the bot to shutdown on the host computer.")]
     [RequireOwner]
     // ReSharper disable once UnusedParameter.Global
     public async Task ExitProgram()
@@ -502,7 +502,7 @@ public class OwnerModule<T> : SudoModule<T> where T : PKM, new()
             Comment = $"Added by {Context.User.Username} on {DateTime.Now:yyyy.MM.dd-hh:mm:ss}",
         };
 
-        [Command("startsysdvr")]
+        [Command("startSysdvr")]
         [Alias("dvrstart", "startdvr", "sysdvrstart", "dvr", "stream")]
         [Summary("Makes the bot open SysDVR to stream your Switch on the current PC.")]
         [RequireOwner]
@@ -527,7 +527,7 @@ public class OwnerModule<T> : SudoModule<T> where T : PKM, new()
             }
         }
 
-        [Command("sysdvr")]
+        [Command("sysDvr")]
         [Summary("Displays instructions on how to use SysDVR.")]
         [RequireOwner]
         public async Task SysDVRInstructionsAsync()
@@ -579,7 +579,7 @@ public class OwnerModule<T> : SudoModule<T> where T : PKM, new()
             });
         }
 
-    [Command("startcontroller")]
+    [Command("startController")]
     [Alias("controllerstart", "startcontrol", "controlstart", "startremote", "remotestart", "sbr", "controller")]
     [Summary("Makes the bot open Switch Remote for PC - a GUI game controller for your Switch.")]
     [RequireOwner]

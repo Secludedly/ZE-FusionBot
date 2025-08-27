@@ -11,7 +11,7 @@ namespace SysBot.Pokemon.Discord
     public class LegalizerModule<T> : ModuleBase<SocketCommandContext> where T : PKM, new()
     {
         [Command("convert"), Alias("showdown")]
-        [Summary("Tries to convert the Showdown Set to RegenTemplate format.")]
+        [Summary("Converts a Showdown Set to RegenTemplate format.")]
         [Priority(1)]
         public async Task ConvertShowdown([Summary("Generation/Format")] byte gen, [Remainder][Summary("Showdown Set")] string content)
         {
@@ -32,7 +32,7 @@ namespace SysBot.Pokemon.Discord
         }
 
         [Command("convert"), Alias("showdown")]
-        [Summary("Tries to convert the Showdown Set to RegenTemplate format.")]
+        [Summary("Converts a Showdown Set to RegenTemplate format.")]
         [Priority(0)]
         public async Task ConvertShowdown([Remainder][Summary("Showdown Set")] string content)
         {
@@ -42,7 +42,7 @@ namespace SysBot.Pokemon.Discord
         }
 
         [Command("legalize"), Alias("alm")]
-        [Summary("Tries to legalize the attached pkm data and output as RegenTemplate.")]
+        [Summary("Tries to legalize the attached PKM data and outputs it as RegenTemplate.")]
         public async Task LegalizeAsync()
         {
             var deleteMessageTask = DeleteCommandMessageAsync(Context.Message, 2000);
