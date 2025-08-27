@@ -167,114 +167,163 @@ At its core, FusionBot is powered by [hexbyt3's](https://github.com/bdawg1989) [
 
 ---
 
-## 📘 Commands
+# 📖 Command Reference
 
-### 🔄 Basic Use
+## ⚡ Basic Commands
 
-- `trade` — Initiate a Link Trade.
-- `hidetrade` — Link Trade with hidden Pokémon embed.
-- `clone` — Clone trade.
-- `dump` — Bot DMs you PKM files.
-- `seed` — Check for seeds.
-- `fixot` — Cleans nickname of a Pokémon.
-- `lc` — Check if a PKM is legal.
-- `lcv` — Legal check with verbose output.
-- `legalize` — Attempts to legalize a PKM.
-- `convert <Showdown Format>` — Converts set to PKM.
-- `tradeuser <Ping User>` — Trades PKM to mentioned user.
-- `egg <Showdown Format>` — Trade for an egg.
-- `it <Held Item>` — Trade held item.
+| Command | Aliases | Summary | Example |
+|---------|---------|---------|---------|
+| `trade` | t | Trade a Pokémon from Showdown Set or PKM file. | `trade <Showdown Format>` |
+| `tradeUser` | tu, tradeOther | Trade the mentioned user the attached file. | `tradeuser @user` |
+| `hidetrade` | ht | Same as trade, but hides the embed. | `hidetrade <Showdown Format>` |
+| `clone` | c | Clone the Pokémon you show via Link Trade. | `clone` |
+| `dump` | d | Dump the Pokémon you show via Link Trade. | `dump` |
+| `egg` | Egg | Trade an egg via provided Pokémon set. | `egg <Showdown Format>` |
+| `seed` | checkMySeed, checkSeed, seedCheck, s, sc | Check a Pokémon seed. | `seedCheck <seed>` |
+| `itemTrade` | it, item | Trade a Pokémon holding a requested item. | `it <Leftovers>` |
+| `fixOT` | fix, f | Fix OT and Nickname of a Pokémon if an advert is detected. | `fixOT` |
+| `convert` | showdown | Convert a Showdown Set to RegenTemplate. | `convert <set>` |
+| `legalize` | alm | Attempt to legalize PKM data. | `legalize <pkm>` |
+| `validate` | lc, check, verify | Verify PKM legality. | `validate <pkm>` |
+| `verbose` | lcv | Verify PKM legality with verbose output. | `verbose <pkm>` |
+| `findFrame` | ff, GetFrameData | Prints next shiny frame from seed. | `findFrame <seed>` |
 
-### 📦 Batch Trading
+## 🎯 Advanced Trade Features
 
-- `btz` — Trade up to 6 PKM in a .zip archive.
+| Command | Aliases | Summary | Example |
+|---------|---------|---------|---------|
+| `textTrade` | tt, text | Upload a .txt/.csv of Showdown sets for batch trading. | `tt file.txt` |
+| `textView` | tv | View a specific Pokémon from your pending TextTrade file. | `tv 2` |
+| `listEvents` | le | Lists available event files via DM. | `le <species> <page>` |
+| `eventRequest` | er | Downloads event attachments and adds to trade queue. | `eventRequest <file>` |
+| `battleReadyList` | brl | Lists available battle-ready files via DM. | `brl <species> <page>` |
+| `battleReadyRequest` | br, brr | Downloads battle-ready attachments and adds to trade queue. | `battleReadyRequest <file>` |
+| `pokepaste` | pp, Pokepaste, PP | Generates a team from a PokePaste URL. | `pp <URL>` |
+| `dittoTrade` | dt, ditto | Trade a Ditto with requested stats, language, and nature. | `dt <LinkCode> <IVToBe0> <Lang> <Nature>` |
+| `mysteryegg` | me | Get a random shiny 6IV egg. | `mysteryegg` |
+| `mysterymon` | mm, mystery, surprise | Get a fully random Pokémon. | `mysterymon` |
+| `randomTeam` | rt, RandomTeam, Rt | Generates a random team. | `randomTeam` |
+| `homeReady` | hr | Displays instructions for HOME-ready trading. | `homeReady` |
+| `homeReadyRequest` | hrr | Downloads HOME-ready files and adds to trade queue. | `homeReadyRequest <file>` |
+| `homeReadylist` | hrl | Lists available HOME-ready files. | `homeReadylist` |
+| `specialRequest` | sr, srp | Lists Wondercard events or requests specific ones. | `srp <game> <page>` |
+| `getEvent` | ge, gep | Downloads the requested event as a PKM file. | `getEvent <eventID>` |
 
-```c#
-bt
-Showdown Template
----
-Showdown Template
-```
+## 📦 Batch Trading
 
-### 📊 Status & Management
+| Command | Aliases | Summary | Example |
+|---------|---------|---------|---------|
+| `batchTrade` | bt | Trade multiple Pokémon (max 6) from a list. | `bt <Set1> --- <Set2>` |
+| `batchTradeZip` | btz | Trade multiple Pokémon from a ZIP file. | `btz <file.zip>` |
+| `batchInfo` | bei | Get info about a batch property. | `batchInfo <prop>` |
+| `batchValidate` | bev | Validate a batch property. | `batchValidate <prop>` |
 
-- `status` — Current bot status.
-- `info` — Bot info.
-- `help` — Lists all options with descriptions.
-- `kill` — Shut down the bot.
-- `ql` — Lists everyone in queue.
-- `qt` — Toggle queue on/off.
-- `qm` — Queue control mode.
+## 📊 Queue Management
 
-### ⏳ Queue Management
+| Command | Aliases | Summary | Example |
+|---------|---------|---------|---------|
+| `queueMode` | qm | Change queue control (manual/threshold/interval). | `qm manual` |
+| `queueClearAll` | qca, tca | Clear all users from all queues. | `qca` |
+| `queueClear` | qc, tc | Remove yourself from the queue. | `qc` |
+| `queueClearUser` | qcu, tcu | Clear a specified user (sudo required). | `qcu @user` |
+| `queueStatus` | qs, ts | Check your position in the queue. | `qs` |
+| `queueToggle` | qt | Enable/disable queue joining. | `qt` |
+| `queueList` | ql | DM the full queue list. | `ql` |
+| `tradeList` | tl | Show users currently in trade queue. | `tl` |
+| `fixOTList` | fl, fq | Prints the users in the FixOT queue. | `fixOTList` |
+| `cloneList` | cl, cq | Prints the users in the Clone queue. | `cloneList` |
+| `dumplist` | dl, dq | Prints the users in the Dump queue. | `dumplist` |
+| `seedList` | sl, scq, seedCheckQueue, seedQueue, seedList | Show seed check queue users. | `seedList` |
 
-- `qc` — Remove yourself from queue.
-- `qs` — Check queue position.
-- `ql`, `tl`, `cl`, `dl`, `fl`, `sl` — Show specific queues.
+## 🛠 Admin Tools
 
-### ⚔️ Advanced Trade Features
+| Command | Aliases | Summary | Example |
+|---------|---------|---------|---------|
+| `addSudo` | — | Add a user to global sudo. | `addSudo <ID>` |
+| `removeSudo` | — | Remove a user from global sudo. | `removeSudo <ID>` |
+| `blacklistServer` | bls | Adds a server ID to the server blacklist. | `blacklistServer <ID>` |
+| `unblacklistServer` | ubls | Removes a server ID from the server blacklist. | `unblacklistServer <ID>` |
+| `blacklist` | — | Blacklist a Discord user. | `blacklist @user` |
+| `unblacklist` | — | Remove a user from blacklist. | `unblacklist @user` |
+| `blacklistId` | — | Blacklist Discord user IDs. | `blacklistId <ID>` |
+| `unBlacklistId` | — | Unblacklist Discord user IDs. | `unBlacklistId <ID>` |
+| `blacklistComment` | — | Adds comment for blacklisted user. | `blacklistcomment <ID> <msg>` |
+| `banTrade` | bant | Ban a user from trading with reason. | `bant @user <reason>` |
+| `banID` | — | Ban an online user ID. | `banID <ID>` |
+| `unbanID` | — | Unban an online user ID. | `unbanID <ID>` |
+| `bannedIDComment` | — | Adds a comment for banned ID. | `bannedIDcomment <ID> <msg>` |
+| `bannedIDSummary` | printBannedID, bannedIDPrint | Show list of banned IDs. | `bannedIDSummary` |
+| `blacklistSummary` | printBlacklist, blacklistPrint | Show list of blacklisted users. | `blacklistSummary` |
 
-- `mm` — Mystery Pokémon.
-- `me` — Mystery Egg.
-- `brl <species> <page>` — Battle-ready Pokémon.
-- `le <species> <page>` — Event Pokémon.
-- `pp <URL>` — Generate from PokePaste.
-- `hr` — Trade HOME-ready Pokémon.
-- `rt` — Receive random VGC team zip.
-- `srp <game> <page>` — List valid events by game.
-- `dt <LinkCode> <IVToBe0> <Language> <Nature>` — Trade Ditto.
-- `tt` — Trade TXT & CSV files full of Showdown Sets.
+## 🎮 Switch Control
 
-### 🤖 Bot Admin Tools
+| Command | Aliases | Summary | Example |
+|---------|---------|---------|---------|
+| `click` | — | Click a button on the Switch. | `click <IP> A` |
+| `setStick` | — | Move stick to coordinates. | `setStick <IP> <Coords>` |
+| `setScreenOn` | screenOn, scrOn | Turn on screen. | `setScreenOn` |
+| `setScreenOff` | screenOff, scrOff | Turn off screen. | `setScreenOff` |
+| `setScreenOnAll` | screenOnAll, scrOnAll | Turn on screen for all bots. | `setScreenOnAll` |
+| `setScreenOffAll` | screenOffAll, scrOffAll | Turn off screen for all bots. | `setScreenOffAll` |
+| `peek` | repeek | Take and send a screenshot. | `peek` |
+| `video` | Video | Record a GIF from the Switch. | `video` |
+| `startSysdvr` | dvrstart, startdvr, sysdvrstart, dvr, stream | Start SysDVR streaming. | `startSysdvr` |
+| `sysDvr` | — | Show instructions for SysDVR. | `sysDvr` |
+| `startController` | controllerstart, startcontrol, controlstart, startremote, remotestart, sbr, controller | Start Switch Remote controller. | `startController` |
 
-- `announce <msg>` — Announce to all channels.
-- `aec` — Make bot post embeds.
-- `echoinfo` — Dump embed settings.
-- `ec`, `eca` — Clear embed channel settings.
-- `addsudo <ID>` — Add global sudo user.
-- `removesudo <ID>` — Remove sudo.
-- `ac` — Add command-accepting channel.
-- `removeChannel` — Remove a command channel.
-- `syncchannels` — Copy whitelist to announcement list.
-- `leave` — Leave server.
-- `listguilds` — List all joined guilds.
-- `leaveguild <ID>` — Leave specific guild.
-- `leaveall` — Leave all guilds.
+## 📡 Bot Management
 
-### 🎮 Switch Control
+| Command | Aliases | Summary | Example |
+|---------|---------|---------|---------|
+| `ping` | — | Ping the bot to check if it's running. | `ping` |
+| `help` | — | Show all commands. | `help` |
+| `info` | about, whoami, owner, bot | Show bot information. | `info` |
+| `botStatus` | — | Get bot status via logs. | `botStatus` |
+| `botStart` | — | Start the bot. | `botStart` |
+| `botStop` | — | Stop the bot. | `botStop` |
+| `botIdle` | botPause, idle | Pause the bot. | `botIdle` |
+| `botChange` | — | Change the bot routine. | `botChange` |
+| `botRestart` | — | Restart the bot(s). | `botRestart` |
+| `status` | stats | Get the bot environment status. | `status` |
+| `kill` | shutdown | Shutdown the bot. | `kill` |
 
-- `screenon`, `screenonall` — Turn Switch screen on.
-- `screenoff`, `screenoffall` — Turn screen off.
-- `sysdvr` — Open SysDVR viewer.
-- `startcontroller` — Open Switch Remote for PC.
-- `video` — Show Switch screen as GIF.
-- `peek` — Show screen snapshot.
-- `setStick <IP> <Coords>` — Move analog stick.
-- `click <IP> <Button>` — Press button.
+## 📢 Echo & Logging
 
-### 🔐 Permissions
+| Command | Aliases | Summary | Example |
+|---------|---------|---------|---------|
+| `announce` | Announce | Send an announcement to Echo channels. | `announce <msg>` |
+| `addEmbedChannel` | aec | Assign a channel for bot embeds. | `addEmbedChannel #channel` |
+| `echoInfo` | — | Dump echo message settings. | `echoInfo` |
+| `echoClear` | rec | Clear echo settings for current channel. | `echoClear` |
+| `echoClearAll` | raec | Clear echo settings from all channels. | `echoClearAll` |
+| `logHere` | — | Log to current channel. | `logHere` |
+| `logClearAll` | — | Clear all log settings. | `logClearAll` |
+| `logClear` | — | Clear log settings for current channel. | `logClear` |
+| `logInfo` | — | Dump logging settings. | `logInfo` |
 
-- `blacklistid`, `unblacklistid` — Manage user blacklist.
-- `blacklistcomment <ID> <msg>` — Add blacklist comment.
-- `blacklistserver`, `unblacklistserver` — Manage server blacklist.
-- `blacklistsummary` — View blacklist.
-- `banid`, `unbanid` — Ban/unban users.
-- `bannedIDcomment <ID> <msg>` — Comment for banned user.
+## 🔐 Permissions & Guild
 
-### 💬 Misc
+| Command | Aliases | Summary | Example |
+|---------|---------|---------|---------|
+| `listGuilds` | lg, servers, listservers | List all guilds the bot is in. | `listGuilds` |
+| `leave` | bye | Leave current server. | `leave` |
+| `leaveGuild` | lg | Leave a guild by ID. | `leaveGuild <ID>` |
+| `leaveAll` | — | Leave all servers. | `leaveAll` |
 
-- `setavatar` — Set bot avatar.
-- `hi` — Say hi.
-- `joke` — Tell a joke.
-- `say <msg> <channel>` — Speak in channel.
-- `dm <user> <msg>` — DM a user.
-- `ping` — Ping check.
+## 🎲 Misc & Fun
 
-### 🧠 Passive Features
+| Command | Aliases | Summary | Example |
+|---------|---------|---------|---------|
+| `joke` | lol, insult | Tell a random joke. | `joke` |
+| `hello` | hi, hey, yo | Say hello to the bot. | `hello` |
+| `medals` | ml | View medals earned from trades. | `medals` |
+
+## 🧠 Passive Features
 
 - Use filename code like `Great Tusk-Tera(Steel)-03760382.pk9` to auto-set trade code.
 - Paste a PKM in chat to receive info + legal formats.
 - Thank the bot — it might reply!
+
 
 
 ## 📝 Batch Commands to Showdown Format
