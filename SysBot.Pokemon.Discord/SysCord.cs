@@ -46,7 +46,8 @@ public sealed class SysCord<T> where T : PKM, new()
         "listevents", "Me", "me", "MysteryEgg", "mysteryegg", "PokePaste", "pokepaste", "PP", "pp", "QC", "Qc", "qc", "QS", "Qs", "qs",
         "queueClear", "queueclear", "queueStatus", "Random", "random", "RandomTeam", "randomteam", "rt", "SEED", "Seed", "seed",
         "specialrequestpokemon", "srp", "st", "status", "SURPRISE", "Surprise", "surprise", "surprisetrade", "T", "t", "tc", "TRADE",
-        "Trade", "trade", "ts"
+        "Trade", "trade", "ts", "mm", "mysterymon", "Mysterymon", "MysteryMon", "homeready", "hrr", "hr", "MM", "HRR", "TV", "tv", "TT", "tt",
+        "texttrade", "TextTrade", "Texttrade", "remotestart", "RemoteStart", "Remotestart", "startremote", "StartRemote", "Startremote"
     };
 
     private readonly DiscordManager Manager;
@@ -452,17 +453,14 @@ public sealed class SysCord<T> where T : PKM, new()
 
             string thanksText = msg.Content.ToLower();
             if (SysCordSettings.Settings.ReplyToThanks &&
-                (thanksText.Contains("thank") || thanksText.Contains("thx") ||
-                (thanksText.Contains("arigato") || thanksText.Contains("the best") ||
-                (thanksText.Contains("amazing") || thanksText.Contains("incredible") ||
-                (thanksText.Contains("i love you") || thanksText.Contains("ilu") ||
-                (thanksText.Contains("i love u") ||
-                (thanksText.Contains("awesome") || thanksText.Contains("thanx") ||
-                (thanksText.Contains("tysm") || thanksText.Contains("wtf") ||
-                (thanksText.Contains("i hate you") || thanksText.Contains("you suck") ||
-                (thanksText.Contains("<3>") || thanksText.Contains(":)") ||
-                (thanksText.Contains("wow") || thanksText.Contains("cool")
-                )))))))))))
+                (thanksText.Contains("thank")  ||
+                (thanksText.Contains("arigato") ||
+                (thanksText.Contains("amazing") ||
+                (thanksText.Contains("incredible") ||
+                (thanksText.Contains("i love you") ||
+                (thanksText.Contains("awesome") ||
+                (thanksText.Contains("thanx")
+                ))))))))
             {
                 await SysCord<T>.RespondToThanksMessage(msg).ConfigureAwait(false);
                 return;
@@ -603,7 +601,7 @@ public sealed class SysCord<T> where T : PKM, new()
             // Check if the user is in the bannedIDs list
             if (msg.Author is SocketGuildUser user && AbuseSettings.BannedIDs.List.Any(z => z.ID == user.Id))
             {
-                await SysCord<T>.SafeSendMessageAsync(msg.Channel, "You are banned from using this bot.").ConfigureAwait(false);
+                await SysCord<T>.SafeSendMessageAsync(msg.Channel, "You are banned from using this bot, you dumb bitch.").ConfigureAwait(false);
                 return true;
             }
 

@@ -38,6 +38,8 @@ namespace SysBot.Pokemon.Discord
     /// </summary>
     public class SpecialRequestModule<T> : ModuleBase<SocketCommandContext> where T : PKM, new()
     {
+        private static string Prefix => SysCordSettings.Settings.CommandPrefix;
+
         private const int itemsPerPage = 25;
 
         private static TradeQueueInfo<T> Info => SysCord<T>.Runner.Hub.Queues.Info;
@@ -288,7 +290,7 @@ namespace SysBot.Pokemon.Discord
                 var entityEvents = eventData.Where(gift => gift.IsEntity && !gift.IsItem).ToArray();
                 if (eventIndex < 1 || eventIndex > entityEvents.Length)
                 {
-                    await ReplyAsync($"Invalid event index. Please use a valid event number from the `{SysCord<T>.Runner.Config.Discord.CommandPrefix}gep {generationOrGame}` command.").ConfigureAwait(false);
+                    await ReplyAsync($"Invalid event index. Please use a valid event number from the `{Prefix}gep {generationOrGame}` command.").ConfigureAwait(false);
                     return;
                 }
 

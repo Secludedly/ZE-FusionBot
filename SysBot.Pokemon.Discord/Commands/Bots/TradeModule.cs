@@ -24,6 +24,8 @@ namespace SysBot.Pokemon.Discord;
 [Summary("Queues new Link Code trades")]
 public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, new()
 {
+    private static string Prefix => SysCordSettings.Settings.CommandPrefix;
+
     private static TradeQueueInfo<T> Info => SysCord<T>.Runner.Hub.Queues.Info;
 
     private static readonly char[] separator = [' '];
@@ -535,7 +537,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             catch (Exception ex)
             {
                 LogUtil.LogSafe(ex, nameof(TradeModule<T>));
-                var msg = $"Oops! An unexpected problem happened with this Showdown Set:\n```{string.Join("\n", set.GetSetLines())}```";
+                var msg = $"An unexpected problem happened with this Showdown Set:\n```{string.Join("\n", set.GetSetLines())}```";
                 _ = ReplyAndDeleteAsync(msg, 5, Context.Message);
             }
             if (Context.Message is IUserMessage userMessage)
@@ -775,7 +777,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             catch (Exception ex)
             {
                 LogUtil.LogSafe(ex, nameof(TradeModule<T>));
-                var msg = $"Oops! An unexpected problem happened with this Showdown Set:\n```{string.Join("\n", set.GetSetLines())}```";
+                var msg = $"An unexpected problem happened with this Showdown Set:\n```{string.Join("\n", set.GetSetLines())}```";
                 _ = ReplyAndDeleteAsync(msg, 6, null);
             }
             if (Context.Message is IUserMessage userMessage)
@@ -839,6 +841,11 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             return;
         }
 
+        if (Context.Message is IUserMessage existingMessage)
+        {
+            _ = DeleteMessagesAfterDelayAsync(existingMessage, null, 6);
+        }
+
         // ===== JOB 1: File Upload =====
         if (Context.Message.Attachments.Count > 0 && string.IsNullOrWhiteSpace(args))
         {
@@ -894,6 +901,11 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
                 return;
             }
 
+            if (Context.Message is IUserMessage detectionMessage)
+            {
+                _ = DeleteMessagesAfterDelayAsync(detectionMessage, null, 6);
+            }
+
             _pendingTextTrades[userId] = blocks;
 
             // Initial embed for the user to select from
@@ -937,13 +949,17 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
 
                 embed.AddField(
                     $"{i + 1}. {species} {icons}",
-                    $"Use `tt {i + 1}` to trade this Pokémon",
+                    $"Use `{Prefix}tt {i + 1}` to trade this Pokémon\nUse `{Prefix}tv {i + 1}` to view this Pokémon set",
                     false
                 );
             }
 
             // Footer legend
-            embed.AddField("Multiple Pokémon", "Use `tt 1 2 3 etc.`, to trade **no more than 6 Pokémon**", false);
+            embed.AddField(
+                "Multiple Pokémon",
+                $"Use `{Prefix}tt 1 2 3 etc.`, to trade **no more than 6 Pokémon**",
+                false
+            );
             embed.WithFooter("✨ = Shiny | 🚩 = Fishy | ⚪ = No Held Item | 🧾 = Has OT/TID/SID | 🥚 = Egg\n⏳ Make a selection within 60s or the TextTrade is canceled automatically.");
             await ReplyAsync(embed: embed.Build());
 
@@ -953,7 +969,6 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
                 if (_pendingTextTrades.TryRemove(userId, out _))
                     await ReplyAsync($"⌛ {user.Mention}, your TextTrade request expired after 60 seconds.");
             });
-
             return;
         }
 
@@ -971,7 +986,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
 
         if (selections.Count == 0)
         {
-            await ReplyAsync("Invalid selection. Use `tt 1` or `tt 1 2` (max 6 Pokémon).");
+            await ReplyAsync($"Invalid selection. Use `{Prefix}tt 1` or `{Prefix}tt 1 2` (max 6 Pokémon).");
             return;
         }
 
@@ -1104,6 +1119,38 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         ).ConfigureAwait(false);
     }
 
+    [Command("textview")]
+    [Alias("tv")]
+    [Summary("View a specific Pokémon set from your pending TextTrade file by number.")]
+    public async Task TextViewAsync([Remainder] string args = "")
+    {
+        ulong userId = Context.User.Id;
+
+        if (!_pendingTextTrades.TryGetValue(userId, out var sets))
+        {
+            await ReplyAsync($"{Context.User.Mention}, you don’t have an active TextTrade file loaded. Upload one first with `{Prefix}tt`.");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(args) || !int.TryParse(args, out int idx) || idx <= 0 || idx > sets.Count)
+        {
+            await ReplyAsync($"Invalid set number. Use `{Prefix}tv 1` through `{Prefix}tv {sets.Count}`.");
+            return;
+        }
+
+        var showdownBlock = sets[idx - 1];
+        showdownBlock = ReusableActions.StripCodeBlock(showdownBlock);
+
+        // Build an embed with the full showdown set
+        var embed = new EmbedBuilder()
+            .WithTitle($"👀 Viewing Set #{idx}")
+            .WithDescription($"```\n{showdownBlock}\n```")
+            .WithFooter($"Use {Prefix}tt {idx} to trade this Pokémon.")
+            .WithColor(Color.DarkPurple);
+
+        await ReplyAsync(embed: embed.Build());
+    }
+
     [Command("batchTrade")]
     [Alias("bt")]
     [Summary("Makes the bot trade multiple Pokémon from the provided list, up to a maximum of 6 trades.")]
@@ -1139,7 +1186,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
 
                 if (trades.Count < 2)
                 {
-                    await ReplyAndDeleteAsync("Batch trades require at least two Pokémon. Use the standard trade command for single Pokémon trades.", 5, Context.Message);
+                    await ReplyAndDeleteAsync($"Batch trades require at least two Pokémon. Use `{Prefix}t` to trade single Pokémon.", 5, Context.Message);
                     return;
                 }
 
@@ -1809,7 +1856,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
 
             if (index < 1 || index > eventFiles.Count)
             {
-                _ = ReplyAndDeleteAsync("Invalid event index. Please use a valid event number from the `.le` command.", 6, Context.Message);
+                _ = ReplyAndDeleteAsync($"Invalid event index. Please use a valid event number from the `{Prefix}le` command.", 6, Context.Message);
                 return;
             }
 
@@ -1857,7 +1904,6 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
     {
         const int itemsPerPage = 20; // Number of items per page
         var battleReadyFolderPath = SysCord<T>.Runner.Config.Trade.RequestFolderSettings.BattleReadyPKMFolder;
-        var botPrefix = SysCord<T>.Runner.Config.Discord.CommandPrefix;
 
         // Check if the battleready folder path is not set or empty
         if (string.IsNullOrEmpty(battleReadyFolderPath))
@@ -1919,7 +1965,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             foreach (var item in pageItems)
             {
                 var index = allBattleReadyFiles.IndexOf(item) + 1; // Get the index from the original list
-                embed.AddField($"{index}. {item}", $"Use `{botPrefix}brr {index}` to request this battle-ready file.");
+                embed.AddField($"{index}. {item}", $"Use `{Prefix}brr {index}` to request this battle-ready file.");
             }
 
             if (Context.User is IUser user)
@@ -1977,7 +2023,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
 
             if (index < 1 || index > battleReadyFiles.Count)
             {
-                _ = ReplyAndDeleteAsync("Invalid battle-ready file index. Please use a valid file number from the `.blr` command.", 6, Context.Message);
+                _ = ReplyAndDeleteAsync($"Invalid battle-ready file index. Please use a valid file number from the `{Prefix}blr` command.", 6, Context.Message);
                 return;
             }
 
@@ -2247,26 +2293,26 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
 
 
         var embed1 = new EmbedBuilder()
-            .AddField("GET LIST: `hrl <Pokemon>`",
-                      "- This will search for any Pokemon in the entire module.\n" +
-                      "**Example:** `hrl Mewtwo`\n");
+            .AddField($"GET LIST: `{Prefix}hrl <Pokemon>`",
+                      $"- This will search for any Pokemon in the entire module.\n" +
+                      $"**Example:** `{Prefix}hrl Mewtwo`\n");
 
         embed1.WithImageUrl("https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/homereadybreak.png");
         var message1 = await ReplyAsync(embed: embed1.Build());
 
 
         var embed2 = new EmbedBuilder()
-            .AddField("CHANGE PAGES: `hrl <page>`",
-                      "- This will change the page you're viewing, with or without additional variables.\n" +
-                      "**Example:** `hrl 5 Charmander`\n");
+            .AddField($"CHANGE PAGES: `{Prefix}hrl <page>`",
+                      $"- This will change the page you're viewing, with or without additional variables.\n" +
+                      $"**Example:** `{Prefix}hrl 5 Charmander`\n");
 
         embed2.WithImageUrl("https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/homereadybreak.png");
         var message2 = await ReplyAsync(embed: embed2.Build());
 
         var embed3 = new EmbedBuilder()
-            .AddField("TRADING FILES: `hrr <number>`",
-                      "- This will trade you the Pokemon through the bot via the designated number.\n" +
-                      "**Example:** `hrr 682`\n");
+            .AddField($"TRADING FILES: `{Prefix}hrr <number>`",
+                      $"- This will trade you the Pokemon through the bot via the designated number.\n" +
+                      $"**Example:** `{Prefix}hrr 682`\n");
 
         embed3.WithImageUrl("https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/homereadybreak.png");
         var message3 = await ReplyAsync(embed: embed3.Build());
@@ -2359,7 +2405,6 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
     {
         const int itemsPerPage = 10; // Number of items per page
         var homeReadyFolderPath = SysCord<T>.Runner.Config.Trade.RequestFolderSettings.HOMEReadyPKMFolder;
-        var botPrefix = SysCord<T>.Runner.Config.Discord.CommandPrefix;
 
         // Check if the homeready folder path is not set or empty
         if (string.IsNullOrEmpty(homeReadyFolderPath))
@@ -2419,11 +2464,11 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
 
             {
                 var index = allHOMEReadyFiles.IndexOf(item) + 1; // Get the index from the original list
-                embed.AddField($"{index}. {item}", $"Use `{botPrefix}hrr {index}` to trade this legal HOME-ready file.");
+                embed.AddField($"{index}. {item}", $"Use `{Prefix}hrr {index}` to trade this legal HOME-ready file.");
             }
 
             // Send confirmation message in the same channel
-            replyMessage = await ReplyAsync($"Use `{botPrefix}hrl <page>` to change the page you are viewing.\n**Current Support:** USUM/LGPE/POGO/BDSP/SWSH/PLA -> SV.");
+            replyMessage = await ReplyAsync($"Use `{Prefix}hrl <page>` to change the page you are viewing.\n**Current Support:** USUM/LGPE/POGO/BDSP/SWSH/PLA -> SV.");
             var message = await ReplyAsync(embed: embed.Build());
 
             // Delay for 10 seconds
