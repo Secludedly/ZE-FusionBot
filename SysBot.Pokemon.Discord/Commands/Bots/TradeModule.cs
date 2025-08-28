@@ -962,7 +962,8 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
                 false
             );
             embed.WithFooter("✨ = Shiny | 🚩 = Fishy | ⚪ = No Held Item | 🧾 = Has OT/TID/SID | 🥚 = Egg\n⏳ Make a selection within 60s or the TextTrade is canceled automatically.");
-            await ReplyAsync(embed: embed.Build());
+            var detectionEmbedMessage = await ReplyAsync(embed: embed.Build());
+            _ = DeleteMessagesAfterDelayAsync(null, detectionEmbedMessage, 60);
 
             _ = Task.Run(async () =>
             {
@@ -1149,7 +1150,8 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             .WithFooter($"Use {Prefix}tt {idx} to trade this Pokémon.")
             .WithColor(Color.DarkPurple);
 
-        await ReplyAsync(embed: embed.Build());
+        var sentEmbed = await ReplyAsync(embed: embed.Build());
+        _ = DeleteMessagesAfterDelayAsync(null, sentEmbed, 60);
     }
 
     [Command("batchTrade")]
@@ -2287,7 +2289,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
     private async Task HomeReadyInstructionsAsync()
     {
         var embed0 = new EmbedBuilder()
-            .WithTitle("-------HOME-READY MODULE INSTRUCTIONS-------");
+            .WithTitle("[HOME-READY MODULE INSTRUCTIONS]");
 
         embed0.WithImageUrl("https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/homereadybreak.png");
         var message0 = await ReplyAsync(embed: embed0.Build());
@@ -2303,7 +2305,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
 
 
         var embed2 = new EmbedBuilder()
-            .AddField($"CHANGE PAGES: `{Prefix}hrl <page>`",
+            .AddField($"CHANGE PAGES: `{Prefix}hrl <page> <species>`",
                       $"- This will change the page you're viewing, with or without additional variables.\n" +
                       $"**Example:** `{Prefix}hrl 5 Charmander`\n");
 
@@ -2324,6 +2326,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             await message0.DeleteAsync();
             await message1.DeleteAsync();
             await message2.DeleteAsync();
+            await message3.DeleteAsync();
         });
     }
 
@@ -2472,7 +2475,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             replyMessage = await ReplyAsync($"Use `{Prefix}hrl <page>` to change the page you are viewing.\n**Current Support:** USUM/LGPE/POGO/BDSP/SWSH/PLA -> SV.");
             var message = await ReplyAsync(embed: embed.Build());
 
-            // Delay for 10 seconds
+            // Delay for 20 seconds
             await Task.Delay(20_000);
 
             // Delete the message
