@@ -356,12 +356,14 @@ At its core, FusionBot is powered by [hexbyt3's](https://github.com/bdawg1989) [
 ---
 
 ### 📍 Met Location Reference
-- **Gen 2–8 Locations (Image):** [Imgur Link](https://i.imgur.com/v02WMmL.jpeg)  
+- **Gen 2–8 Locations:** [Imgur](https://i.imgur.com/v02WMmL.jpeg)  
 - **PLA Locations:** [Pastebin](https://pastebin.com/3pTsquW1)  
 - **BDSP Locations:** [Pastebin](https://pastebin.com/Fk77w1NR)  
-- **Scarlet & Violet Locations:** [Pastebin](https://pastebin.com/UNE9brU7)  
+- **SV Locations:** [Pastebin](https://pastebin.com/UNE9brU7)  
 
-> 🔹 Currently, `.MetLocation=` only supports **numeric IDs**. See above references for valid values per generation.
+> 🔹 Currently, `Met Location:` only supports **numeric IDs**. See above references for valid values per generation.
+
+ 
 ### Example Usage
 
 ```markdown
