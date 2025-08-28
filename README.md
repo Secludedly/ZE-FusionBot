@@ -173,13 +173,13 @@ At its core, FusionBot is powered by [hexbyt3's](https://github.com/bdawg1989) [
 
 | Command | Aliases | Summary | Example | Permission |
 |---------|---------|---------|---------|------------|
-| `trade` | t | Trade a Pokémon from Showdown Set or PKM file. | `trade <Showdown Format>` | Everyone |
+| `trade` | t | Trade a Pokémon from Showdown Set or PKM file. | `trade <Showdown Format>` or `<upload pkm file>` | Everyone |
 | `tradeUser` | tu, tradeOther | Trade the mentioned user the attached file. | `tradeuser @user` | Everyone |
 | `hidetrade` | ht | Same as trade, but hides the embed. | `hidetrade <Showdown Format>` | Everyone |
 | `clone` | c | Clone the Pokémon you show via Link Trade. | `clone` | Everyone |
 | `dump` | d | Dump the Pokémon you show via Link Trade. | `dump` | Everyone |
 | `egg` | Egg | Trade an egg via provided Pokémon set. | `egg <Showdown Format>` | Everyone |
-| `seed` | checkMySeed, checkSeed, seedCheck, s, sc | Check a Pokémon seed. | `seedCheck <seed>` | Everyone |
+| `seed` | checkMySeed, checkSeed, seedCheck, s, sc | Check a Pokémon seed. | `seedCheck` | Everyone |
 | `itemTrade` | it, item | Trade a Pokémon holding a requested item. | `it <Leftovers>` | Everyone |
 | `fixOT` | fix, f | Fix OT and Nickname of a Pokémon if an advert is detected. | `fixOT` | Everyone |
 | `convert` | showdown | Convert a Showdown Set to RegenTemplate. | `convert <set>` | Everyone |
@@ -192,11 +192,11 @@ At its core, FusionBot is powered by [hexbyt3's](https://github.com/bdawg1989) [
 
 | Command | Aliases | Summary | Example | Permission |
 |---------|---------|---------|---------|------------|
-| `textTrade` | tt, text | Upload a .txt/.csv of Showdown sets for batch trading. | `tt file.txt` | Everyone |
+| `textTrade` | tt, text | Upload a .txt/.csv of Showdown sets for batch trading. | `tt <upload .txt/.csv file>` | Everyone |
 | `textView` | tv | View a specific Pokémon from your pending TextTrade file. | `tv 2` | Everyone |
-| `listEvents` | le | Lists available event files via DM. | `le <species> <page>` | Everyone |
+| `listEvents` | le | Lists available event files via DM. | `le <species> <page2>` | Everyone |
 | `eventRequest` | er | Downloads event attachments and adds to trade queue. | `eventRequest <file>` | Everyone |
-| `battleReadyList` | brl | Lists available battle-ready files via DM. | `brl <species> <page>` | Everyone |
+| `battleReadyList` | brl | Lists available battle-ready files via DM. | `brl <species> <page2>` | Everyone |
 | `battleReadyRequest` | br, brr | Downloads battle-ready attachments and adds to trade queue. | `battleReadyRequest <file>` | Everyone |
 | `pokepaste` | pp, Pokepaste, PP | Generates a team from a PokePaste URL. | `pp <URL>` | Everyone |
 | `dittoTrade` | dt, ditto | Trade a Ditto with requested stats, language, and nature. | `dt <LinkCode> <IVToBe0> <Lang> <Nature>` | Everyone |
@@ -204,9 +204,9 @@ At its core, FusionBot is powered by [hexbyt3's](https://github.com/bdawg1989) [
 | `mysterymon` | mm, mystery, surprise | Get a fully random Pokémon. | `mysterymon` | Everyone |
 | `randomTeam` | rt, RandomTeam, Rt | Generates a random team. | `randomTeam` | Everyone |
 | `homeReady` | hr | Displays instructions for HOME-ready trading. | `homeReady` | Everyone |
-| `homeReadyRequest` | hrr | Downloads HOME-ready files and adds to trade queue. | `homeReadyRequest <file>` | Everyone |
+| `homeReadyRequest` | hrr | Downloads HOME-ready files and adds to trade queue. | `homeReadyRequest <number>` | Everyone |
 | `homeReadylist` | hrl | Lists available HOME-ready files. | `homeReadylist` | Everyone |
-| `specialRequest` | sr, srp | Lists Wondercard events or requests specific ones. | `srp <game> <page>` | Everyone |
+| `specialRequest` | sr, srp | Lists Wondercard events or requests specific ones. | `srp <game> <page2>` | Everyone |
 | `getEvent` | ge, gep | Downloads the requested event as a PKM file. | `getEvent <eventID>` | Everyone |
 
 ## 📦 Batch Trading
@@ -282,7 +282,7 @@ At its core, FusionBot is powered by [hexbyt3's](https://github.com/bdawg1989) [
 | `botStart` | — | Start the bot. | `botStart` | Sudo, Owner |
 | `botStop` | — | Stop the bot. | `botStop` | Sudo, Owner |
 | `botIdle` | botPause, idle | Pause the bot. | `botIdle` | Sudo, Owner |
-| `botChange` | — | Change the bot routine. | `botChange` | Sudo, Owner |
+| `botChange` | — | Change the bot routine. | `botChange <FlexTrade>` | Sudo, Owner |
 | `botRestart` | — | Restart the bot(s). | `botRestart` | Sudo, Owner |
 | `status` | stats | Get the bot environment status. | `status` | Sudo, Owner |
 | `kill` | shutdown | Shutdown the bot. | `kill` | Owner |
