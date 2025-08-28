@@ -342,7 +342,7 @@ At its core, FusionBot is powered by [hexbyt3's](https://github.com/bdawg1989) [
 | `.HandlingTrainerFriendship=` | `HT Friendship:` | Value 1–255. |
 | `.MetDate=` | `Met Date:` | Supports flexible date formats. |
 | `~=Version=` | `Game:` or `Version:` | Supports full game names or abbreviations. |
-| `.MetLocation=` | `Met Location:` | Only numeric IDs currently supported. |
+| `.MetLocation=` | `Met Location:` | Only [numeric IDs](https://github.com/Secludedly/ZE-FusionBot?tab=readme-ov-file#-met-location-reference) currently supported. |
 | `.HyperTrainFlags=` | `HyperTrain:` | True / False. |
 | `.Moves=` | `Moves:` | “Random” generates random moves. |
 | `.RelearnMoves=` | `Relearn Moves:` | “All” or “None” accepted. |
@@ -353,6 +353,15 @@ At its core, FusionBot is powered by [hexbyt3's](https://github.com/bdawg1989) [
 | `.SetIVs=` | `Set IVs:` | Accepts `Random`, or presets like `1IV`–`6IV`. |
 | `.GV_[STAT]=` | `GVs:` | Supports HP, Atk, Def, SpA, SpD, Spe. |
 
+---
+
+### 📍 Met Location Reference
+- **Gen 2–8 Locations (Image):** [Imgur Link](https://i.imgur.com/v02WMmL.jpeg)  
+- **PLA Locations:** [Pastebin](https://pastebin.com/3pTsquW1)  
+- **BDSP Locations:** [Pastebin](https://pastebin.com/Fk77w1NR)  
+- **Scarlet & Violet Locations:** [Pastebin](https://pastebin.com/UNE9brU7)  
+
+> 🔹 Currently, `.MetLocation=` only supports **numeric IDs**. See above references for valid values per generation.
 ### Example Usage
 
 ```markdown
