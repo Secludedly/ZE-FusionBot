@@ -8,6 +8,10 @@
 </h1>
 
 <p align="center">
+    <img src="https://visitor-badge.laobi.icu/badge?page_id=Secludedly.ZE-FusionBot" alt="Visitors">
+</p>
+
+<p align="center">
   <i align="center">A community-driven and inspired SysBot.NET project with the most beautiful GUI that unites code from everyone!</i>
 </p>
 
