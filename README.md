@@ -6,7 +6,6 @@
     <img src="https://i.imgur.com/0HWW0te.png">
     </a>
 </h1>
-
 <h1 align="center">🤖 ZE FusionBot</h1>
 
 <p align="center">
