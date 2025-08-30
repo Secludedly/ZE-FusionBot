@@ -7,9 +7,10 @@
     </a>
 </h1>
 
+<h1 align="center">🤖 ZE FusionBot</h1>
+
 <p align="center">
-    ## 🤖 ZE FusionBot
-  <i align="center">A community-driven and inspired SysBot.NET project with the most beautiful GUI that unites code from everyone!</i>
+  <i>A community-driven and inspired SysBot.NET project with the most beautiful GUI that unites code from everyone!</i>
 </p>
 
 <p align="center">
