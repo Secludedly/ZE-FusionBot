@@ -390,7 +390,7 @@ Ribbons: All
 GVs: 7 HP / 7 Atk / 7 Def / 7 SpA / 7 SpD / 7 Spe
 ```
 
-## ⚙️ Bot Features
+## ⚙️ Bot Functions
 
 ### 🧑‍🎓 AutoOT
 FusionBot automatically applies your **trainer information** based on the save file you’re currently using.  
