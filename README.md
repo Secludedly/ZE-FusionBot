@@ -177,7 +177,8 @@ At its core, FusionBot is powered by [hexbyt3's](https://github.com/bdawg1989) [
 
 | Command | Aliases | Summary | Example | Permission |
 |---------|---------|---------|---------|------------|
-| `trade` | t | Trade a Pokémon from Showdown Set or PKM file. | `trade <Showdown Format>` or `<upload pkm file>` | Everyone |
+| `trade` | t | Trade a Pokémon from Showdown Set or PKM file. | `trade <Showdown Format>` or `<upload pkm>` | Everyone |
+| `trade true` | t true | Trade a Pokémon from a PKM file, without AutoOT | `trade true <upload pkm>` | Everyone |
 | `tradeUser` | tu, tradeOther | Trade the mentioned user the attached file. | `tradeuser @user` | Everyone |
 | `hidetrade` | ht | Same as trade, but hides the embed. | `hidetrade <Showdown Format>` | Everyone |
 | `clone` | c | Clone the Pokémon you show via Link Trade. | `clone` | Everyone |
@@ -191,6 +192,8 @@ At its core, FusionBot is powered by [hexbyt3's](https://github.com/bdawg1989) [
 | `validate` | lc, check, verify | Verify PKM legality. | `validate <pkm>` | Everyone |
 | `verbose` | lcv | Verify PKM legality with verbose output. | `verbose <pkm>` | Everyone |
 | `findFrame` | ff, GetFrameData | Prints next shiny frame from seed. | `findFrame <seed>` | Everyone |
+| `deleteTradeCode` | dtc | Deletes the stored Link Trade Code for the user. | `dtc` | Everyone |
+| `changeTradeCode` | ctc | Change your stored Link Trade Code. | `ctc 12345678` | Everyone |
 
 ## 🎯 Advanced Trade Features
 
@@ -386,6 +389,39 @@ Mark: BestFriends
 Ribbons: All
 GVs: 7 HP / 7 Atk / 7 Def / 7 SpA / 7 SpD / 7 Spe
 ```
+
+## ⚙️ Bot Features
+
+### 🧑‍🎓 AutoOT
+FusionBot automatically applies your **trainer information** based on the save file you’re currently using.  
+- Your **OT / TID / SID / OTGender** are applied automatically.  
+- To keep the trainer info in your own files, attach them with `t true`.  
+- For Showdown Sets, simply include the OT/TID/SID you want — AutoOT will then be disabled.  
+
+This ensures all trades feel natural and consistent with your game, while still letting you override it if you want custom trainer data.
+
+---
+
+### 🔗 Link Trade Codes
+FusionBot assigns you a **personal static Link Trade Code** on your first trade.  
+- This code is **unique to you** and stays the same for all future trades.  
+- To reset it: use `dtc` (your next trade gives you a new random code).  
+- To customize it: use `ctc 12345678` (sets your permanent code to whatever you choose).  
+
+This makes trading smoother by removing guesswork — your link code is always ready.  
+
+---
+
+### 🏅 Medals & Milestones
+Every trade you complete is tracked by FusionBot, and your **trade count** shows up in the footer of the trade embed.  
+- For every **50 trades**, you earn a new medal 🥇.  
+- You can check your medals anytime with the `ml` command.  
+- It’s just for fun — a little **progression system** to show off your trading dedication.  
+
+Think of it like leveling up — the more you trade, the more medals you rack up, proving you’re a true master trader.  
+
+---
+
 
 ---
 
