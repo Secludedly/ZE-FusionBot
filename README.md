@@ -6,7 +6,7 @@
     <img src="https://i.imgur.com/0HWW0te.png">
     </a>
 </h1>
-<h1 align="center">🤖 ZE FusionBot</h1>
+
 
 <p align="center">
   <i>A community-driven and inspired SysBot.NET project with the most beautiful GUI that unites code from everyone!</i>
@@ -351,6 +351,7 @@ At its core, FusionBot is powered by [hexbyt3's](https://github.com/bdawg1989) [
 | `~=Version=` | `Game:` or `Version:` | Supports full game names or abbreviations. |
 | `.MetLocation=` | `Met Location:` | Only [numeric IDs](https://github.com/Secludedly/ZE-FusionBot?tab=readme-ov-file#-met-location-reference) currently supported. |
 | `.HyperTrainFlags=` | `HyperTrain:` | True / False. |
+| `.HT_[STAT]=` | `HT:` | Supports HP, Atk, Def, SpA, SpD, Spe. |
 | `.Moves=` | `Moves:` | “Random” generates random moves. |
 | `.RelearnMoves=` | `Relearn Moves:` | “All” or “None” accepted. |
 | `.Ribbons=` | `Ribbons:` | “All” or “None” supported. |
@@ -359,6 +360,8 @@ At its core, FusionBot is powered by [hexbyt3's](https://github.com/bdawg1989) [
 | `.SetEVs=` | `Set EVs:` | Accepts `Random`, or `Suggest`. |
 | `.SetIVs=` | `Set IVs:` | Accepts `Random`, or presets like `1IV`–`6IV`. |
 | `.GV_[STAT]=` | `GVs:` | Supports HP, Atk, Def, SpA, SpD, Spe. |
+| `.Marking[type]=` | `Markings:` | Diamond, Heart, Square, Star, Triangle, Circle in Red or Blue `Markings: Diamond=Red / Circle=Blue` etc. |
+| `.Characteristic=` | `Characteristic:` | Type out a [characteristic](https://github.com/Secludedly/ZE-FusionBot?tab=readme-ov-file#-characteristic-reference). |
 
 ---
 
@@ -370,7 +373,44 @@ At its core, FusionBot is powered by [hexbyt3's](https://github.com/bdawg1989) [
 
 > 🔹 Currently, `Met Location:` only supports **numeric IDs**. See above references for valid values per generation.
 
- 
+---
+
+### 💠 Characteristic Reference
+| Characteristic | IV Set | IV Type |
+|----------------|--------|---------|
+| `Likes to eat` | 30, 8, 13, 18, 23, 25 | HP |
+| `Takes plenty of siestas` | 31, 6, 26, 22, 10, 0 | HP |
+| `Scatters things often` | 28, 8, 28, 12, 9, 19 | HP |
+| `Likes to relax` | 29, 16, 3, 7, 26, 13 | HP |
+| `Nods off a lot` | 27, 0, 13, 27, 27, 8 | HP |
+| `Proud of its power` | 18, 30, 10, 11, 26, 3 | Attack |
+| `Likes to thrash about` | 10, 31, 0, 3, 12, 0 | Attack |
+| `A little quick tempered` | 25, 27, 9, 7, 8, 8 | Attack |
+| `Quick tempered` | 0, 29, 6, 23, 4, 17 | Attack |
+| `Likes to fight` | 25, 28, 11, 8, 9, 18 | Attack |
+| `Sturdy body` | 15, 24, 30, 5, 24, 29 | Defense |
+| `Capable of taking hits` | 6, 0, 21, 2, 18, 3 | Defense |
+| `Highly persistent` | 4, 21, 27, 9, 21, 18 | Defense |
+| `Good endurance` | 19, 2, 23, 2, 6, 4 | Defense |
+| `Good perseverance` | 26, 16, 29, 0, 20, 22 | Defense |
+| `Highly curious` | 9, 6, 21, 30, 10, 28 | Special Attack |
+| `Mischievous` | 7, 20, 0, 31, 5, 17 | Special Attack |
+| `Thoroughly cunning` | 5, 4, 20, 27, 12, 26 | Special Attack |
+| `Often lost in thought` | 8, 3, 1, 23, 19, 14 | Special Attack |
+| `Very finicky` | 9, 1, 0, 24, 21, 12 | Special Attack |
+| `Strong willed` | 14, 6, 29, 16, 30, 0 | Special Defense |
+| `Somewhat vain` | 10, 5, 10, 15, 26, 15 | Special Defense |
+| `Strongly defiant` | 10, 10, 12, 3, 12, 10 | Special Defense |
+| `Hates to lose` | 3, 8, 13, 18, 23, 2 | Special Defense |
+| `Somewhat stubborn` | 4, 9, 14, 19, 24, 15 | Special Defense |
+| `Likes to run` | 2, 7, 12, 17, 22, 30 | Speed |
+| `Alert to sounds` | 31, 31, 31, 31, 31, 31 | Speed |
+| `Impetuous and silly` | 2, 7, 12, 17, 22, 27 | Speed |
+| `Somewhat of a clown` | 3, 8, 13, 18, 23, 28 | Speed |
+| `Quick to flee` | 4, 9, 14, 19, 24, 29 | Speed |
+
+---
+
 ### Example Usage
 
 ```markdown
