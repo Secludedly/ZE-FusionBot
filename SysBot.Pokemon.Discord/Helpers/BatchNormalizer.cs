@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Reflection.PortableExecutable;
+using System.Text;
 using System.Text.RegularExpressions;
 using PKHeX.Core;
 
@@ -17,6 +19,8 @@ namespace SysBot.Pokemon.Discord.Helpers
 
         //////////////////////////////////// ALIAS & COMMAND MAPPINGS //////////////////////////////////////
 
+        // Maps common aliases to their normalized command keys
+        // New Showdown Set key → Original Batch Command key
         private static readonly Dictionary<string, string> BatchCommandAliasMap = new(StringComparer.OrdinalIgnoreCase)
         {
             { "Size", "Scale" },
@@ -36,7 +40,8 @@ namespace SysBot.Pokemon.Discord.Helpers
             { "Set EVs", "SetEVs" },
             { "Set IVs", "SetIVs" },
             { "OT Friendship", "OriginalTrainerFriendship" },
-            { "HT Friendship", "HandlingTrainerFriendship" }
+            { "HT Friendship", "HandlingTrainerFriendship" },
+            { "Characteristic", "Characteristic" }
         };
 
         private static readonly HashSet<string> EqualCommandKeys = new(StringComparer.OrdinalIgnoreCase)
@@ -45,6 +50,7 @@ namespace SysBot.Pokemon.Discord.Helpers
         };
 
         // Core mapping of functions for each key
+        // Batch Command key → Handler function
         private static readonly Dictionary<string, Func<string, string>> CommandProcessors =
             new(StringComparer.OrdinalIgnoreCase)
             {
@@ -64,35 +70,41 @@ namespace SysBot.Pokemon.Discord.Helpers
                 { "Ribbon", ProcessRibbon },
                 { "GVs", ProcessGVs },
                 { "SetEVs", ProcessEVs },
-                { "SetIVs", ProcessIVs }
+                { "SetIVs", ProcessIVs },
+                { "Characteristic", ProcessCharacteristic },
+                { "HT", ProcessHyperTrain },
+                { "Markings", ProcessMarkings }
             };
 
         //////////////////////////////////// NEW COMMAND DICTIONARIES //////////////////////////////////////
 
+        // Size keywords
         private static readonly Dictionary<string, (int Min, int Max)> SizeKeywords = new(StringComparer.OrdinalIgnoreCase)
         {
             { "XXXS", (0, 0) }, { "XXS", (1, 30) }, { "XS", (31, 60) }, { "S", (61, 100) },
             { "AV", (101, 160) }, { "L", (161, 195) }, { "XL", (196, 241) }, { "XXL", (242, 254) }, { "XXXL", (255, 255) }
         };
 
+        // Weight/Height scalar keywords
         private static readonly Dictionary<string, (int Min, int Max)> ScalarKeywords = new(StringComparer.OrdinalIgnoreCase)
         {
             { "XS", (0, 15) }, { "S", (16, 47) }, { "AV", (48, 207) }, { "L", (208, 239) }, { "XL", (240, 255) }
         };
 
-        // Replace your AcceptedDateFormats with this:
+        // Accepted date formats for Met Date parsing
         private static readonly string[] AcceptedDateFormats =
         {
-    "yyyyMMdd",
-    "MMddyyyy",
-    // slash-separated (variable digits)
-    "M/d/yyyy", "MM/dd/yyyy",
-    "yyyy/M/d", "yyyy/MM/dd",
-    // dash-separated (variable digits)
-    "M-d-yyyy", "MM-dd-yyyy",
-    "yyyy-M-d", "yyyy-MM-dd"
-};
+          "yyyyMMdd",
+          "MMddyyyy",
+          // slash-separated (variable digits)
+          "M/d/yyyy", "MM/dd/yyyy",
+          "yyyy/M/d", "yyyy/MM/dd",
+          // dash-separated (variable digits)
+          "M-d-yyyy", "MM-dd-yyyy",
+          "yyyy-M-d", "yyyy-MM-dd"
+        };
 
+        // Game name/abbreviation to internal version ID mapping
         private static readonly Dictionary<string, int> GameKeywords = new(StringComparer.OrdinalIgnoreCase)
         {
             { "Red", 35 }, { "Blue", 36 }, { "Green", 36 }, { "BlueJP", 37 }, { "Yellow", 38 },
@@ -110,6 +122,72 @@ namespace SysBot.Pokemon.Discord.Helpers
             { "SP", 49 }, { "Shining Pearl", 49 }, { "Scarlet", 50 }, { "SL", 50 }, { "Violet", 51 }, { "VL", 51 }
         };
 
+        // Characteristic to IV spread mapping
+        private static readonly Dictionary<string, int[]> CharacteristicIVs =
+        new(StringComparer.OrdinalIgnoreCase)
+    {
+    // HP-based
+    { "Likes to eat",              new[] {30, 8, 13, 18, 23, 25} },
+    { "Takes plenty of siestas",   new[] {31, 6, 26, 22, 10, 0} },
+    { "Scatters things often",     new[] {28, 8, 28, 12, 9, 19} },
+    { "Likes to relax",            new[] {29, 16, 3, 7, 26, 13} },
+    { "Nods off a lot",            new[] {27, 0, 13, 27, 27, 8} },
+
+    // Attack-based
+    { "Proud of its power",      new[] {18, 30, 10, 11, 26, 3} },
+    { "Likes to thrash about",   new[] {10, 31, 0, 3, 12, 0} },
+    { "A little quick tempered", new[] {25, 27, 9, 7, 8, 8} },
+    { "Quick tempered",          new[] {0, 29, 6, 23, 4, 17} },
+    { "Likes to fight",          new[] {25, 28, 11, 8, 9, 18} },
+
+    // Defense-based
+    { "Sturdy body",           new[] {15, 24, 30, 5, 24, 29} },
+    { "Capable of taking hits",new[] {6, 0, 21, 2, 18, 3} },
+    { "Highly persistent",     new[] {4, 21, 27, 9, 21, 18} },
+    { "Good endurance",        new[] {19, 2, 23, 2, 6, 4} },
+    { "Good perseverance",     new[] {26, 16, 29, 0, 20, 22} },
+
+    // Sp.Atk-based
+    { "Highly curious",        new[] {9, 6, 21, 30, 10, 28} },
+    { "Mischievous",           new[] {7, 20, 0, 31, 5, 17} },
+    { "Thoroughly cunning",    new[] {5, 4, 20, 27, 12, 26} },
+    { "Often lost in thought", new[] {8, 3, 1, 23, 19, 14} },
+    { "Very finicky",          new[] {9, 1, 0, 24, 21, 12} },
+
+    // Sp.Def-based
+    { "Strong willed",         new[] {14, 6, 29, 16, 30, 0} },
+    { "Somewhat vain",         new[] {10, 5, 10, 15, 26, 15} },
+    { "Strongly defiant",      new[] {10, 10, 12, 3, 12, 10} },
+    { "Hates to lose",         new[] {3, 8, 13, 18, 23, 2} },
+    { "Somewhat stubborn",     new[] {4, 9, 14, 19, 24, 15} },
+
+    // Speed-based
+    { "Likes to run",            new[] {2, 7, 12, 17, 22, 30} },
+    { "Alert to sounds",         new[] {31, 31, 31, 31, 31, 31} },
+    { "Impetuous and silly",     new[] {2, 7, 12, 17, 22, 27} },
+    { "Somewhat of a clown",     new[] {3, 8, 13, 18, 23, 28} },
+    { "Quick to flee",           new[] {4, 9, 14, 19, 24, 29} },
+    };
+
+        // Mark Name → Batch Command Key mapping
+        private static readonly Dictionary<string, string> MarkingKeys = new(StringComparer.OrdinalIgnoreCase)
+    {
+    { "Diamond", "MarkingDiamond" },
+    { "Heart", "MarkingHeart" },
+    { "Square", "MarkingSquare" },
+    { "Star", "MarkingStar" },
+    { "Triangle", "MarkingTriangle" },
+    { "Circle", "MarkingCircle" }
+    };
+
+        // Mark Color → Batch Command Value mapping
+        private static readonly Dictionary<string, int> MarkingColors = new(StringComparer.OrdinalIgnoreCase)
+    {
+    { "No", 0 },
+    { "Blue", 1 },
+    { "Red", 2 }
+    };
+
         //////////////////////////////////// MAIN ENTRY //////////////////////////////////////
 
         public static string NormalizeBatchCommands(string content)
@@ -118,6 +196,9 @@ namespace SysBot.Pokemon.Discord.Helpers
 
             var lines = content.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
 
+            var hasCharacteristic = lines.Any(l =>
+            Regex.IsMatch(l.Trim(), @"^Characteristic\s*:", RegexOptions.IgnoreCase));
+
             for (int i = 0; i < lines.Length; i++)
             {
                 if (!TrySplitCommand(lines[i], out var key, out var value))
@@ -125,6 +206,13 @@ namespace SysBot.Pokemon.Discord.Helpers
 
                 if (BatchCommandAliasMap.TryGetValue(key, out var normalizedKey))
                     key = normalizedKey;
+
+                // If there's a Characteristic line, ignore any "Set IVs:" or "IVs:" lines to avoid conflicts and override them
+                if (hasCharacteristic && (key.Equals("SetIVs", StringComparison.OrdinalIgnoreCase) || key.Equals("IVs", StringComparison.OrdinalIgnoreCase)))
+                {
+                    lines[i] = string.Empty;
+                    continue;
+                }
 
                 if (CommandProcessors.TryGetValue(key, out var processor))
                 {
@@ -214,6 +302,13 @@ namespace SysBot.Pokemon.Discord.Helpers
                 ? ".Moves=$suggest"
                 : $".Moves={val}";
 
+        // .MetLevel= → Met Level:
+        // Value must be between 1–100 (game cap for levels)
+        private static string ProcessMetLevel(string val) =>
+            int.TryParse(val, out int level) && level >= 1 && level <= 100
+                ? $".MetLevel={level}"
+                : string.Empty;
+
         // .RelearnMoves= → Relearn Moves:
         // Only accepted options are "All" or "None"
         private static string ProcessRelearnMoves(string value)
@@ -247,6 +342,71 @@ namespace SysBot.Pokemon.Discord.Helpers
         // Value is a Ribbon name like "BattleChampion," without using spaces
         private static string ProcessRibbon(string val) =>
             $".Ribbon{val.Replace(" ", "")}=True";
+
+        // .[MarkingKey]=[ColorVal] → Mark:
+        // Value is a series of marking assignments like "Markings: Diamond=Red / Heart=Blue / Circle=No"
+        // Any Markings that are not specified or include "No" are ignored
+        private static string ProcessMarkings(string val)
+        {
+            if (string.IsNullOrWhiteSpace(val))
+                return string.Empty;
+
+            var lines = new List<string>();
+
+            var parts = val.Split('/', StringSplitOptions.RemoveEmptyEntries);
+            foreach (var part in parts)
+            {
+                var split = part.Split('=', StringSplitOptions.RemoveEmptyEntries);
+                if (split.Length != 2)
+                    continue;
+
+                var markName = split[0].Trim();
+                var colorName = split[1].Trim();
+
+                if (!MarkingKeys.TryGetValue(markName, out var markKey))
+                    continue;
+
+                if (!MarkingColors.TryGetValue(colorName, out var colorVal))
+                    continue;
+
+                lines.Add($".{markKey}={colorVal}");
+            }
+
+            return string.Join('\n', lines);
+        }
+
+        // Creates a ".Characteristic=" batch command that can be written as "Characteristic:"
+        // Value is a characteristic wordage like "Likes to eat"
+        private static string ProcessCharacteristic(string val)
+        {
+            if (!CharacteristicIVs.TryGetValue(val, out var spread))
+                return string.Empty;
+
+            return FormatIVs(spread);
+        }
+
+        // .HT_[STAT]= → HT:
+        // "HT: HP / Atk / Def" to enable Hyper Training for those stats only
+        private static readonly string[] StatKeys = { "HP", "ATK", "DEF", "SPA", "SPD", "SPE" };
+
+        private static string ProcessHyperTrain(string val)
+        {
+            if (string.IsNullOrWhiteSpace(val))
+                return string.Empty;
+
+            var requestedStats = val.Split('/', StringSplitOptions.RemoveEmptyEntries)
+                                    .Select(s => s.Trim().ToUpper())
+                                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            var htLines = new List<string>();
+            foreach (var stat in StatKeys)
+            {
+                if (requestedStats.Contains(stat))
+                    htLines.Add($".HT_{stat}=True");
+            }
+
+            return string.Join('\n', htLines);
+        }
 
         // Creates an ".EVs=" batch command that can be written as "EVs:" that accepts "Random" or "Suggest" as special values
         // "EVs: Random" value randomizes EVs across all stats
@@ -412,6 +572,7 @@ namespace SysBot.Pokemon.Discord.Helpers
             return false;
         }
 
+        // Parses "true"/"false" (case insensitive) values to 1/0 respectively
         private static bool TryParseBoolean(string input, out int result)
         {
             if (input.Equals("true", StringComparison.OrdinalIgnoreCase)) { result = 1; return true; }
@@ -445,6 +606,7 @@ namespace SysBot.Pokemon.Discord.Helpers
             return content;
         }
 
+        // Formats EVs into batch command lines
         private static string FormatEVs(int[] evs)
         {
             var evLines = new List<string>(6);
@@ -453,6 +615,7 @@ namespace SysBot.Pokemon.Discord.Helpers
             return string.Join('\n', evLines);
         }
 
+        // Formats IVs into batch command lines
         private static string FormatIVs(int[] ivs)
         {
             var ivLines = new List<string>(6);
