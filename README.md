@@ -428,6 +428,9 @@ Relearn Moves: All
 Mark: BestFriends
 Ribbons: All
 GVs: 7 HP / 7 Atk / 7 Def / 7 SpA / 7 SpD / 7 Spe
+HT: HP / Atk / Def / SpA / SpD / Spe
+Characteristic: Quick to flee
+Markings: Diamond=Red / Heart=Red / Square=Blue / Star=Blue / Triangle=Red / Circle=Blue
 ```
 
 ## ⚙️ Bot Functions
