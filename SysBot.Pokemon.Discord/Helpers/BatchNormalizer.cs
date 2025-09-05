@@ -188,43 +188,77 @@ namespace SysBot.Pokemon.Discord.Helpers
     { "Red", 2 }
     };
 
+        // Alcremie topping keywords
+        private static readonly Dictionary<string, int> AlcremieFormArguments = new(StringComparer.OrdinalIgnoreCase)
+    {
+    { "Strawberry", 0 },
+    { "Berry", 1 },
+    { "Love", 2 },
+    { "Star", 3 },
+    { "Clover", 4 },
+    { "Flower", 5 },
+    { "Ribbon", 6 }
+    };
+
+
         //////////////////////////////////// MAIN ENTRY //////////////////////////////////////
 
-        public static string NormalizeBatchCommands(string content)
+        public static string NormalizeBatchCommands(string input)
         {
-            content = HandleAlcremieToppings(content);
-
-            var lines = content.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
-
-            var hasCharacteristic = lines.Any(l =>
-            Regex.IsMatch(l.Trim(), @"^Characteristic\s*:", RegexOptions.IgnoreCase));
+            var lines = input.Split('\n');
+            var processed = new List<string>();
+            bool hasCharacteristic = false;
 
             for (int i = 0; i < lines.Length; i++)
             {
-                if (!TrySplitCommand(lines[i], out var key, out var value))
+                var line = lines[i].Trim();
+                if (string.IsNullOrWhiteSpace(line))
+                    continue;
+
+                if (!line.Contains(":"))
+                {
+                    if (line.StartsWith("Alcremie-", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var parts = line.Split('-', StringSplitOptions.RemoveEmptyEntries);
+                        var lastPart = parts.Last();
+
+                        if (AlcremieFormArguments.TryGetValue(lastPart, out int arg))
+                        {
+                            var speciesName = string.Join("-", parts.Take(parts.Length - 1));
+                            processed.Add(speciesName);
+                            processed.Add($".FormArgument={arg}");
+                            continue;
+                        }
+                    }
+
+                    processed.Add(line);
+                    continue;
+                }
+
+                if (!TrySplitCommand(line, out var key, out var value))
                     continue;
 
                 if (BatchCommandAliasMap.TryGetValue(key, out var normalizedKey))
                     key = normalizedKey;
 
-                // If there's a Characteristic line, ignore any "Set IVs:" or "IVs:" lines to avoid conflicts and override them
-                if (hasCharacteristic && (key.Equals("SetIVs", StringComparison.OrdinalIgnoreCase) || key.Equals("IVs", StringComparison.OrdinalIgnoreCase)))
-                {
-                    lines[i] = string.Empty;
+                // characteristic overrides IVs
+                if (hasCharacteristic &&
+                    (key.Equals("SetIVs", StringComparison.OrdinalIgnoreCase) ||
+                     key.Equals("IVs", StringComparison.OrdinalIgnoreCase)))
                     continue;
-                }
 
                 if (CommandProcessors.TryGetValue(key, out var processor))
                 {
-                    lines[i] = processor(value);
+                    processed.Add(processor(value));
                 }
                 else if (EqualCommandKeys.Contains(key))
                 {
-                    lines[i] = $"~={key}={value}";
+                    processed.Add($"~={key}={value}");
                 }
             }
 
-            return string.Join('\n', lines.Where(l => !string.IsNullOrWhiteSpace(l)));
+            // Always return at the end
+            return string.Join("\n", processed);
         }
 
         //////////////////////////////////// HANDLER METHODS //////////////////////////////////////
@@ -579,31 +613,6 @@ namespace SysBot.Pokemon.Discord.Helpers
             if (input.Equals("false", StringComparison.OrdinalIgnoreCase)) { result = 0; return true; }
             result = -1;
             return false;
-        }
-
-        // Alcremie forms can now add a topping to the flavor without batch command
-        // For example, it accepts: Alcremie-Caramel-Swirl-Ribbon
-        // Just affix the topping name to the end of Alcremie's name after its flavor
-        // This code injects FormArgument/Topping for Alcremie based on Showdown Format nickname
-        private static string HandleAlcremieToppings(string content)
-        {
-            if (!content.Contains("Alcremie", StringComparison.OrdinalIgnoreCase))
-                return content;
-
-            var match = Regex.Match(content, @"Alcremie[-\s]?.*?[-]?(Strawberry|Berry|Love|Star|Clover|Flower|Ribbon)", RegexOptions.IgnoreCase);
-            if (!match.Success) return content;
-
-            var toppingMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
-            {
-                { "Strawberry", 0 }, { "Berry", 1 }, { "Love", 2 }, { "Star", 3 },
-                { "Clover", 4 }, { "Flower", 5 }, { "Ribbon", 6 }
-            };
-
-            var topping = match.Groups[1].Value;
-            if (toppingMap.TryGetValue(topping, out int formArg) && !content.Contains(".FormArgument=", StringComparison.OrdinalIgnoreCase))
-                content += $"\n.FormArgument={formArg}";
-
-            return content;
         }
 
         // Formats EVs into batch command lines
