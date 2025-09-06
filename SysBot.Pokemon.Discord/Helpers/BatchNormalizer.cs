@@ -217,6 +217,10 @@ namespace SysBot.Pokemon.Discord.Helpers
 
                 if (!line.Contains(":"))
                 {
+                    // Alcremie forms can now add a topping to the flavor without batch command
+                    // For example, it accepts: Alcremie-Caramel-Swirl-Ribbon
+                    // Just affix the topping name to the end of Alcremie's name after its flavor
+                    // This code injects FormArgument/Topping for Alcremie based on Showdown Format nickname
                     if (line.StartsWith("Alcremie-", StringComparison.OrdinalIgnoreCase))
                     {
                         var parts = line.Split('-', StringSplitOptions.RemoveEmptyEntries);
@@ -255,10 +259,14 @@ namespace SysBot.Pokemon.Discord.Helpers
                 {
                     processed.Add($"~={key}={value}");
                 }
+                else
+                {
+                    processed.Add($"{key}: {value}");
+                }
             }
 
-            // Always return at the end
-            return string.Join("\n", processed);
+                // Always return at the end
+                return string.Join("\n", processed);
         }
 
         //////////////////////////////////// HANDLER METHODS //////////////////////////////////////
