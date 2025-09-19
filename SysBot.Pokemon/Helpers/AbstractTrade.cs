@@ -289,6 +289,18 @@ namespace SysBot.Pokemon.Helpers
             pk.MaximizeFriendship(); // Hatch Egg Faster
                                      // Final checksum refresh
             pk.RefreshChecksum();
+
+            // Force illegal egg balls to default to Poké Ball (4)
+            var illegalEggBalls = new HashSet<int>{ 1, 16, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37 };
+
+            if (illegalEggBalls.Contains(pk.Ball))
+                pk.Ball = 4; // Poké Ball
+
+            // Only allow Poké Ball (4) and breedable balls; force everything else to Poké Ball
+            var validEggBalls = new HashSet<int> { 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26 };
+
+            if (!validEggBalls.Contains(pk.Ball))
+                pk.Ball = 4; // Poké Ball
         }
 
         public static string FormOutput(ushort species, byte form, out string[] formString)
@@ -658,7 +670,6 @@ namespace SysBot.Pokemon.Helpers
             pk.MetDate = Start.AddDays(Random.Shared.Next(rangeDays));
         }
     
-
             public static byte DetectShowdownLanguage(string content)
         {
             // Check for batch command format: .Language=X
