@@ -73,6 +73,7 @@ namespace SysBot.Pokemon.Discord.Helpers
                 { "SetIVs", ProcessIVs },
                 { "Characteristic", ProcessCharacteristic },
                 { "HT", ProcessHyperTrain },
+                { "MetLevel", ProcessMetLevel },
                 { "Markings", ProcessMarkings }
             };
 
@@ -253,7 +254,9 @@ namespace SysBot.Pokemon.Discord.Helpers
 
                 if (CommandProcessors.TryGetValue(key, out var processor))
                 {
-                    processed.Add(processor(value));
+                    var processedLine = processor(value);
+                    if (!string.IsNullOrWhiteSpace(processedLine))
+                        processed.Add(processedLine);
                 }
                 else if (EqualCommandKeys.Contains(key))
                 {
@@ -583,10 +586,11 @@ namespace SysBot.Pokemon.Discord.Helpers
 
         //////////////////////////////////// HELPERS //////////////////////////////////////
 
+        // Splits a line into key and value parts
         private static bool TrySplitCommand(string line, out string key, out string value)
         {
             key = value = string.Empty;
-            var match = Regex.Match(line.Trim(), @"^([\w\s]+)\s*:\s*(.+)$");
+            var match = Regex.Match(line.Trim(), @"^([\w\s]+)\s*:\s*(.*)$");
             if (!match.Success) return false;
 
             key = match.Groups[1].Value.Trim();
