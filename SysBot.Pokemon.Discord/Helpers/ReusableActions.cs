@@ -1,6 +1,7 @@
 using Discord;
 using Discord.WebSocket;
 using PKHeX.Core;
+using PKHeX.Core.AutoMod;
 using SysBot.Base;
 using SysBot.Pokemon.Helpers;
 using System;
@@ -13,70 +14,97 @@ namespace SysBot.Pokemon.Discord;
 
 public static class ReusableActions
 {
-    public static async Task SendPKMAsync(this IMessageChannel channel, PKM pkm, string msg = "")
-    {
-        // Create a unique filename for each Pokémon
-        var uniqueId = Guid.NewGuid().ToString("N").Substring(0, 8);
-        var fileName = $"{uniqueId}_{PathUtil.CleanFileName(pkm.FileName)}";
+        public static async Task SendPKMAsync(this IMessageChannel channel, PKM pkm, string msg = "")
+        {
+            string shinyMark = "";
+            if (pkm.IsShiny)
+                shinyMark = (pkm.ShinyXor == 0 || pkm.FatefulEncounter) ? "Square Shiny" : "Shiny";
+
+        var species = GameInfo.GetStrings((int)LanguageID.English).Species[pkm.Species];
+        var languageName = ((LanguageID)pkm.Language).ToString();
+        var ot = pkm.OriginalTrainerName;
+        var tid = pkm.DisplayTID;
+        var sid = pkm.DisplaySID;
+        var hash = (pkm.EncryptionConstant != 0 ? pkm.EncryptionConstant : pkm.PID).ToString("X8");
+
+        // Final file name format
+        var fileName = $"{species} - {shinyMark} - {languageName} - {ot} - {tid} - {sid} - {hash}.pk{pkm.Format}";
+        fileName = SafeFileName(fileName);
+
+
+        // Temp path
         var tmp = Path.Combine(Path.GetTempPath(), fileName);
 
-        try
-        {
-            // Write the file
-            await File.WriteAllBytesAsync(tmp, pkm.DecryptedPartyData);
-
-            // Send the file and WAIT for it to complete
-            await channel.SendFileAsync(tmp, msg);
-
-            // Add a small delay to ensure Discord processes each file separately
-            await Task.Delay(700);
-        }
-        finally
-        {
-            // Make sure we attempt to delete the temp file even if an exception occurs
             try
             {
-                if (File.Exists(tmp))
-                    File.Delete(tmp);
+                // Write the file
+                await File.WriteAllBytesAsync(tmp, pkm.DecryptedPartyData);
+
+                // Send the file
+                await channel.SendFileAsync(tmp, msg);
+
+                // Give Discord a little breathing room
+                await Task.Delay(700);
             }
-            catch (Exception ex)
+            finally
             {
-                Console.WriteLine($"Error deleting temporary file: {ex.Message}");
+                try
+                {
+                    if (File.Exists(tmp))
+                        File.Delete(tmp);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error deleting temporary file: {ex.Message}");
+                }
             }
         }
-    }
 
-    public static async Task SendPKMAsync(this IUser user, PKM pkm, string msg = "")
-    {
-        // Create a unique filename for each Pokémon
-        var uniqueId = Guid.NewGuid().ToString("N").Substring(0, 8);
-        var fileName = $"{uniqueId}_{PathUtil.CleanFileName(pkm.FileName)}";
+        public static async Task SendPKMAsync(this IUser user, PKM pkm, string msg = "")
+        {
+            string shinyMark = "";
+            if (pkm.IsShiny)
+                shinyMark = (pkm.ShinyXor == 0 || pkm.FatefulEncounter) ? "Square Shiny" : "Shiny";
+
+        var species = GameInfo.GetStrings((int)LanguageID.English).Species[pkm.Species];
+        var languageName = ((LanguageID)pkm.Language).ToString();
+        var ot = pkm.OriginalTrainerName;
+        var tid = pkm.DisplayTID;
+        var sid = pkm.DisplaySID;
+        var hash = (pkm.EncryptionConstant != 0 ? pkm.EncryptionConstant : pkm.PID).ToString("X8");
+
+        var fileName = $"{species} - {shinyMark} - {languageName} - {ot} - {tid} - {sid} - {hash}.pk{pkm.Format}";
+        fileName = SafeFileName(fileName);
+
+
         var tmp = Path.Combine(Path.GetTempPath(), fileName);
 
-        try
-        {
-            // Write the file
-            await File.WriteAllBytesAsync(tmp, pkm.DecryptedPartyData);
-
-            // Send the file and WAIT for it to complete
-            await user.SendFileAsync(tmp, msg);
-
-            // Add a small delay to ensure Discord processes each file separately
-            await Task.Delay(700);
-        }
-        finally
-        {
-            // Make sure we attempt to delete the temp file even if an exception occurs
             try
             {
-                if (File.Exists(tmp))
-                    File.Delete(tmp);
+                await File.WriteAllBytesAsync(tmp, pkm.DecryptedPartyData);
+                await user.SendFileAsync(tmp, msg);
+                await Task.Delay(700);
             }
-            catch (Exception ex)
+            finally
             {
-                Console.WriteLine($"Error deleting temporary file: {ex.Message}");
+                try
+                {
+                    if (File.Exists(tmp))
+                        File.Delete(tmp);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error deleting temporary file: {ex.Message}");
+                }
             }
         }
+
+    public static string SafeFileName(string input)
+    {
+        // Only remove forbidden Windows chars
+        char[] invalidChars = Path.GetInvalidFileNameChars();
+        var cleaned = new string(input.Where(c => !invalidChars.Contains(c)).ToArray());
+        return cleaned.Trim().TrimEnd('.');
     }
 
     public static async Task RepostPKMAsShowdownAsync(this ISocketMessageChannel channel, IAttachment att, SocketUserMessage userMessage)
@@ -166,18 +194,37 @@ public static class ReusableActions
         // If found, insert your OT/TID/etc after it. Otherwise, append to the end.
         int insertIndex = natureIndex >= 0 ? natureIndex + 1 : newShowdown.Count;
 
-        newShowdown.InsertRange(insertIndex, new[]
+        // Build all the extra info in one list
+        var extraInfo = new List<string>
+    {
+        $"OT: {pkm.OriginalTrainerName}",
+        $"TID: {pkm.DisplayTID}",
+        $"SID: {pkm.DisplaySID}",
+        $"OTGender: {(Gender)pkm.OriginalTrainerGender}",
+        $"Language: {(LanguageID)pkm.Language}",
+        $".MetDate={pkm.MetDate:yyyy-MM-dd}",
+        $".MetLocation={pkm.MetLocation}",
+        $".MetLevel={pkm.MetLevel}",
+        $".Version={(GameVersion)pkm.Version}",
+        $".OriginalTrainerFriendship={pkm.OriginalTrainerFriendship}",
+        $".HandlingTrainerFriendship={pkm.HandlingTrainerFriendship}",
+    };
+
+        // Add Height/Weight if available
+        if (pkm is IScaledSize scaled)
         {
-    $"OT: {pkm.OriginalTrainerName}",
-    $"TID: {pkm.DisplayTID}",
-    $"SID: {pkm.DisplaySID}",
-    $"OTGender: {(Gender)pkm.OriginalTrainerGender}",
-    $"Language: {(LanguageID)pkm.Language}",
-    $".MetDate={pkm.MetDate:yyyy-MM-dd}",
-    $".MetLocation={pkm.MetLocation}",
-    $".MetLevel={pkm.MetLevel}",
-    $".Version={(GameVersion)pkm.Version}"
-});
+            extraInfo.Add($".HeightScalar={scaled.HeightScalar}");
+            extraInfo.Add($".WeightScalar={scaled.WeightScalar}");
+        }
+
+        // Add Scale if SV
+        if (pkm is PK9 pk9)
+        {
+            extraInfo.Add($".Scale={pk9.Scale}");
+        }
+
+        // Insert everything at once
+        newShowdown.InsertRange(insertIndex, extraInfo);
 
         return Format.Code(string.Join("\n", newShowdown).TrimEnd());
     }
