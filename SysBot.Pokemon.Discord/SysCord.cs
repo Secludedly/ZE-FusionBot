@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using static Discord.GatewayIntents;
 using static SysBot.Pokemon.DiscordSettings;
 using Discord.Net;
+using SysBot.Pokemon.Discord.Helpers;
 
 namespace SysBot.Pokemon.Discord;
 
@@ -81,6 +82,28 @@ public sealed class SysCord<T> where T : PKM, new()
             // you must set the MessageCacheSize. You may adjust the number as needed.
             //MessageCacheSize = 50,
         });
+
+        _client = new DiscordSocketClient(new DiscordSocketConfig
+        {
+            LogLevel = LogSeverity.Info,
+            GatewayIntents = Guilds | GuildMessages | DirectMessages | GuildMembers | GuildPresences | MessageContent,
+        });
+
+        // ===== DM Relay Setup =====
+        ulong forwardTargetId = 0;
+        if (!string.IsNullOrWhiteSpace(Hub.Config.Discord.UserDMsToBotForwarder))
+        {
+            if (!ulong.TryParse(Hub.Config.Discord.UserDMsToBotForwarder, out forwardTargetId))
+            {
+                LogUtil.LogInfo("SysCord", $"Invalid UserDMsToBotForwarder ID: {Hub.Config.Discord.UserDMsToBotForwarder}");
+            }
+        }
+
+        if (forwardTargetId != 0)
+        {
+            _ = new DMRelayService(_client, forwardTargetId);
+            LogUtil.LogInfo("SysCord", $"DM relay active -> forwarding bot DMs to {forwardTargetId}");
+        }
 
         _commands = new CommandService(new CommandServiceConfig
         {
