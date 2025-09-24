@@ -30,9 +30,7 @@
 
 ## 🚀 Introduction
 
-`ZE FusionBot` is a powerful and open-source SysBot.NET fork, initially tailored for the Discord server [Zeraora's Emporium](https://FreeMons.Org). While originally built for internal use, it has transformed into a beautiful, community-powered GUI with dozens of integrated forks and unique enhancements.
-
-At its core, FusionBot is powered by [hexbyt3's](https://github.com/bdawg1989) [PokeBot](https://github.com/bdawg1989/PokeBot) but significantly extended and redesigned with major community-driven features.
+`ZE FusionBot` is a powerful and open-source SysBot.NET fork, initially tailored for the Discord server [Zeraora's Emporium](https://FreeMons.Org). While originally built for internal server use, it has transformed into a beautiful, community-powered GUI with dozens of integrated forks and unique enhancements, catering to every Nintendo Switch Pokémon game.
 
 ---
 
