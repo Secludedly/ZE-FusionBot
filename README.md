@@ -44,6 +44,7 @@
 - DM embeds with GIFs, Channel Status notifications, Announcement System, Keyword Response.
 - Built-in metrics: Queue tracking, trade counters, medal system.
 - Multi-Language request support.
+- Live/Real-time log searches.
 
 ---
 
