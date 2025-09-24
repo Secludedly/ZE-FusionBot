@@ -9,9 +9,11 @@
 
 
 <p align="center">
-  <i>A community-driven and inspired SysBot.NET project with the most beautiful GUI that unites code from everyone!</i>
+  <i>A community-driven and inspired SysBot.NET project with the most beautiful GUI that unites code from everyone, supporting LGPE, SWSH, BDSP, PLA, SV, and PLZA!</i>
 </p>
-
+<p align="center">
+  <h2><i>Visit <a href="https://FreeMons.Org">FreeMons.Org</a> to join Zeraora's Emporium!</i></h2>
+</p>
 <p align="center">
     <img src="https://visitor-badge.laobi.icu/badge?page_id=Secludedly.ZE-FusionBot" alt="Visitors">
 </p>
