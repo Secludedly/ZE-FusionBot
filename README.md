@@ -465,6 +465,11 @@ Think of it like leveling up — the more you trade, the more medals you rack up
 
 ---
 
+### 🤖 Reading DMs Sent to the Bot
+You can now read the DMs a user sends to the bot. This is fun for when people think your bot is a real person and they attempt to speak to it, or get enraged at it because their internet sucks or don't have NSO. As sad as it is, sometimes users will send derogatory/racial/sexist messages to your bot thinking no one can see it, but now you can, and if they speak like that, do you really want them in your server? 
+- Visit the **UserDMsToBotForwarder** option in `Hub -> Discord` and insert a Channel ID, then restart the bot.
+- The DMs that get logged are only those without a command, so you will not get flooded with user command input.
+- You'll also be able to see attachments users send to the bot, but beware, because it can get weird. I learned from experience.
 
 ---
 
