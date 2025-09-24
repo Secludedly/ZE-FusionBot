@@ -45,6 +45,7 @@
 - Built-in metrics: Queue tracking, trade counters, medal system.
 - Multi-Language request support.
 - Live/Real-time log searches.
+- Read user DMs sent to the bot.
 
 ---
 
