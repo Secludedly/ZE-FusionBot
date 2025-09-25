@@ -9,9 +9,11 @@
 
 
 <p align="center">
-  <i>A community-driven and inspired SysBot.NET project with the most beautiful GUI that unites code from everyone!</i>
+  <i>A community-driven and inspired SysBot.NET project with the most beautiful GUI that unites code from everyone, supporting LGPE, SWSH, BDSP, PLA, SV, and PLZA!</i>
 </p>
-
+<h2 align="center">
+  Visit <a href="https://FreeMons.Org">FreeMons.Org</a> to join Zeraora's Emporium!
+</h2>
 <p align="center">
     <img src="https://visitor-badge.laobi.icu/badge?page_id=Secludedly.ZE-FusionBot" alt="Visitors">
 </p>
@@ -28,9 +30,7 @@
 
 ## 🚀 Introduction
 
-`ZE FusionBot` is a powerful and open-source SysBot.NET fork, initially tailored for the Discord server [Zeraora's Emporium](https://FreeMons.Org). While originally built for internal use, it has transformed into a beautiful, community-powered GUI with dozens of integrated forks and unique enhancements.
-
-At its core, FusionBot is powered by [hexbyt3's](https://github.com/bdawg1989) [PokeBot](https://github.com/bdawg1989/PokeBot) but significantly extended and redesigned with major community-driven features.
+`ZE FusionBot` is a powerful and open-source SysBot.NET fork, initially tailored for the Discord server [Zeraora's Emporium](https://FreeMons.Org). While originally built for internal server use, it has transformed into a beautiful, community-powered GUI with dozens of integrated forks and unique enhancements, catering to every Nintendo Switch Pokémon game.
 
 ---
 
@@ -44,6 +44,8 @@ At its core, FusionBot is powered by [hexbyt3's](https://github.com/bdawg1989) [
 - DM embeds with GIFs, Channel Status notifications, Announcement System, Keyword Response.
 - Built-in metrics: Queue tracking, trade counters, medal system.
 - Multi-Language request support.
+- Live/Real-time log searches.
+- Read user DMs sent to the bot.
 
 ---
 
