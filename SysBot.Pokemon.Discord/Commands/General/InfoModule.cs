@@ -31,21 +31,19 @@ namespace SysBot.Pokemon.Discord
             builder.AddField("Info",
                 $"- {Format.Bold("Owner")}: {app.Owner} ({app.Owner.Id})\n" +
                 $"- {Format.Bold("Original Source")}: {("[SysBot.Net](https://github.com/kwsch/SysBot.NET)")}\n" +
-                $"- {Format.Bold("Bot Fork")}: {("[ZE FusionBot](https://discord.com/channels/709788621896417370/1159521117854257242)")}\n" +
-                $"- {Format.Bold("Fork Base")}: {("[MergeBot](https://github.com/bdawg1989/MergeBot)")}\n" +
+                $"- {Format.Bold("This Bot")}: {("[ZE FusionBot](https://discord.com/channels/709788621896417370/1159521117854257242)")}\n" +
                 $"- {Format.Bold("Library")}: Discord.Net ({DiscordConfig.Version})\n" +
                 $"- {Format.Bold("Uptime")}: {GetUptime()}\n" +
                 $"- {Format.Bold("Runtime")}: {RuntimeInformation.FrameworkDescription} {RuntimeInformation.ProcessArchitecture}\n" +
                 $"- {Format.Bold("Buildtime")}: {GetVersionInfo("SysBot.Base", false)}\n" +
                 $"- {Format.Bold("ZE FusionBot Version")}: {TradeBot.Version}\n" +
                 $"- {Format.Bold("Core & ALM Version")}: {GetVersionInfo("PKHeX.Core")}\n" +
-                $"- {Format.Bold("Operating System")}: {("Windows X-Lite Optimum 11 Professional 2H22")}\n" +
-                $"- {Format.Bold("Contributers")}: {("Secludedly(Sec), GenPKM.com(Gengar), DeVry, SantaCrab, Caburus(Kai), kwsch(Kurt), koiffeinated(Koi)")}\n"
+                $"- {Format.Bold("Contributers")}: {("Secludedly(Sec), hexbyt3, DeVry, SantaCrab, kwsch(Kurt), koiffeinated(Koi)")}\n"
             );
 
             builder.AddField("Stats",
                 $"- {Format.Bold("Heap Size")}: {GetHeapSize()}MiB\n" +
-                $"- {Format.Bold("Guilds")}: {Context.Client.Guilds.Count}\n" +
+                $"- {Format.Bold("Servers")}: {Context.Client.Guilds.Count}\n" +
                 $"- {Format.Bold("Channels")}: {Context.Client.Guilds.Sum(g => g.Channels.Count)}\n" +
                 $"- {Format.Bold("Users")}: {Context.Client.Guilds.Sum(g => g.MemberCount)}\n"
             );
