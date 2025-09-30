@@ -131,7 +131,12 @@ public class QueueSettings
     /// <param name="position">Position in the queue</param>
     /// <param name="botct">Amount of bots processing requests</param>
     /// <returns>Estimated time in Minutes</returns>
-    public float EstimateDelay(int position, int botct) => (EstimatedDelayFactor * position) / botct;
+    public float EstimateDelay(int position, int botct)
+    {
+        if (botct <= 0) botct = 1;
+        float delayPerTrade = 1.5f;
+        return (position * delayPerTrade) / botct;
+    }
 }
 
 public enum FlexBiasMode
