@@ -1308,11 +1308,11 @@ public class PokeTradeBotLA(PokeTradeHub<PA8> Hub, PokeBotState Config) : PokeRo
         {
             clone = (PA8)sav.GetLegal(AutoLegalityWrapper.GetTemplate(new ShowdownSet(string.Join("\n", set))), out _);
         }
-
-        clone = (PA8)AbstractTrade<PA8>.TrashBytes(clone, new LegalityAnalysis(clone));
+        var la = new LegalityAnalysis(clone);
+        clone = (PA8)AbstractTrade<PA8>.TrashBytes(clone, la);
         clone.ResetPartyStats();
 
-        var la = new LegalityAnalysis(clone);
+        la = new LegalityAnalysis(clone);
         if (!la.Valid)
         {
             poke.SendNotification(this, "This Pokémon is not legal per PKHeX's legality checks. I was unable to fix this. Exiting trade.");

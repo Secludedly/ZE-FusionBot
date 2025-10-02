@@ -734,9 +734,10 @@ public class PokeTradeBotBS : PokeRoutineExecutor8BS, ICountBot, ITradeBot, IDis
             clone = (PB8)sav.GetLegal(AutoLegalityWrapper.GetTemplate(new ShowdownSet(string.Join("\n", set))), out _);
         }
 
-        clone = (PB8)AbstractTrade<PB8>.TrashBytes(clone, new LegalityAnalysis(clone));
-        clone.ResetPartyStats();
         var la = new LegalityAnalysis(clone);
+        clone = (PB8)AbstractTrade<PB8>.TrashBytes(clone, la);
+        clone.ResetPartyStats();
+        la = new LegalityAnalysis(clone);
         if (!la.Valid)
         {
             poke.SendNotification(this, "This Pokémon is not legal per PKHeX's legality checks. I was unable to fix this. Exiting trade.");

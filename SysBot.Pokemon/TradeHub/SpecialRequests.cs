@@ -15,7 +15,6 @@ namespace SysBot.Pokemon.TradeHub
         private static readonly object _sync2 = new();
         private static readonly string ItemPath = @"0items.txt";
         private static readonly char[] separator = ['\n'];
-        private static readonly Dictionary<string, int> UserListSpecialReqCount = [];
 
         #region Item ID Constants
         // Pokeballs

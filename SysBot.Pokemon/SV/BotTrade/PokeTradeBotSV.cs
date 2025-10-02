@@ -717,10 +717,11 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
             clone = (PK9)sav.GetLegal(AutoLegalityWrapper.GetTemplate(new ShowdownSet(string.Join("\n", set))), out _);
         }
 
-        clone = (PK9)AbstractTrade<PK9>.TrashBytes(clone, new LegalityAnalysis(clone));
+        var la = new LegalityAnalysis(clone);
+        clone = (PK9)AbstractTrade<PK9>.TrashBytes(clone, la);
         clone.ResetPartyStats();
 
-        var la = new LegalityAnalysis(clone);
+        la = new LegalityAnalysis(clone);
         if (!la.Valid)
         {
             poke.SendNotification(this, "This Pokémon is not legal per PKHeX's legality checks. I was unable to fix this. Exiting trade.");
@@ -1000,8 +1001,6 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
                     }
                     return PokeTradeResult.NoTrainerFound;
                 }
-
-                Hub.Config.Stream.EndEnterCode(this);
 
                 var cnt = 0;
                 while (!await IsInBox(PortalOffset, token).ConfigureAwait(false))
@@ -1283,7 +1282,6 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
         // Update Barrier Settings
         UpdateBarrier(poke.IsSynchronized);
         poke.TradeInitialize(this);
-        Hub.Config.Stream.EndEnterCode(this);
 
         // Handle connection and portal entry
         if (!await EnsureConnectedAndInPortal(token).ConfigureAwait(false))
@@ -1292,7 +1290,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
         }
 
         // Enter Link Trade and code
-        if (!await EnterLinkTradeAndCode(poke.Code, token).ConfigureAwait(false))
+        if (!await EnterLinkTradeAndCode(poke, poke.Code, token).ConfigureAwait(false))
         {
             return PokeTradeResult.RecoverStart;
         }
@@ -1329,26 +1327,36 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
         return true;
     }
 
-    private async Task<bool> EnterLinkTradeAndCode(int code, CancellationToken token)
+    private async Task<bool> EnterLinkTradeAndCode(PokeTradeDetail<PK9> poke, int code, CancellationToken token)
     {
         // Assumes we're freshly in the Portal and the cursor is over Link Trade.
         Log("Selecting Link Trade.");
         TradeProgressChanged?.Invoke(24);
-
         await Click(A, 1_500, token).ConfigureAwait(false);
-
         // Always clear Link Codes and enter a new one based on the current trade type
         await Click(X, 1_000, token).ConfigureAwait(false);
         await Click(PLUS, 1_000, token).ConfigureAwait(false);
-        await Task.Delay(Hub.Config.Timings.MiscellaneousSettings.ExtraTimeOpenCodeEntry, token).ConfigureAwait(false);
-
-        Log($"Entering Link Trade code: {code:0000 0000}...");
-        TradeProgressChanged?.Invoke(36);
-
-        await EnterLinkCode(code, Hub.Config, token).ConfigureAwait(false);
-        await Click(PLUS, 3_000, token).ConfigureAwait(false);
-
-        return true;
+        // Loading code entry
+        bool startedEnterCode = false;
+        try
+        {
+            if (poke.Type != PokeTradeType.Random)
+            {
+                Hub.Config.Stream.StartEnterCode(this);
+                startedEnterCode = true;
+            }
+            await Task.Delay(Hub.Config.Timings.MiscellaneousSettings.ExtraTimeOpenCodeEntry, token).ConfigureAwait(false);
+            Log($"Entering Link Trade code: {code:0000 0000}...");
+            TradeProgressChanged?.Invoke(36);
+            await EnterLinkCode(code, Hub.Config, token).ConfigureAwait(false);
+            await Click(PLUS, 3_000, token).ConfigureAwait(false);
+            return true;
+        }
+        finally
+        {
+            if (startedEnterCode)
+                Hub.Config.Stream.EndEnterCode(this);
+        }
     }
 
     private async Task<PokeTradeResult> PerformNonBatchTrade(SAV9SV sav, PokeTradeDetail<PK9> poke, CancellationToken token)
@@ -1395,8 +1403,6 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
             }
             return PokeTradeResult.NoTrainerFound;
         }
-
-        Hub.Config.Stream.EndEnterCode(this);
 
         // Wait until we get into the box.
         var cnt = 0;
