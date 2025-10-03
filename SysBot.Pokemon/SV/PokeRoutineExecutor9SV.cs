@@ -133,7 +133,7 @@ public abstract class PokeRoutineExecutor9SV : PokeRoutineExecutor<PK9>
             Log("Turning off screen.");
             await SetScreen(ScreenState.Off, token).ConfigureAwait(false);
         }
-
+        await SetController(ControllerType.ProController, token);
         Log($"Setting SV-specific hid waits");
         await Connection.SendAsync(SwitchCommand.Configure(SwitchConfigureParameter.keySleepTime, KeyboardPressTime), token).ConfigureAwait(false);
         await Connection.SendAsync(SwitchCommand.Configure(SwitchConfigureParameter.pollRate, HidWaitTime), token).ConfigureAwait(false);

@@ -111,6 +111,7 @@ public abstract class PokeRoutineExecutor8LA : PokeRoutineExecutor<PA8>
 
     public async Task InitializeHardware(IBotStateSettings settings, CancellationToken token)
     {
+        await SetController(ControllerType.ProController, token);
         Log("Detaching on startup.");
         await DetachController(token).ConfigureAwait(false);
         if (settings.ScreenOff)
