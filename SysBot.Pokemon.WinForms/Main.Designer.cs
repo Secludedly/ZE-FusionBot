@@ -229,7 +229,7 @@ namespace SysBot.Pokemon.WinForms
             lblTitle.Name = "lblTitle";
             lblTitle.Size = new Size(220, 32);
             lblTitle.TabIndex = 4;
-            lblTitle.Text = "ZE FusionBot | v0.0.0 | MODE: XXXX";
+            lblTitle.Text = "ZE FusionBot | v0.0.0 | MODE: None";
             lblTitle.TextAlign = ContentAlignment.MiddleCenter;
             // 
             // panel4

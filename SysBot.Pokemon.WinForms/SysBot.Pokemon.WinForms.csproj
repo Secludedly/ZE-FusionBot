@@ -58,6 +58,7 @@
     <None Remove="Fonts\UbuntuMono-BI.ttf" />
     <None Remove="Fonts\UbuntuMono-R.ttf" />
     <None Remove="Fonts\UbuntuMono-RI.ttf" />
+    <None Remove="Resources\plza_mode_image.png" />
   </ItemGroup>
 
   <ItemGroup>
@@ -85,6 +86,7 @@
     <EmbeddedResource Include="Fonts\UbuntuMono-BI.ttf" />
     <EmbeddedResource Include="Fonts\UbuntuMono-R.ttf" />
     <EmbeddedResource Include="Fonts\UbuntuMono-RI.ttf" />
+    <EmbeddedResource Include="Resources\plza_mode_image.png" />
   </ItemGroup>
 
   <ItemGroup>

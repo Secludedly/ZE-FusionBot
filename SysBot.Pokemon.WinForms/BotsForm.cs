@@ -149,7 +149,7 @@ namespace SysBot.Pokemon.WinForms
             StyleComboBox(_CB_Routine);
 
             _CB_GameMode = new ComboBox { Location = new Point(625, 5), Size = new Size(100, 40), DropDownStyle = ComboBoxStyle.DropDownList, BackColor = Color.FromArgb(20, 19, 57), ForeColor = whiteText };
-            _CB_GameMode.Items.AddRange(new object[] { "SWSH", "BDSP", "PLA", "SV", "LGPE" });
+            _CB_GameMode.Items.AddRange(new object[] { "SWSH", "BDSP", "PLA", "SV", "LGPE", "PLZA" });
             _CB_GameMode.SelectedIndex = -1;
             _CB_GameMode.DrawItem += (s, e) =>
             {
@@ -204,6 +204,7 @@ namespace SysBot.Pokemon.WinForms
                 "PLA" => 3,
                 "SV" => 4,
                 "LGPE" => 5,
+                "PLZA" => 6,
                 _ => 1
             };
 
@@ -272,6 +273,7 @@ namespace SysBot.Pokemon.WinForms
                     3 => "PLA",
                     4 => "SV",
                     5 => "LGPE",
+                    6 => "PLZA",
                     _ => "SWSH"
                 };
 

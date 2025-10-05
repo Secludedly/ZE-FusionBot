@@ -240,6 +240,7 @@ namespace SysBot.Pokemon.WinForms
             ProgramMode.BDSP => new PokeBotRunnerImpl<PB8>(cfg.Hub, new BotFactory8BS()),
             ProgramMode.LA => new PokeBotRunnerImpl<PA8>(cfg.Hub, new BotFactory8LA()),
             ProgramMode.SV => new PokeBotRunnerImpl<PK9>(cfg.Hub, new BotFactory9SV()),
+      //    ProgramMode.PLZA => new PokeBotRunnerImpl<PZ10>(cfg.Hub, new BotFactory10ZA()),
             ProgramMode.LGPE => new PokeBotRunnerImpl<PB7>(cfg.Hub, new BotFactory7LGPE()),
             _ => throw new IndexOutOfRangeException("Unsupported mode."), // A LIE
         };
@@ -584,6 +585,9 @@ namespace SysBot.Pokemon.WinForms
 
             switch (mode)
             {
+      //        case ProgramMode.PLZA:
+      //            leftSideImage.Image = Resources.plza_mode_image;   // Set the image for SV mode
+      //            break;
                 case ProgramMode.SV:
                     leftSideImage.Image = Resources.sv_mode_image;   // Set the image for SV mode
                     break;
@@ -626,6 +630,9 @@ namespace SysBot.Pokemon.WinForms
 
             switch (bot)
             {
+      //        case PokeTradeBotZA zaBot:
+      //            zaBot.TradeProgressChanged += SetProgress;
+      //            break;
                 case PokeTradeBotSV svBot:
                     svBot.TradeProgressChanged += SetProgress;
                     break;
