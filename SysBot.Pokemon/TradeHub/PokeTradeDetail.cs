@@ -22,6 +22,8 @@ namespace SysBot.Pokemon
         /// </summary>
         public readonly int Code;
 
+        public bool IsHiddenTrade { get; set; } = false;
+
         /// <summary> Data to be traded </summary>
         public TPoke TradeData;
 
@@ -62,7 +64,7 @@ namespace SysBot.Pokemon
         public bool SetEdited { get; set; }
         public List<TPoke>? BatchTrades { get; set; }
 
-        public PokeTradeDetail(TPoke pkm, PokeTradeTrainerInfo info, IPokeTradeNotifier<TPoke> notifier, PokeTradeType type, int code, bool favored = false, List<Pictocodes>? lgcode = null, int batchTradeNumber = 0, int totalBatchTrades = 0, bool isMysteryEgg = false, int uniqueTradeID = 0, bool ignoreAutoOT = false, bool setEdited = false)
+        public PokeTradeDetail(TPoke pkm, PokeTradeTrainerInfo info, IPokeTradeNotifier<TPoke> notifier, PokeTradeType type, int code, bool favored = false, List<Pictocodes>? lgcode = null, int batchTradeNumber = 0, int totalBatchTrades = 0, bool isMysteryEgg = false, bool isHiddenTrade = false, int uniqueTradeID = 0, bool ignoreAutoOT = false, bool setEdited = false)
         {
             ID = Interlocked.Increment(ref CreatedCount) % 50000;
             Code = code;
@@ -76,6 +78,7 @@ namespace SysBot.Pokemon
             BatchTradeNumber = batchTradeNumber;
             TotalBatchTrades = totalBatchTrades;
             IsMysteryEgg = isMysteryEgg;
+            IsHiddenTrade = isHiddenTrade;
             UniqueTradeID = uniqueTradeID;
             IgnoreAutoOT = ignoreAutoOT;
             SetEdited = setEdited;

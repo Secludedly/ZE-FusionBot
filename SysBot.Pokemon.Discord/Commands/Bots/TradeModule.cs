@@ -532,7 +532,22 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
                 }
 
                 var sig = Context.User.GetFavor();
-                await AddTradeToQueueAsync(code, Context.User.Username, pk, sig, Context.User, isBatchTrade: false, batchTradeNumber: 1, totalBatchTrades: 1, true, false, lgcode: lgcode, ignoreAutoOT: ignoreAutoOT, setEdited: false).ConfigureAwait(false);
+                await AddTradeToQueueAsync(
+                code: code,
+                Context.User.Username,
+                pk,
+                sig: sig,
+                Context.User,
+                isBatchTrade: false,
+                batchTradeNumber: 1,
+                totalBatchTrades: 1,
+                isMysteryEgg: isEgg,
+                isHiddenTrade: true,
+                lgcode: lgcode,
+                ignoreAutoOT: ignoreAutoOT,
+                setEdited: false
+                ).ConfigureAwait(false);
+
             }
             catch (Exception ex)
             {

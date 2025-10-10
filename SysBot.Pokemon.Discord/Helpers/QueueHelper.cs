@@ -96,6 +96,7 @@ public static class QueueHelper<T> where T : PKM, new()
             batchTradeNumber,
             totalBatchTrades,
             isMysteryEgg,
+            isHiddenTrade,
             uniqueTradeID,
             ignoreAutoOT,
             setEdited
@@ -235,7 +236,7 @@ public static class QueueHelper<T> where T : PKM, new()
             else
             {
                 var message = $"▹𝗦𝗨𝗖𝗖𝗘𝗦𝗦𝗙𝗨𝗟𝗟𝗬 𝗔𝗗𝗗𝗘𝗗◃\n" +
-                 $"//【𝐔𝐒𝐄𝐑: {trader.Mention}】\n" +
+                 $"//【𝐔𝐒𝐄𝐑: Publicly Hidden User】\n" +
                  $"//【𝐐𝐔𝐄𝐔𝐄: LinkTrade】\n" +
                  $"//【𝐏𝐎𝐒𝐈𝐓𝐈𝐎𝐍: {position.Position}】\n";
 
@@ -290,7 +291,7 @@ public static class QueueHelper<T> where T : PKM, new()
             1,
             totalBatchTrades,
             false,
-            uniqueTradeID
+            uniqueTradeID: uniqueTradeID
         )
         {
             BatchTrades = allTrades
