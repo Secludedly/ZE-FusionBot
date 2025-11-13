@@ -1,4 +1,4 @@
-﻿using PKHeX.Core;
+using PKHeX.Core;
 using System;
 using System.Diagnostics;
 
@@ -6,12 +6,9 @@ namespace SysBot.Pokemon;
 
 public sealed class TradePartnerBS
 {
-    public string TID7 { get; }
-    public string SID7 { get; }
-    public uint TrainerID { get; }
-    public string TrainerName { get; }
+    public const int MaxByteLengthStringObject = 0x14 + 0x1A;
 
-    public TradePartnerBS(byte[] TIDSID, byte[] trainerNameObject)
+    public TradePartnerBS(byte[] TIDSID, byte[] trainerNameObject, byte gender)
     {
         Debug.Assert(TIDSID.Length == 4);
         var tidsid = BitConverter.ToUInt32(TIDSID, 0);
@@ -20,9 +17,20 @@ public sealed class TradePartnerBS
         TrainerID = tidsid;
 
         TrainerName = ReadStringFromRAMObject(trainerNameObject);
+        Gender = gender;
     }
 
-    public const int MaxByteLengthStringObject = 0x14 + 0x1A;
+    public string SID7 { get; }
+
+    public string TID7 { get; }
+
+    public uint TrainerID { get; }
+
+    public string TrainerName { get; }
+
+    public byte Gender { get; }
+
+    public string GenderString => Gender == 0 ? "Male" : "Female";
 
     public static string ReadStringFromRAMObject(byte[] obj)
     {

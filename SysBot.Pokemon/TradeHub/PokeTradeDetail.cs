@@ -22,8 +22,6 @@ namespace SysBot.Pokemon
         /// </summary>
         public readonly int Code;
 
-        public bool IsHiddenTrade { get; set; } = false;
-
         /// <summary> Data to be traded </summary>
         public TPoke TradeData;
 
@@ -54,17 +52,26 @@ namespace SysBot.Pokemon
         public List<Pictocodes> LGPETradeCode;
 
         public readonly int BatchTradeNumber;
+
         public readonly int TotalBatchTrades;
+
         public readonly int UniqueTradeID;
+
         public string? MetDate { get; set; }
+
         public bool IsCanceled { get; set; }
+
         public bool IsMysteryEgg { get; }
+
         public bool IgnoreAutoOT { get; }
 
         public bool SetEdited { get; set; }
         public List<TPoke>? BatchTrades { get; set; }
 
-        public PokeTradeDetail(TPoke pkm, PokeTradeTrainerInfo info, IPokeTradeNotifier<TPoke> notifier, PokeTradeType type, int code, bool favored = false, List<Pictocodes>? lgcode = null, int batchTradeNumber = 0, int totalBatchTrades = 0, bool isMysteryEgg = false, bool isHiddenTrade = false, int uniqueTradeID = 0, bool ignoreAutoOT = false, bool setEdited = false)
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+
+        public PokeTradeDetail(TPoke pkm, PokeTradeTrainerInfo info, IPokeTradeNotifier<TPoke> notifier, PokeTradeType type, int code, bool favored = false, List<Pictocodes>? lgcode = null, int batchTradeNumber = 0, int totalBatchTrades = 0, bool isMysteryEgg = false, int uniqueTradeID = 0, bool ignoreAutoOT = false, bool setEdited = false)
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         {
             ID = Interlocked.Increment(ref CreatedCount) % 50000;
             Code = code;
@@ -74,11 +81,12 @@ namespace SysBot.Pokemon
             Type = type;
             Time = DateTime.Now;
             IsFavored = favored;
-            LGPETradeCode = lgcode ?? new List<Pictocodes>(); // Fixes CS8601 and CS8618
+#pragma warning disable CS8601 // Possible null reference assignment.
+            LGPETradeCode = lgcode;
+#pragma warning restore CS8601 // Possible null reference assignment.
             BatchTradeNumber = batchTradeNumber;
             TotalBatchTrades = totalBatchTrades;
             IsMysteryEgg = isMysteryEgg;
-            IsHiddenTrade = isHiddenTrade;
             UniqueTradeID = uniqueTradeID;
             IgnoreAutoOT = ignoreAutoOT;
             SetEdited = setEdited;
@@ -131,14 +139,23 @@ namespace SysBot.Pokemon
     public enum Pictocodes
     {
         Pikachu,
+
         Eevee,
+
         Bulbasaur,
+
         Charmander,
+
         Squirtle,
+
         Pidgey,
+
         Caterpie,
+
         Rattata,
+
         Jigglypuff,
+
         Diglett
     }
 }

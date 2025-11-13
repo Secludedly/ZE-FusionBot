@@ -15,6 +15,7 @@ namespace SysBot.Pokemon.TradeHub
         private static readonly object _sync2 = new();
         private static readonly string ItemPath = @"0items.txt";
         private static readonly char[] separator = ['\n'];
+        private static readonly Dictionary<string, int> UserListSpecialReqCount = [];
 
         #region Item ID Constants
         // Pokeballs
@@ -22,14 +23,14 @@ namespace SysBot.Pokemon.TradeHub
         private const int ITEM_ULTRA_BALL = 2;
         private const int ITEM_GREAT_BALL = 3;
         private const int ITEM_POKE_BALL = 4;
-
+        
         // Shiny Items
         private const int ITEM_ANTIDOTE = 18;
         private const int ITEM_BURN_HEAL = 19;
         private const int ITEM_ICE_HEAL = 20;
         private const int ITEM_AWAKENING = 21;
         private const int ITEM_PARALYZE_HEAL = 22;
-
+        
         // IV/Stat Items
         private const int ITEM_FULL_HEAL = 27;
         private const int ITEM_REVIVE = 28;
@@ -37,7 +38,7 @@ namespace SysBot.Pokemon.TradeHub
         private const int ITEM_SODA_POP = 31;
         private const int ITEM_LEMONADE = 32;
         private const int ITEM_POKE_DOLL = 63;
-
+        
         // Language Items
         private const int ITEM_PP_UP = 51;
         private const int ITEM_GUARD_SPEC = 55;
@@ -48,16 +49,16 @@ namespace SysBot.Pokemon.TradeHub
         private const int ITEM_X_ACCURACY = 60;
         private const int ITEM_X_SP_ATK = 61;
         private const int ITEM_X_SP_DEF = 62;
-
+        
         // Mint Items
         private const int MINT_START = 1231;
         private const int MINT_END = 1251;
-
+        
         // Tera Shard Items
         private const int TERA_SHARD_START = 1862;
         private const int TERA_SHARD_END = 1879;
         private const int STELLAR_TERA_SHARD = 2549;
-
+        
         // Perfect IVs
         private static readonly int[] PerfectIVs = [31, 31, 31, 31, 31, 31];
         private static readonly int[] PhysicalIVs = [31, 0, 31, 0, 31, 31];
@@ -128,7 +129,7 @@ namespace SysBot.Pokemon.TradeHub
         {
             GameStrings str = GameInfo.GetStrings(GameLanguage.DefaultLanguage);
             var allitems = str.GetItemStrings(pk.Context, GameVersion.SWSH);
-
+            
             if (heldItem > 0 && heldItem < allitems.Length)
             {
                 var itemHeld = allitems[heldItem];
@@ -154,7 +155,7 @@ namespace SysBot.Pokemon.TradeHub
         /// <summary>
         /// Processes held item-based modification requests.
         /// </summary>
-        private static SpecialTradeType ProcessHeldItemRequest<T>(ref T pk, PokeRoutineExecutor<T> caller, PokeTradeDetail<T> detail,
+        private static SpecialTradeType ProcessHeldItemRequest<T>(ref T pk, PokeRoutineExecutor<T> caller, PokeTradeDetail<T> detail, 
             string trainerName, bool hasHomeTracker, int rewardItem, int heldItem) where T : PKM, new()
         {
             // Pokeball-based OT/Nickname changes
@@ -189,8 +190,8 @@ namespace SysBot.Pokemon.TradeHub
         /// </summary>
         private static bool IsStatChangeItem(int item)
         {
-            return item == ITEM_FULL_HEAL || item == ITEM_REVIVE ||
-                   (item >= ITEM_FRESH_WATER && item <= ITEM_LEMONADE) ||
+            return item == ITEM_FULL_HEAL || item == ITEM_REVIVE || 
+                   (item >= ITEM_FRESH_WATER && item <= ITEM_LEMONADE) || 
                    item == ITEM_POKE_DOLL;
         }
 
@@ -205,12 +206,12 @@ namespace SysBot.Pokemon.TradeHub
         /// <summary>
         /// Processes Pokeball-based OT and nickname modifications.
         /// </summary>
-        private static SpecialTradeType ProcessPokeballRequest<T>(ref T pk, PokeRoutineExecutor<T> caller, PokeTradeDetail<T> detail,
+        private static SpecialTradeType ProcessPokeballRequest<T>(ref T pk, PokeRoutineExecutor<T> caller, PokeTradeDetail<T> detail, 
             string trainerName, bool hasHomeTracker, int rewardItem) where T : PKM, new()
         {
             if (!HandleHomeTrackerForCloneChange(hasHomeTracker, caller, detail))
                 return SpecialTradeType.FailReturn;
-
+            
             switch (pk.HeldItem)
             {
                 case ITEM_ULTRA_BALL:
@@ -226,19 +227,22 @@ namespace SysBot.Pokemon.TradeHub
             }
 
             ApplyCommonModifications(ref pk, rewardItem);
-            LegalizeIfNotLegal(ref pk, caller, detail);
+
+            if (!CheckLegalityAfterModification(pk, caller, detail))
+                return SpecialTradeType.FailReturn;
+
             return SpecialTradeType.SanitizeReq;
         }
 
         /// <summary>
         /// Processes shiny modification requests.
         /// </summary>
-        private static SpecialTradeType ProcessShinyRequest<T>(ref T pk, PokeRoutineExecutor<T> caller, PokeTradeDetail<T> detail,
+        private static SpecialTradeType ProcessShinyRequest<T>(ref T pk, PokeRoutineExecutor<T> caller, PokeTradeDetail<T> detail, 
             bool hasHomeTracker, int rewardItem) where T : PKM, new()
         {
             if (!HandleHomeTrackerForCloneChange(hasHomeTracker, caller, detail))
                 return SpecialTradeType.FailReturn;
-
+            
             if (pk.HeldItem == ITEM_PARALYZE_HEAL)
             {
                 pk.SetUnshiny();
@@ -254,7 +258,9 @@ namespace SysBot.Pokemon.TradeHub
                 CommonEdits.SetShiny(pk, type);
             }
 
-            LegalizeIfNotLegal(ref pk, caller, detail);
+            // Check if modifications made it illegal
+            if (!CheckLegalityAfterModification(pk, caller, detail))
+                return SpecialTradeType.FailReturn;
 
             if (!pk.IsEgg)
             {
@@ -267,12 +273,12 @@ namespace SysBot.Pokemon.TradeHub
         /// <summary>
         /// Processes IV and stat modification requests.
         /// </summary>
-        private static SpecialTradeType ProcessStatChangeRequest<T>(ref T pk, PokeRoutineExecutor<T> caller, PokeTradeDetail<T> detail,
+        private static SpecialTradeType ProcessStatChangeRequest<T>(ref T pk, PokeRoutineExecutor<T> caller, PokeTradeDetail<T> detail, 
             bool hasHomeTracker, int rewardItem, int heldItem) where T : PKM, new()
         {
             if (!HandleHomeTrackerForCloneChange(hasHomeTracker, caller, detail))
                 return SpecialTradeType.FailReturn;
-
+            
             // Apply IV/Level changes based on item
             switch (heldItem)
             {
@@ -302,19 +308,22 @@ namespace SysBot.Pokemon.TradeHub
                 iht.HyperTrainClear();
 
             ApplyCommonModifications(ref pk, rewardItem);
-            LegalizeIfNotLegal(ref pk, caller, detail);
+
+            if (!CheckLegalityAfterModification(pk, caller, detail))
+                return SpecialTradeType.FailReturn;
+
             return SpecialTradeType.StatChange;
         }
 
         /// <summary>
         /// Processes Tera Type modification requests for Generation 9 Pokemon.
         /// </summary>
-        private static SpecialTradeType ProcessTeraTypeRequest<T>(ref T _, PK9 pk9, PokeRoutineExecutor<T> caller, PokeTradeDetail<T> detail,
+        private static SpecialTradeType ProcessTeraTypeRequest<T>(ref T _, PK9 pk9, PokeRoutineExecutor<T> caller, PokeTradeDetail<T> detail, 
             bool hasHomeTracker, int rewardItem) where T : PKM, new()
         {
             if (!HandleHomeTrackerForCloneChange(hasHomeTracker, caller, detail))
                 return SpecialTradeType.FailReturn;
-
+            
             // Map item to Tera Type
             MoveType teraType = pk9.HeldItem switch
             {
@@ -341,11 +350,14 @@ namespace SysBot.Pokemon.TradeHub
             };
 
             pk9.TeraTypeOverride = teraType;
-            var pk9AsT = (T)(PKM)pk9;
-            LegalizeIfNotLegal(ref pk9AsT, caller, detail);
 
             SimpleEdits.SetRecordFlags(pk9, []);
             pk9.HeldItem = rewardItem;
+
+            // Need to cast pk9 back to T for the legality check
+            var pkAsT = (T)(PKM)pk9;
+            if (!CheckLegalityAfterModification(pkAsT, caller, detail))
+                return SpecialTradeType.FailReturn;
 
             return SpecialTradeType.TeraChange;
         }
@@ -353,7 +365,7 @@ namespace SysBot.Pokemon.TradeHub
         /// <summary>
         /// Processes language modification requests.
         /// </summary>
-        private static SpecialTradeType ProcessLanguageRequest<T>(ref T pk, PokeRoutineExecutor<T> caller, PokeTradeDetail<T> detail,
+        private static SpecialTradeType ProcessLanguageRequest<T>(ref T pk, PokeRoutineExecutor<T> caller, PokeTradeDetail<T> detail, 
             int rewardItem, int heldItem) where T : PKM, new()
         {
             // Map item to language
@@ -374,8 +386,10 @@ namespace SysBot.Pokemon.TradeHub
             pk.Language = (int)language;
             pk.ClearNickname();
 
-            LegalizeIfNotLegal(ref pk, caller, detail);
             ApplyCommonModifications(ref pk, rewardItem);
+
+            if (!CheckLegalityAfterModification(pk, caller, detail))
+                return SpecialTradeType.FailReturn;
 
             return SpecialTradeType.SanitizeReq;
         }
@@ -383,17 +397,17 @@ namespace SysBot.Pokemon.TradeHub
         /// <summary>
         /// Processes nature modification requests using mints.
         /// </summary>
-        private static SpecialTradeType ProcessNatureRequest<T>(ref T pk, PokeRoutineExecutor<T> caller, PokeTradeDetail<T> detail,
+        private static SpecialTradeType ProcessNatureRequest<T>(ref T pk, PokeRoutineExecutor<T> caller, PokeTradeDetail<T> detail, 
             bool hasHomeTracker, int rewardItem, int heldItem) where T : PKM, new()
         {
             if (!HandleHomeTrackerForCloneChange(hasHomeTracker, caller, detail))
                 return SpecialTradeType.FailReturn;
-
+            
             GameStrings strings = GameInfo.GetStrings(GameLanguage.DefaultLanguage);
             var items = strings.GetItemStrings(pk.Context, GameVersion.SWSH);
             var itemName = items[heldItem];
             var natureName = itemName.Split(' ')[0];
-
+            
             if (!Enum.TryParse(natureName, out Nature result))
             {
                 detail.SendNotification(caller, "Nature request was not found in the db.");
@@ -402,7 +416,9 @@ namespace SysBot.Pokemon.TradeHub
 
             pk.Nature = pk.StatNature = result;
             ApplyCommonModifications(ref pk, rewardItem);
-            LegalizeIfNotLegal(ref pk, caller, detail);
+
+            if (!CheckLegalityAfterModification(pk, caller, detail))
+                return SpecialTradeType.FailReturn;
 
             return SpecialTradeType.StatChange;
         }
@@ -420,11 +436,13 @@ namespace SysBot.Pokemon.TradeHub
             if (item < 0)
             {
                 detail.SendNotification(caller, "Item request was invalid. Check spelling & gen.");
-                return SpecialTradeType.None;
+                return SpecialTradeType.FailReturn;
             }
 
             pk.HeldItem = item;
-            LegalizeIfNotLegal(ref pk, caller, detail);
+
+            if (!CheckLegalityAfterModification(pk, caller, detail))
+                return SpecialTradeType.FailReturn;
 
             return SpecialTradeType.ItemReq;
         }
@@ -442,11 +460,14 @@ namespace SysBot.Pokemon.TradeHub
             if (ball < 0)
             {
                 detail.SendNotification(caller, "Ball request was invalid. Check spelling & gen.");
-                return SpecialTradeType.None;
+                return SpecialTradeType.FailReturn;
             }
 
             pk.Ball = (byte)ball;
-            LegalizeIfNotLegal(ref pk, caller, detail);
+            pk.ClearNickname(); // Clear the nickname after changing the ball
+
+            if (!CheckLegalityAfterModification(pk, caller, detail))
+                return SpecialTradeType.FailReturn;
 
             return SpecialTradeType.BallReq;
         }
@@ -454,7 +475,7 @@ namespace SysBot.Pokemon.TradeHub
         /// <summary>
         /// Handles wonder card requests using nickname containing 'pls'.
         /// </summary>
-        private static SpecialTradeType HandleWonderCardRequest<T>(ref T pk, PokeRoutineExecutor<T> caller, PokeTradeDetail<T> detail,
+        private static SpecialTradeType HandleWonderCardRequest<T>(ref T pk, PokeRoutineExecutor<T> caller, PokeTradeDetail<T> detail, 
             SaveFile sav) where T : PKM, new()
         {
             T? loaded = LoadEvent<T>(pk.Nickname.Replace("pls", string.Empty).ToLower(), sav);
@@ -492,7 +513,7 @@ namespace SysBot.Pokemon.TradeHub
                 {
                     if (!File.Exists(ItemPath))
                         return tmp;
-
+                        
                     var rawText = File.ReadAllText(ItemPath);
                     foreach (var st in rawText.Split(separator, StringSplitOptions.RemoveEmptyEntries))
                     {
@@ -507,42 +528,23 @@ namespace SysBot.Pokemon.TradeHub
         }
 
         /// <summary>
-        /// Attempts to legalize a Pokemon if it's not already legal.
+        /// Checks if a Pokemon is legal after modifications. Does not attempt to legalize.
         /// </summary>
-        private static void LegalizeIfNotLegal<T>(ref T pkm, PokeRoutineExecutor<T> caller, PokeTradeDetail<T> detail) where T : PKM, new()
+        /// <returns>True if legal, false if illegal</returns>
+        private static bool CheckLegalityAfterModification<T>(T pkm, PokeRoutineExecutor<T> caller, PokeTradeDetail<T> detail) where T : PKM, new()
         {
-            var tempPk = pkm.Clone();
             var la = new LegalityAnalysis(pkm);
 
             if (!la.Valid)
             {
-                detail.SendNotification(caller, "This request isn't legal! Attempting to legalize...");
-                caller.Log(la.Report());
-
-                try
-                {
-                    pkm = (T)pkm.LegalizePokemon();
-                }
-                catch (Exception e)
-                {
-                    caller.Log($"Legalization failed: {e.Message}");
-                    return;
-                }
-            }
-            else
-            {
-                return;
+                detail.SendNotification(caller, "This modification made the Pokémon illegal per PKHeX's legality checks. Cannot complete this request. The Pokémon will be returned unchanged.");
+                var report = la.Report();
+                caller.Log(report);
+                detail.SendNotification(caller, report);
+                return false;
             }
 
-            // Restore original trainer name if needed
-            pkm.OriginalTrainerName = tempPk.OriginalTrainerName;
-
-            // Re-check legality
-            la = new LegalityAnalysis(pkm);
-            if (!la.Valid)
-            {
-                pkm = (T)pkm.LegalizePokemon();
-            }
+            return true;
         }
 
         /// <summary>
@@ -552,13 +554,13 @@ namespace SysBot.Pokemon.TradeHub
         {
             // Try loading different wondercard formats
             string[] extensions = [".wc9", ".wc8", ".wc7", ".wc6", ".pgf"];
-
+            
             foreach (var ext in extensions)
             {
                 string pathwc = Path.Combine("wc", eventName + ext);
                 if (!File.Exists(pathwc))
                     continue;
-
+                    
                 byte[] wcData = File.ReadAllBytes(pathwc);
                 MysteryGift? wc = ext switch
                 {
@@ -574,7 +576,7 @@ namespace SysBot.Pokemon.TradeHub
                     continue;
 
                 var pkLoaded = wc.ConvertToPKM(sav);
-
+                
                 // Convert to appropriate format if needed
                 if (!pkLoaded.SWSH)
                 {
@@ -585,11 +587,11 @@ namespace SysBot.Pokemon.TradeHub
                         QuickLegalize(ref pkLoaded);
                     }
                 }
-
+                
                 if (pkLoaded != null)
                     return (T)pkLoaded;
             }
-
+            
             return null;
         }
 
@@ -602,7 +604,7 @@ namespace SysBot.Pokemon.TradeHub
             if (!la.Valid)
                 pkm = pkm.LegalizePokemon();
         }
-
+        
         /// <summary>
         /// Validates if clone changes can be applied to Pokemon with Home Tracker.
         /// </summary>
@@ -615,7 +617,7 @@ namespace SysBot.Pokemon.TradeHub
             // If the Pokemon doesn't have a Home Tracker, we can proceed with clone changes
             if (!hasHomeTracker)
                 return true;
-
+            
             // Pokemon has a Home Tracker - block all clone changes for safety
             detail.SendNotification(caller, "Cannot apply clone changes to this Pokemon. It has a Home Tracker, and modifying it would invalidate the tracker. Please use a Pokemon without a Home Tracker.");
             caller.Log("Clone change blocked - Pokemon has Home Tracker. Modifications would invalidate the tracker.");

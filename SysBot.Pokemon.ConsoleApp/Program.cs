@@ -3,6 +3,7 @@ using SysBot.Base;
 using SysBot.Pokemon.Z3;
 using System;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -18,17 +19,17 @@ public static class Program
         var cfg = new ProgramConfig { Bots = [bot] };
         var created = JsonSerializer.Serialize(cfg, ProgramConfigContext.Default.ProgramConfig);
         File.WriteAllText(ConfigPath, created);
-        Console.WriteLine("Created new config file since none was found in the program's path. Please configure it and restart the program.");
-        Console.WriteLine("It is suggested to configure this config file using the GUI project if possible, as it will help you assign values correctly.");
-        Console.WriteLine("Press any key to exit.");
+        LogUtil.LogInfo("SysBot", "Created new config file since none was found in the program's path. Please configure it and restart the program.");
+        LogUtil.LogInfo("SysBot", "It is suggested to configure this config file using the GUI project if possible, as it will help you assign values correctly.");
+        LogUtil.LogInfo("SysBot", "Press any key to exit.");
         Console.ReadKey();
     }
 
     private static void Main(string[] args)
     {
-        Console.WriteLine("Starting up...");
+        LogUtil.LogInfo("SysBot", "Starting up...");
         if (args.Length > 1)
-            Console.WriteLine("This program does not support command line arguments.");
+            LogUtil.LogInfo("SysBot", "This program does not support command line arguments.");
 
         if (!File.Exists(ConfigPath))
         {
@@ -45,12 +46,11 @@ public static class Program
         }
         catch (Exception)
         {
-            Console.WriteLine("Unable to start bots with saved config file. Please copy your config from the WinForms project or delete it and reconfigure.");
+            LogUtil.LogInfo("SysBot", "Unable to start bots with saved config file. Please copy your config from the WinForms project or delete it and reconfigure.");
             Console.ReadKey();
         }
     }
 }
-
 
 [JsonSerializable(typeof(ProgramConfig))]
 [JsonSourceGenerationOptions(WriteIndented = true, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
@@ -65,13 +65,13 @@ public static class BotContainer
         {
             bot.Initialize();
             if (!AddBot(env, bot, prog.Mode))
-                Console.WriteLine($"Failed to add bot: {bot}");
+                LogUtil.LogInfo("SysBot", $"Failed to add bot: {bot}");
         }
 
         LogUtil.Forwarders.Add(ConsoleForwarder.Instance);
         env.StartAll();
-        Console.WriteLine($"Started all bots (Count: {prog.Bots.Length}.");
-        Console.WriteLine("Press any key to stop execution and quit. Feel free to minimize this window!");
+        LogUtil.LogInfo("SysBot", $"Started all bots (Count: {prog.Bots.Length}).");
+        LogUtil.LogInfo("SysBot", "Press any key to stop execution and quit. Feel free to minimize this window!");
         Console.ReadKey();
         env.StopAll();
     }
@@ -80,7 +80,7 @@ public static class BotContainer
     {
         if (!cfg.IsValid())
         {
-            Console.WriteLine($"{cfg}'s config is not valid.");
+            LogUtil.LogInfo("SysBot", $"{cfg}'s config is not valid.");
             return false;
         }
 
@@ -91,7 +91,7 @@ public static class BotContainer
         }
         catch
         {
-            Console.WriteLine($"Current Mode ({mode}) does not support this type of bot ({cfg.CurrentRoutineType}).");
+            LogUtil.LogInfo("SysBot", $"Current Mode ({mode}) does not support this type of bot ({cfg.CurrentRoutineType}).");
             return false;
         }
         try
@@ -100,21 +100,22 @@ public static class BotContainer
         }
         catch (ArgumentException ex)
         {
-            Console.WriteLine(ex.Message);
+            LogUtil.LogInfo("SysBot", ex.Message);
             return false;
         }
 
-        Console.WriteLine($"Added: {cfg}: {cfg.InitialRoutine}");
+        LogUtil.LogInfo("SysBot", $"Added: {cfg}: {cfg.InitialRoutine}");
         return true;
     }
 
     private static IPokeBotRunner GetRunner(ProgramConfig prog) => prog.Mode switch
     {
-        ProgramMode.SWSH => new PokeBotRunnerImpl<PK8>(prog.Hub, new BotFactory8SWSH()),
-        ProgramMode.BDSP => new PokeBotRunnerImpl<PB8>(prog.Hub, new BotFactory8BS()),
-        ProgramMode.LA => new PokeBotRunnerImpl<PA8>(prog.Hub, new BotFactory8LA()),
-        ProgramMode.SV => new PokeBotRunnerImpl<PK9>(prog.Hub, new BotFactory9SV()),
-        ProgramMode.LGPE => new PokeBotRunnerImpl<PB7>(prog.Hub, new BotFactory7LGPE()),
+        ProgramMode.SWSH => new PokeBotRunnerImpl<PK8>(new PokeTradeHub<PK8>(prog.Hub), new BotFactory8SWSH(), prog),
+        ProgramMode.BDSP => new PokeBotRunnerImpl<PB8>(new PokeTradeHub<PB8>(prog.Hub), new BotFactory8BS(), prog),
+        ProgramMode.LA => new PokeBotRunnerImpl<PA8>(new PokeTradeHub<PA8>(prog.Hub), new BotFactory8LA(), prog),
+        ProgramMode.SV => new PokeBotRunnerImpl<PK9>(new PokeTradeHub<PK9>(prog.Hub), new BotFactory9SV(), prog),
+        ProgramMode.LGPE => new PokeBotRunnerImpl<PB7>(new PokeTradeHub<PB7>(prog.Hub), new BotFactory7LGPE(), prog),
+        ProgramMode.PLZA => new PokeBotRunnerImpl<PA9>(new PokeTradeHub<PA9>(prog.Hub), new BotFactory9PLZA(), prog),
         _ => throw new IndexOutOfRangeException("Unsupported mode."),
     };
 }

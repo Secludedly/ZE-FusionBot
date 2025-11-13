@@ -156,7 +156,7 @@ public class JokeModule : ModuleBase<SocketCommandContext>
         "I’ve heard that three out of five people suffer from a chronic disease. Does that mean two out of five people enjoy it?",
         "My favorite Disney movie is The Hunchback of Notre Dame. I love a hero with a twisted back story.",
         "Cremation. My final hope for a smokin’ hot body!",
-        "I was drinking a martini when the waitress screamed, “Does anyone know CPR?” \nI yelled, “I know the entire alphabet,” and we all laughed and laughed... \n...Except for one person because he's dead now.",
+        "I was drinking a martini when the waitress screamed, “Does anyone know CPR?” \nI yelled, “I know it! I actually know the **entire** alphabet,” and we all laughed and laughed... \n...Except for one person.\nHe's dead now lol.",
         "Why is it that if you donate a kidney, people love you. But if you donate five kidneys, they call the police.",
         "Why are friends a lot like snow? If you pee on them, they disappear.",
         "Today was the worst day of my life. My ex got hit by a school bus, and I lost my job as a bus driver."

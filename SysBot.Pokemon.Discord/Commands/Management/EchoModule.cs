@@ -35,57 +35,105 @@ namespace SysBot.Pokemon.Discord
     public class EchoModule : ModuleBase<SocketCommandContext>
     {
         private static DiscordSettings? Settings { get; set; }
-        private class EchoChannel(ulong channelId, string channelName, Action<string> action, Action<byte[], string, EmbedBuilder>? raidAction)
+
+        private static DiscordSocketClient? _discordClient;
+
+        private class EchoChannel(ulong channelId, string channelName, Action<string> action, Action<byte[], string, EmbedBuilder> raidAction)
         {
             public readonly ulong ChannelID = channelId;
+
             public readonly string ChannelName = channelName;
+
             public readonly Action<string> Action = action;
-            public readonly Action<byte[], string, EmbedBuilder>? RaidAction = raidAction;
+
+            public readonly Action<byte[], string, EmbedBuilder> RaidAction = raidAction;
+
             public string EmbedResult = string.Empty;
         }
 
         private class EncounterEchoChannel(ulong channelId, string channelName, Action<string, Embed> embedaction)
         {
             public readonly ulong ChannelID = channelId;
+
             public readonly string ChannelName = channelName;
+
             public readonly Action<string, Embed> EmbedAction = embedaction;
+
             public string EmbedResult = string.Empty;
         }
 
         private static readonly Dictionary<ulong, EchoChannel> Channels = [];
+
         private static readonly Dictionary<ulong, EncounterEchoChannel> EncounterChannels = [];
 
         public static void RestoreChannels(DiscordSocketClient discord, DiscordSettings cfg)
         {
             Settings = cfg;
+            _discordClient = discord;
             foreach (var ch in cfg.AnnouncementChannels)
             {
                 if (discord.GetChannel(ch.ID) is ISocketMessageChannel c)
                     AddEchoChannel(c, ch.ID);
             }
+
             // EchoUtil.Echo("Added echo notification to Discord channel(s) on Bot startup.");
+        }
+
+        public static async Task SendQueueStatusEmbedAsync(bool isFull, int currentCount, int maxCount)
+        {
+            if (Settings == null || _discordClient == null || Channels.Count == 0)
+                return;
+
+            var unixTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            var formattedTimestamp = $"<t:{unixTimestamp}:F>";
+
+            var embedColor = isFull ? Color.Red : Color.Green;
+            var title = isFull ? "🚫 Queue is Now Full!" : "✅ Queue is Now Open!";
+            var description = isFull
+                ? $"The queue has reached maximum capacity and is now **closed**.\n\n**Current Queue Count:** {currentCount}/{maxCount}\n\nThe queue will automatically open when trades are completed and space becomes available.\n\n**Status Updated:** {formattedTimestamp}"
+                : $"The queue is now **open** and accepting new trades!\n\n**Current Queue Count:** {currentCount}/{maxCount}\n\n**Status Updated:** {formattedTimestamp}";
+
+            var thumbnailUrl = Settings.AnnouncementSettings.RandomAnnouncementThumbnail ? GetRandomThumbnail() : GetSelectedThumbnail();
+
+            var embed = new EmbedBuilder
+            {
+                Color = embedColor,
+                Description = description
+            }
+            .WithTitle(title)
+            .WithThumbnailUrl(thumbnailUrl)
+            .WithFooter("Queue status updates are automatic")
+            .Build();
+
+            foreach (var channelEntry in Channels)
+            {
+                var channelId = channelEntry.Key;
+                try
+                {
+                    if (_discordClient.GetChannel(channelId) is ISocketMessageChannel channel)
+                    {
+                        await channel.SendMessageAsync(embed: embed).ConfigureAwait(false);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LogUtil.LogError($"Failed to send queue status to channel {channelId}: {ex.Message}", nameof(SendQueueStatusEmbedAsync));
+                }
+            }
         }
 
         [Command("Announce", RunMode = RunMode.Async)]
         [Alias("announce")]
-        [Summary("Sends an announcement to all EchoChannels added to the bot.")]
+        [Summary("Sends an announcement to all EchoChannels added by the aec command.")]
         [RequireOwner]
         public async Task AnnounceAsync([Remainder] string announcement)
         {
-            if (Settings?.AnnouncementSettings == null)
-            {
-                await ReplyAsync("Announcement settings are not configured.").ConfigureAwait(false);
-                return;
-            }
-
             var unixTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             var formattedTimestamp = $"<t:{unixTimestamp}:F>";
-            var embedColor = Settings.AnnouncementSettings.RandomAnnouncementColor
-                ? GetRandomColor()
-                : Settings.AnnouncementSettings.AnnouncementEmbedColor.ToDiscordColor();
-            var thumbnailUrl = Settings.AnnouncementSettings.RandomAnnouncementThumbnail
-                ? GetRandomThumbnail()
-                : GetSelectedThumbnail();
+#pragma warning disable CS8602 // Dereference of a possibly null reference.
+            var embedColor = Settings.AnnouncementSettings.RandomAnnouncementColor ? GetRandomColor() : Settings.AnnouncementSettings.AnnouncementEmbedColor.ToDiscordColor();
+#pragma warning restore CS8602 // Dereference of a possibly null reference.
+            var thumbnailUrl = Settings.AnnouncementSettings.RandomAnnouncementThumbnail ? GetRandomThumbnail() : GetSelectedThumbnail();
 
             var embedDescription = $"## {announcement}\n\n**Sent: {formattedTimestamp}**";
 
@@ -134,13 +182,13 @@ namespace SysBot.Pokemon.Discord
         {
             var thumbnailOptions = new List<string>
     {
-        "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/imgs/gengarmegaphone.png",
-        "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/imgs/pikachumegaphone.png",
-        "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/imgs/umbreonmegaphone.png",
-        "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/imgs/sylveonmegaphone.png",
-        "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/imgs/charmandermegaphone.png",
-        "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/imgs/jigglypuffmegaphone.png",
-        "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/imgs/flareonmegaphone.png",
+        "https://raw.githubusercontent.com/hexbyt3/sprites/main/imgs/gengarmegaphone.png",
+        "https://raw.githubusercontent.com/hexbyt3/sprites/main/imgs/pikachumegaphone.png",
+        "https://raw.githubusercontent.com/hexbyt3/sprites/main/imgs/umbreonmegaphone.png",
+        "https://raw.githubusercontent.com/hexbyt3/sprites/main/imgs/sylveonmegaphone.png",
+        "https://raw.githubusercontent.com/hexbyt3/sprites/main/imgs/charmandermegaphone.png",
+        "https://raw.githubusercontent.com/hexbyt3/sprites/main/imgs/jigglypuffmegaphone.png",
+        "https://raw.githubusercontent.com/hexbyt3/sprites/main/imgs/flareonmegaphone.png",
     };
             var random = new Random();
             return thumbnailOptions[random.Next(thumbnailOptions.Count)];
@@ -148,39 +196,36 @@ namespace SysBot.Pokemon.Discord
 
         private static string GetSelectedThumbnail()
         {
-            if (Settings?.AnnouncementSettings != null &&
-                !string.IsNullOrEmpty(Settings.AnnouncementSettings.CustomAnnouncementThumbnailUrl))
+#pragma warning disable CS8602 // Dereference of a possibly null reference.
+            if (!string.IsNullOrEmpty(Settings.AnnouncementSettings.CustomAnnouncementThumbnailUrl))
             {
                 return Settings.AnnouncementSettings.CustomAnnouncementThumbnailUrl;
             }
-            else if (Settings?.AnnouncementSettings != null)
+            else
             {
                 return GetUrlFromThumbnailOption(Settings.AnnouncementSettings.AnnouncementThumbnailOption);
             }
-            else
-            {
-                throw new InvalidOperationException("AnnouncementSettings is not configured.");
-            }
+#pragma warning restore CS8602 // Dereference of a possibly null reference.
         }
 
         private static string GetUrlFromThumbnailOption(ThumbnailOption option)
         {
             return option switch
             {
-                ThumbnailOption.Gengar => "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/imgs/gengarmegaphone.png",
-                ThumbnailOption.Pikachu => "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/imgs/pikachumegaphone.png",
-                ThumbnailOption.Umbreon => "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/imgs/umbreonmegaphone.png",
-                ThumbnailOption.Sylveon => "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/imgs/sylveonmegaphone.png",
-                ThumbnailOption.Charmander => "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/imgs/charmandermegaphone.png",
-                ThumbnailOption.Jigglypuff => "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/imgs/jigglypuffmegaphone.png",
-                ThumbnailOption.Flareon => "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/imgs/flareonmegaphone.png",
-                _ => "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/imgs/flareonmegaphone.png",
+                ThumbnailOption.Gengar => "https://raw.githubusercontent.com/hexbyt3/sprites/main/imgs/gengarmegaphone.png",
+                ThumbnailOption.Pikachu => "https://raw.githubusercontent.com/hexbyt3/sprites/main/imgs/pikachumegaphone.png",
+                ThumbnailOption.Umbreon => "https://raw.githubusercontent.com/hexbyt3/sprites/main/imgs/umbreonmegaphone.png",
+                ThumbnailOption.Sylveon => "https://raw.githubusercontent.com/hexbyt3/sprites/main/imgs/sylveonmegaphone.png",
+                ThumbnailOption.Charmander => "https://raw.githubusercontent.com/hexbyt3/sprites/main/imgs/charmandermegaphone.png",
+                ThumbnailOption.Jigglypuff => "https://raw.githubusercontent.com/hexbyt3/sprites/main/imgs/jigglypuffmegaphone.png",
+                ThumbnailOption.Flareon => "https://raw.githubusercontent.com/hexbyt3/sprites/main/imgs/flareonmegaphone.png",
+                _ => "https://raw.githubusercontent.com/hexbyt3/sprites/main/imgs/gengarmegaphone.png",
             };
         }
 
         [Command("addEmbedChannel")]
         [Alias("aec")]
-        [Summary("Assigns a channel for the bot to post embeds to.")]
+        [Summary("Makes the bot post raid embeds to the channel.")]
         [RequireSudo]
         public async Task AddEchoAsync()
         {
@@ -233,7 +278,7 @@ namespace SysBot.Pokemon.Discord
                     {
                         await c.SendMessageAsync("", false, embed.Build()).ConfigureAwait(false);
                     }
-                    return true; 
+                    return true;
                 }
                 catch (Exception ex)
                 {
@@ -279,7 +324,7 @@ namespace SysBot.Pokemon.Discord
 
         [Command("echoClear")]
         [Alias("rec")]
-        [Summary("Clears the special Echo message settings in that specific channel.")]
+        [Summary("Clears the special message echo settings in that specific channel.")]
         [RequireSudo]
         public async Task ClearEchosAsync()
         {
@@ -297,7 +342,7 @@ namespace SysBot.Pokemon.Discord
 
         [Command("echoClearAll")]
         [Alias("raec")]
-        [Summary("Clears all of the special Echo message settings from all channels.")]
+        [Summary("Clears all the special message Echo channel settings.")]
         [RequireSudo]
         public async Task ClearEchosAllAsync()
         {

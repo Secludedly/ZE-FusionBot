@@ -14,13 +14,13 @@ namespace SysBot.Pokemon.Discord;
 
 public static class ReusableActions
 {
-        public static async Task SendPKMAsync(this IMessageChannel channel, PKM pkm, string msg = "")
-        {
-            string shinyMark = "";
-            if (pkm.IsShiny)
-                shinyMark = (pkm.ShinyXor == 0 || pkm.FatefulEncounter) ? "Square Shiny" : "Shiny";
+    public static async Task SendPKMAsync(this IMessageChannel channel, PKM pkm, string msg = "")
+    {
+        string shinyMark = "";
+        if (pkm.IsShiny)
+            shinyMark = (pkm.ShinyXor == 0 || pkm.FatefulEncounter) ? "Square Shiny" : "Shiny";
 
-        var species = GameInfo.GetStrings((int)LanguageID.English).Species[pkm.Species];
+        var species = GameInfo.GetStrings("en").Species[pkm.Species];
         var languageName = ((LanguageID)pkm.Language).ToString();
         var ot = pkm.OriginalTrainerName;
         var tid = pkm.DisplayTID;
@@ -35,38 +35,38 @@ public static class ReusableActions
         // Temp path
         var tmp = Path.Combine(Path.GetTempPath(), fileName);
 
+        try
+        {
+            // Write the file
+            await File.WriteAllBytesAsync(tmp, pkm.DecryptedPartyData);
+
+            // Send the file
+            await channel.SendFileAsync(tmp, msg);
+
+            // Give Discord a little breathing room
+            await Task.Delay(700);
+        }
+        finally
+        {
             try
             {
-                // Write the file
-                await File.WriteAllBytesAsync(tmp, pkm.DecryptedPartyData);
-
-                // Send the file
-                await channel.SendFileAsync(tmp, msg);
-
-                // Give Discord a little breathing room
-                await Task.Delay(700);
+                if (File.Exists(tmp))
+                    File.Delete(tmp);
             }
-            finally
+            catch (Exception ex)
             {
-                try
-                {
-                    if (File.Exists(tmp))
-                        File.Delete(tmp);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Error deleting temporary file: {ex.Message}");
-                }
+                Console.WriteLine($"Error deleting temporary file: {ex.Message}");
             }
         }
+    }
 
-        public static async Task SendPKMAsync(this IUser user, PKM pkm, string msg = "")
-        {
-            string shinyMark = "";
-            if (pkm.IsShiny)
-                shinyMark = (pkm.ShinyXor == 0 || pkm.FatefulEncounter) ? "Square Shiny" : "Shiny";
+    public static async Task SendPKMAsync(this IUser user, PKM pkm, string msg = "")
+    {
+        string shinyMark = "";
+        if (pkm.IsShiny)
+            shinyMark = (pkm.ShinyXor == 0 || pkm.FatefulEncounter) ? "Square Shiny" : "Shiny";
 
-        var species = GameInfo.GetStrings((int)LanguageID.English).Species[pkm.Species];
+        var species = GameInfo.GetStrings("en").Species[pkm.Species];
         var languageName = ((LanguageID)pkm.Language).ToString();
         var ot = pkm.OriginalTrainerName;
         var tid = pkm.DisplayTID;
@@ -79,25 +79,25 @@ public static class ReusableActions
 
         var tmp = Path.Combine(Path.GetTempPath(), fileName);
 
+        try
+        {
+            await File.WriteAllBytesAsync(tmp, pkm.DecryptedPartyData);
+            await user.SendFileAsync(tmp, msg);
+            await Task.Delay(700);
+        }
+        finally
+        {
             try
             {
-                await File.WriteAllBytesAsync(tmp, pkm.DecryptedPartyData);
-                await user.SendFileAsync(tmp, msg);
-                await Task.Delay(700);
+                if (File.Exists(tmp))
+                    File.Delete(tmp);
             }
-            finally
+            catch (Exception ex)
             {
-                try
-                {
-                    if (File.Exists(tmp))
-                        File.Delete(tmp);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Error deleting temporary file: {ex.Message}");
-                }
+                Console.WriteLine($"Error deleting temporary file: {ex.Message}");
             }
         }
+    }
 
     public static string SafeFileName(string input)
     {
@@ -143,7 +143,7 @@ public static class ReusableActions
     {
         var txt = GetFormattedShowdownText(pkm);
         bool canGmax = pkm is PK8 pk8 && pk8.CanGigantamax;
-        var speciesImageUrl = AbstractTrade<PK9>.PokeImg(pkm, canGmax, false);
+        var speciesImageUrl = TradeExtensions<PK9>.PokeImg(pkm, canGmax, false);
 
         var embed = new EmbedBuilder()
             .WithTitle("Pokémon Showdown Set")
@@ -230,7 +230,7 @@ public static class ReusableActions
     }
 
 
-    private static readonly string[] separator = [ ",", ", ", " " ];
+    private static readonly string[] separator = [",", ", ", " "];
 
     public static IReadOnlyList<string> GetListFromString(string str)
     {

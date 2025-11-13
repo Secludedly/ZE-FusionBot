@@ -11,7 +11,6 @@ namespace SysBot.Pokemon.Discord.Helpers
         private readonly DiscordSocketClient _client;
         private readonly ulong _forwardTargetId;
         private static string Prefix => SysCordSettings.Settings.CommandPrefix;
-
         public DMRelayService(DiscordSocketClient client, ulong forwardTargetId)
         {
             _client = client;

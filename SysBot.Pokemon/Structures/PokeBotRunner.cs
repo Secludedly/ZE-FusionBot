@@ -1,6 +1,7 @@
 using PKHeX.Core;
 using SysBot.Base;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,6 +15,8 @@ public interface IPokeBotRunner
     bool RunOnce { get; }
 
     bool IsRunning { get; }
+
+    IList<BotSource<PokeBotState>> Bots { get; }
 
     void StartAll();
 
@@ -34,7 +37,7 @@ public interface IPokeBotRunner
     event EventHandler BotStopped;
 }
 
-public abstract class PokeBotRunner<T> : BotRunner<PokeBotState>, IPokeBotRunner where T : PKM, new()
+public abstract class PokeBotRunner<T> : RecoverableBotRunner<PokeBotState>, IPokeBotRunner where T : PKM, new()
 {
     public readonly PokeTradeHub<T> Hub;
 
@@ -43,6 +46,8 @@ public abstract class PokeBotRunner<T> : BotRunner<PokeBotState>, IPokeBotRunner
     public event EventHandler BotStopped;
 
     public PokeTradeHubConfig Config => Hub.Config;
+
+    IList<BotSource<PokeBotState>> IPokeBotRunner.Bots => base.Bots;
 
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 
@@ -95,11 +100,44 @@ public abstract class PokeBotRunner<T> : BotRunner<PokeBotState>, IPokeBotRunner
 
         AutoLegalityWrapper.EnsureInitialized(Hub.Config.Legality);
 
+        // Initialize recovery service with settings from config
+        InitializeRecoveryService();
+
         AddIntegrations();
         AddTradeBotMonitors();
 
         base.InitializeStart();
     }
+
+    private void InitializeRecoveryService()
+    {
+        var recoveryConfig = new RecoveryConfiguration
+        {
+            EnableRecovery = Hub.Config.Recovery.EnableRecovery,
+            MaxRecoveryAttempts = Hub.Config.Recovery.MaxRecoveryAttempts,
+            InitialRecoveryDelaySeconds = Hub.Config.Recovery.InitialRecoveryDelaySeconds,
+            MaxRecoveryDelaySeconds = Hub.Config.Recovery.MaxRecoveryDelaySeconds,
+            BackoffMultiplier = Hub.Config.Recovery.BackoffMultiplier,
+            CrashHistoryWindowMinutes = Hub.Config.Recovery.CrashHistoryWindowMinutes,
+            MaxCrashesInWindow = Hub.Config.Recovery.MaxCrashesInWindow,
+            RecoverIntentionalStops = Hub.Config.Recovery.RecoverIntentionalStops,
+            MinimumStableUptimeSeconds = Hub.Config.Recovery.MinimumStableUptimeSeconds,
+            NotifyOnRecoveryAttempt = Hub.Config.Recovery.NotifyOnRecoveryAttempt,
+            NotifyOnRecoveryFailure = Hub.Config.Recovery.NotifyOnRecoveryFailure
+        };
+
+        InitializeRecovery(recoveryConfig);
+        
+        if (Hub.Config.Recovery.EnableRecovery)
+        {
+            LogUtil.LogInfo("Bot recovery system is enabled", "Recovery");
+        }
+    }
+
+    /// <summary>
+    /// Gets the recovery service for external integrations (like Discord).
+    /// </summary>
+    public new BotRecoveryService<PokeBotState>? GetRecoveryService() => RecoveryService;
 
     public override void StopAll()
     {
@@ -114,6 +152,9 @@ public abstract class PokeBotRunner<T> : BotRunner<PokeBotState>, IPokeBotRunner
         int count = Hub.BotSync.Barrier.ParticipantCount;
         if (count != 0)
             Hub.BotSync.Barrier.RemoveParticipants(count);
+            
+        // Dispose recovery service when stopping all bots
+        DisposeRecovery();
     }
 
     public override void PauseAll()
@@ -134,11 +175,11 @@ public abstract class PokeBotRunner<T> : BotRunner<PokeBotState>, IPokeBotRunner
 
         var path = Hub.Config.Folder.DistributeFolder;
         if (!Directory.Exists(path))
-            LogUtil.LogError("The distribution folder was not found. Please verify that it exists!", "Hub");
+            LogUtil.LogError("Hub", "The distribution folder was not found. Please verify that it exists!");
 
         var pool = Hub.Ledy.Pool;
         if (!pool.Reload(Hub.Config.Folder.DistributeFolder))
-            LogUtil.LogError("Nothing to distribute for Empty Trade Queues!", "Hub");
+            LogUtil.LogError("Hub", "Nothing to distribute for Empty Trade Queues!");
     }
 
     public PokeRoutineExecutorBase CreateBotFromConfig(PokeBotState cfg) => Factory.CreateBot(Hub, cfg);

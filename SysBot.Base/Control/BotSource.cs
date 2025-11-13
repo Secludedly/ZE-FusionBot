@@ -8,13 +8,13 @@ public class BotSource<T>(RoutineExecutor<T> Bot)
 {
     public readonly RoutineExecutor<T> Bot = Bot;
 
-    public CancellationTokenSource Source = new();
+    private CancellationTokenSource Source = new();
 
     public bool IsPaused { get; private set; }
 
     public bool IsRunning { get; private set; }
 
-    public bool IsStopping { get; set; }
+    public bool IsStopping { get; private set; }
 
     public void Pause()
     {
@@ -79,7 +79,6 @@ public class BotSource<T>(RoutineExecutor<T> Bot)
 
         IsStopping = true;
         Source.Cancel();
-        Source.Dispose();
         Source = new CancellationTokenSource();
 
         Task.Run(async () => await Bot.HardStop()

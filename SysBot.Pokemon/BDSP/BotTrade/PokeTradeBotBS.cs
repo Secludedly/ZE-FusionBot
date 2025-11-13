@@ -18,7 +18,7 @@ namespace SysBot.Pokemon;
 
 // ReSharper disable once ClassWithVirtualMembersNeverInherited.Global
 public class PokeTradeBotBS : PokeRoutineExecutor8BS, ICountBot, ITradeBot, IDisposable
-{  
+{
     private readonly PokeTradeHub<PB8> Hub;
     private readonly TradeAbuseSettings AbuseSettings;
     private readonly FolderSettings DumpSetting;
@@ -420,7 +420,7 @@ public class PokeTradeBotBS : PokeRoutineExecutor8BS, ICountBot, ITradeBot, IDis
             return true;
 
         // Open y-comm and select global room
-        await Click(Y, 1_000 + Hub.Config.Timings.MiscellaneousSettings.ExtraTimeOpenYMenu, token).ConfigureAwait(false);
+        await Click(Y, 1_000 + Hub.Config.Timings.ExtraTimeOpenYMenu, token).ConfigureAwait(false);
         await Click(DRIGHT, 0_400, token).ConfigureAwait(false);
 
         // French has one less menu
@@ -511,7 +511,7 @@ public class PokeTradeBotBS : PokeRoutineExecutor8BS, ICountBot, ITradeBot, IDis
                 return false;
         }
 
-        await Task.Delay(1_300 + Hub.Config.Timings.MiscellaneousSettings.ExtraTimeJoinUnionRoom, token).ConfigureAwait(false);
+        await Task.Delay(1_300 + Hub.Config.Timings.ExtraTimeJoinUnionRoom, token).ConfigureAwait(false);
 
         return true; // We've made it into the room and are ready to request.
     }
@@ -574,7 +574,7 @@ public class PokeTradeBotBS : PokeRoutineExecutor8BS, ICountBot, ITradeBot, IDis
                 if (tries < 0)
                     return false;
             }
-            await Task.Delay(3_000 + Hub.Config.Timings.MiscellaneousSettings.ExtraTimeLeaveUnionRoom, token).ConfigureAwait(false);
+            await Task.Delay(3_000 + Hub.Config.Timings.ExtraTimeLeaveUnionRoom, token).ConfigureAwait(false);
         }
         return true;
     }
@@ -585,7 +585,15 @@ public class PokeTradeBotBS : PokeRoutineExecutor8BS, ICountBot, ITradeBot, IDis
 
         var id = await SwitchConnection.PointerPeek(4, Offsets.LinkTradePartnerIDPointer, token).ConfigureAwait(false);
         var name = await SwitchConnection.PointerPeek(TradePartnerBS.MaxByteLengthStringObject, Offsets.LinkTradePartnerNamePointer, token).ConfigureAwait(false);
-        return new TradePartnerBS(id, name);
+        // Read gender from first byte of param data
+        var genderByte = await SwitchConnection.PointerPeek(1, Offsets.LinkTradePartnerParamPointer, token).ConfigureAwait(false);
+
+        // Extract gender from bit 6 (0x40) - still needs testing, some tests i've done are accurate, some are not
+        // Bit 6 set = female, Bit 6 clear = male
+        bool isFemale = (genderByte[0] & 0x40) != 0;
+        byte gender = isFemale ? (byte)1 : (byte)0;
+
+        return new TradePartnerBS(id, name, gender);
     }
 
     private void HandleAbortedTrade(PokeTradeDetail<PB8> detail, PokeRoutineType type, uint priority, PokeTradeResult result)
@@ -682,7 +690,7 @@ public class PokeTradeBotBS : PokeRoutineExecutor8BS, ICountBot, ITradeBot, IDis
         if (Hub.Config.Discord.ReturnPKMs)
             poke.SendNotification(this, offered, $"Here's what you showed me - {GameInfo.GetStrings("en").Species[offered.Species]}");
 
-        var adOT = AbstractTrade<PB8>.HasAdName(offered, out _);
+        var adOT = TradeExtensions<PB8>.HasAdName(offered, out _);
         var laInit = new LegalityAnalysis(offered);
         if (!adOT && laInit.Valid)
         {
@@ -697,7 +705,7 @@ public class PokeTradeBotBS : PokeRoutineExecutor8BS, ICountBot, ITradeBot, IDis
             clone.Tracker = 0;
 
         string shiny = string.Empty;
-        if (!AbstractTrade<PB8>.ShinyLockCheck(offered.Species, AbstractTrade<PB8>.FormOutput(offered.Species, offered.Form, out _), $"{(Ball)offered.Ball}"))
+        if (!TradeExtensions<PB8>.ShinyLockCheck(offered.Species, TradeExtensions<PB8>.FormOutput(offered.Species, offered.Form, out _), $"{(Ball)offered.Ball}"))
             shiny = $"\nShiny: {(offered.ShinyXor == 0 ? "Square" : offered.IsShiny ? "Star" : "No")}";
         else shiny = "\nShiny: No";
 
@@ -726,7 +734,7 @@ public class PokeTradeBotBS : PokeRoutineExecutor8BS, ICountBot, ITradeBot, IDis
             var info = new SimpleTrainerInfo { Gender = clone.OriginalTrainerGender, Language = clone.Language, OT = name, TID16 = clone.TID16, SID16 = clone.SID16, Generation = 8 };
             var mg = EncounterEvent.GetAllEvents().Where(x => x.Species == clone.Species && x.Form == clone.Form && x.IsShiny == clone.IsShiny && x.OriginalTrainerName == clone.OriginalTrainerName).ToList();
             if (mg.Count > 0)
-                clone = AbstractTrade<PB8>.CherishHandler(mg.First(), info);
+                clone = TradeExtensions<PB8>.CherishHandler(mg.First(), info);
             else clone = (PB8)sav.GetLegal(AutoLegalityWrapper.GetTemplate(new ShowdownSet(string.Join("\n", set))), out _);
         }
         else
@@ -735,7 +743,7 @@ public class PokeTradeBotBS : PokeRoutineExecutor8BS, ICountBot, ITradeBot, IDis
         }
 
         var la = new LegalityAnalysis(clone);
-        clone = (PB8)AbstractTrade<PB8>.TrashBytes(clone, la);
+        clone = (PB8)TradeExtensions<PB8>.TrashBytes(clone, la);
         clone.ResetPartyStats();
         la = new LegalityAnalysis(clone);
         if (!la.Valid)
@@ -746,7 +754,7 @@ public class PokeTradeBotBS : PokeRoutineExecutor8BS, ICountBot, ITradeBot, IDis
             return (clone, PokeTradeResult.IllegalTrade);
         }
 
-        AbstractTrade<PB8>.HasAdName(offered, out string detectedAd);
+        TradeExtensions<PB8>.HasAdName(offered, out string detectedAd);
         poke.SendNotification(this, $"{(!laInit.Valid ? "**Legalized" : "**Fixed Nickname/OT for")} {(Species)clone.Species}** (found ad: {detectedAd})! Now confirm the trade!");
         Log($"{(!laInit.Valid ? "Legalized" : "Fixed Nickname/OT for")} {LanguageHelper.GetLocalizedSpeciesLog(clone)}!");
         TradeProgressChanged?.Invoke(84);
@@ -859,8 +867,8 @@ public class PokeTradeBotBS : PokeRoutineExecutor8BS, ICountBot, ITradeBot, IDis
             {
                 if (e.StackTrace != null)
                     Connection.LogError(e.StackTrace);
-                var attempts = Hub.Config.Timings.MiscellaneousSettings.ReconnectAttempts;
-                var delay = Hub.Config.Timings.MiscellaneousSettings.ExtraReconnectDelay;
+                var attempts = Hub.Config.Timings.ReconnectAttempts;
+                var delay = Hub.Config.Timings.ExtraReconnectDelay;
                 var protocol = Config.Connection.Protocol;
                 if (!await TryReconnect(attempts, delay, protocol, token).ConfigureAwait(false))
                     return;

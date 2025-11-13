@@ -3,6 +3,7 @@ using Discord.Commands;
 using Discord.Net;
 using Discord.WebSocket;
 using PKHeX.Core;
+using SysBot.Pokemon.Helpers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -38,8 +39,6 @@ namespace SysBot.Pokemon.Discord
     /// </summary>
     public class SpecialRequestModule<T> : ModuleBase<SocketCommandContext> where T : PKM, new()
     {
-        private static string Prefix => SysCordSettings.Settings.CommandPrefix;
-
         private const int itemsPerPage = 25;
 
         private static TradeQueueInfo<T> Info => SysCord<T>.Runner.Hub.Queues.Info;
@@ -56,9 +55,9 @@ namespace SysBot.Pokemon.Discord
             };
         }
 
-        [Command("specialRequest")]
+        [Command("specialrequestpokemon")]
         [Alias("srp", "sr")]
-        [Summary("Lists available Wondercard events from the specified generation, or game. Requests a specific event if a number is provided.")]
+        [Summary("Lists available wondercard events from the specified generation or game or requests a specific event if a number is provided.")]
         public async Task ListSpecialEventsAsync(string generationOrGame, [Remainder] string args = "")
         {
             var botPrefix = SysCord<T>.Runner.Config.Discord.CommandPrefix;
@@ -104,7 +103,7 @@ namespace SysBot.Pokemon.Discord
             await CleanupMessagesAsync().ConfigureAwait(false);
         }
 
-        [Command("specialRequest")]
+        [Command("specialrequestpokemon")]
         [Alias("srp", "sr")]
         [Summary("Downloads wondercard event attachments from the specified generation and adds to trade queue.")]
         [RequireQueueRole(nameof(DiscordManager.RolesTrade))]
@@ -147,7 +146,7 @@ namespace SysBot.Pokemon.Discord
                     return;
                 }
 
-                var code = Info.GetRandomTradeCode((int)userID);
+                var code = Info.GetRandomTradeCode(userID);
                 var lgcode = Info.GetRandomLGTradeCode();
                 var sig = Context.User.GetFavor();
 
@@ -176,6 +175,7 @@ namespace SysBot.Pokemon.Discord
                 "pla" or "la" => EncounterEvent.MGDB_G8A,
                 "bdsp" => EncounterEvent.MGDB_G8B,
                 "9" or "gen9" => EncounterEvent.MGDB_G9,
+                "plza" or "9a" or "gen9a" => EncounterEvent.MGDB_G9A,
                 _ => null,
             };
         }
@@ -251,10 +251,9 @@ namespace SysBot.Pokemon.Discord
                 await userMessage.DeleteAsync().ConfigureAwait(false);
         }
 
-        public static T? ConvertEventToPKM(MysteryGift selectedEvent, byte? requestedLanguage = null)
+        public static T? ConvertEventToPKM(MysteryGift selectedEvent, byte? requestedLanguage = null, string? metDate = null)
         {
             // Create a SimpleTrainerInfo instance with just version and language
-            // Don't try to set other properties - let the MysteryGift implementation handle defaults
             var trainer = new SimpleTrainerInfo(selectedEvent.Version)
             {
                 Language = requestedLanguage ?? (byte)LanguageID.English,
@@ -266,6 +265,60 @@ namespace SysBot.Pokemon.Discord
             if (pkm is null)
                 return null;
 
+            // DO NOT apply custom met date for Mystery Gift eggs
+            // PKHeX already handles dates correctly for Mystery Gifts including special cases like:
+            // - BDSP eggs where MetLocation=65535 requires date fields to be 0
+            // - SV eggs where MetLocation=0 requires date fields to be 0
+            // Only apply custom dates for non-Mystery Gift scenarios
+            // Note: For now, we skip date setting for all eggs to avoid conflicts
+            if (!string.IsNullOrEmpty(metDate) && !pkm.IsEgg)
+            {
+                bool dateParseSuccess = false;
+
+                // Try to parse YYYYMMDD format first (expected from PKHeX)
+                if (metDate.Length == 8 && DateTime.TryParseExact(metDate, "yyyyMMdd", 
+                    System.Globalization.CultureInfo.InvariantCulture, 
+                    System.Globalization.DateTimeStyles.None, out DateTime parsedDate))
+                {
+                    dateParseSuccess = true;
+                }
+                // Fallback to general DateTime parsing for other formats
+                else if (DateTime.TryParse(metDate, out parsedDate))
+                {
+                    dateParseSuccess = true;
+                }
+                
+                if (dateParseSuccess)
+                {
+                    var dateOnly = new DateOnly(parsedDate.Year, parsedDate.Month, parsedDate.Day);
+                    
+                    // Set MetDate for non-eggs
+                    if (pkm is PK9 pk9)
+                    {
+                        pk9.MetDate = dateOnly;
+                    }
+                    else if (pkm is PK8 pk8)
+                    {
+                        pk8.MetDate = dateOnly;
+                    }
+                    else if (pkm is PA8 pa8)
+                    {
+                        pa8.MetDate = dateOnly;
+                    }
+                    else if (pkm is PB8 pb8)
+                    {
+                        pb8.MetDate = dateOnly;
+                    }
+                    else
+                    {
+                        // For older PKM formats, use individual day/month/year properties
+                        pkm.MetDay = (byte)parsedDate.Day;
+                        pkm.MetMonth = (byte)parsedDate.Month;
+                        pkm.MetYear = (byte)(parsedDate.Year - 2000); // PKHeX stores only the last two digits of the year
+                    }
+                }
+            }
+
             // Convert to the correct type if necessary
             if (pkm is T pk)
                 return pk;
@@ -273,9 +326,9 @@ namespace SysBot.Pokemon.Discord
             return EntityConverter.ConvertToType(pkm, typeof(T), out _) as T;
         }
 
-        [Command("getEvent")]
-        [Alias("gep", "ge")]
-        [Summary("Downloads the requested event as a PKM file and sends it to the user. Optionally, specify the language.")]
+        [Command("geteventpokemon")]
+        [Alias("gep")]
+        [Summary("Downloads the requested event as a pk file and sends it to the user. Optionally, specify the language.")]
         public async Task GetEventPokemonAsync(string generationOrGame, int eventIndex, byte? language = null)
         {
             try
@@ -290,7 +343,7 @@ namespace SysBot.Pokemon.Discord
                 var entityEvents = eventData.Where(gift => gift.IsEntity && !gift.IsItem).ToArray();
                 if (eventIndex < 1 || eventIndex > entityEvents.Length)
                 {
-                    await ReplyAsync($"Invalid event index. Please use a valid event number from the `{Prefix}gep {generationOrGame}` command.").ConfigureAwait(false);
+                    await ReplyAsync($"Invalid event index. Please use a valid event number from the `{SysCord<T>.Runner.Config.Discord.CommandPrefix}gep {generationOrGame}` command.").ConfigureAwait(false);
                     return;
                 }
 
@@ -328,9 +381,9 @@ namespace SysBot.Pokemon.Discord
             }
         }
 
-        private async Task AddTradeToQueueAsync(int code, string trainerName, T pk, RequestSignificance sig, SocketUser usr, bool isBatchTrade = false, int batchTradeNumber = 1, int totalBatchTrades = 1, bool isMysteryEgg = false, bool isMysteryMon = false, List<Pictocodes>? lgcode = null, PokeTradeType tradeType = PokeTradeType.Specific, bool ignoreAutoOT = false, bool isHiddenTrade = false)
+        private async Task AddTradeToQueueAsync(int code, string trainerName, T pk, RequestSignificance sig, SocketUser usr, bool isBatchTrade = false, int batchTradeNumber = 1, int totalBatchTrades = 1, bool isMysteryEgg = false, List<Pictocodes>? lgcode = null, PokeTradeType tradeType = PokeTradeType.Specific, bool ignoreAutoOT = false, bool isHiddenTrade = false)
         {
-            lgcode ??= TradeModule<T>.GenerateRandomPictocodes(3);
+            lgcode ??= Helpers<T>.GenerateRandomPictocodes(3);
             var la = new LegalityAnalysis(pk);
             if (!la.Valid)
             {
@@ -358,7 +411,7 @@ namespace SysBot.Pokemon.Discord
                 if (la.Valid) pk = clone;
             }
 
-            await QueueHelper<T>.AddToQueueAsync(Context, code, trainerName, sig, pk, PokeRoutineType.LinkTrade, tradeType, usr, isBatchTrade, batchTradeNumber, totalBatchTrades, isHiddenTrade, isMysteryEgg, lgcode, ignoreAutoOT).ConfigureAwait(false);
+            await QueueHelper<T>.AddToQueueAsync(Context, code, trainerName, sig, pk, PokeRoutineType.LinkTrade, tradeType, usr, isBatchTrade, batchTradeNumber, totalBatchTrades, isHiddenTrade, isMysteryEgg, lgcode: lgcode, ignoreAutoOT).ConfigureAwait(false);
         }
     }
 }

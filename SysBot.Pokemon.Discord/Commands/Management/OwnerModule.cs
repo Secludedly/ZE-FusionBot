@@ -1,30 +1,28 @@
+using AnimatedGif;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
 using Newtonsoft.Json.Linq;
 using PKHeX.Core;
+using SysBot.Pokemon.Helpers;
 using System;
+using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
 using System.Linq;
-using SysBot.Pokemon.Helpers;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Collections.Generic;
-using AnimatedGif;
-using System.Drawing;
 using Color = System.Drawing.Color;
 using DiscordColor = Discord.Color;
-using System.Diagnostics;
 
 namespace SysBot.Pokemon.Discord;
 
 public class OwnerModule<T> : SudoModule<T> where T : PKM, new()
 {
-
-    [Command("listGuilds")]
+    [Command("listguilds")]
     [Alias("lg", "servers", "listservers")]
-    [Summary("Lists all guilds/servers the bot is part of.")]
+    [Summary("Lists all guilds the bot is part of.")]
     [RequireSudo]
     public async Task ListGuilds(int page = 1)
     {
@@ -58,7 +56,7 @@ public class OwnerModule<T> : SudoModule<T> where T : PKM, new()
         }
     }
 
-    [Command("blacklistServer")]
+    [Command("blacklistserver")]
     [Alias("bls")]
     [Summary("Adds a server ID to the bot's server blacklist.")]
     [RequireOwner]
@@ -87,7 +85,7 @@ public class OwnerModule<T> : SudoModule<T> where T : PKM, new()
         await ReplyAsync($"Left the server '{server.Name}' and added it to the blacklist.");
     }
 
-    [Command("unblacklistServer")]
+    [Command("unblacklistserver")]
     [Alias("ubls")]
     [Summary("Removes a server ID from the bot's server blacklist.")]
     [RequireOwner]
@@ -116,7 +114,6 @@ public class OwnerModule<T> : SudoModule<T> where T : PKM, new()
     [Command("addSudo")]
     [Summary("Adds mentioned user to global sudo")]
     [RequireOwner]
-    // ReSharper disable once UnusedParameter.Global
     public async Task SudoUsers([Remainder] string _)
     {
         var users = Context.Message.MentionedUsers;
@@ -128,7 +125,6 @@ public class OwnerModule<T> : SudoModule<T> where T : PKM, new()
     [Command("removeSudo")]
     [Summary("Removes mentioned user from global sudo")]
     [RequireOwner]
-    // ReSharper disable once UnusedParameter.Global
     public async Task RemoveSudoUsers([Remainder] string _)
     {
         var users = Context.Message.MentionedUsers;
@@ -140,7 +136,6 @@ public class OwnerModule<T> : SudoModule<T> where T : PKM, new()
     [Command("addChannel")]
     [Summary("Adds a channel to the list of channels that are accepting commands.")]
     [RequireOwner]
-    // ReSharper disable once UnusedParameter.Global
     public async Task AddChannel()
     {
         var obj = GetReference(Context.Message.Channel);
@@ -181,7 +176,6 @@ public class OwnerModule<T> : SudoModule<T> where T : PKM, new()
     [Command("removeChannel")]
     [Summary("Removes a channel from the list of channels that are accepting commands.")]
     [RequireOwner]
-    // ReSharper disable once UnusedParameter.Global
     public async Task RemoveChannel()
     {
         var obj = GetReference(Context.Message.Channel);
@@ -193,18 +187,16 @@ public class OwnerModule<T> : SudoModule<T> where T : PKM, new()
     [Alias("bye")]
     [Summary("Leaves the current server.")]
     [RequireOwner]
-    // ReSharper disable once UnusedParameter.Global
     public async Task Leave()
     {
         await ReplyAsync("Goodbye.").ConfigureAwait(false);
         await Context.Guild.LeaveAsync().ConfigureAwait(false);
     }
 
-    [Command("leaveGuild")]
+    [Command("leaveguild")]
     [Alias("lg")]
     [Summary("Leaves guild based on supplied ID.")]
     [RequireOwner]
-    // ReSharper disable once UnusedParameter.Global
     public async Task LeaveGuild(string userInput)
     {
         if (!ulong.TryParse(userInput, out ulong id))
@@ -224,10 +216,9 @@ public class OwnerModule<T> : SudoModule<T> where T : PKM, new()
         await guild.LeaveAsync().ConfigureAwait(false);
     }
 
-    [Command("leaveAll")]
+    [Command("leaveall")]
     [Summary("Leaves all servers the bot is currently in.")]
     [RequireOwner]
-    // ReSharper disable once UnusedParameter.Global
     public async Task LeaveAll()
     {
         await ReplyAsync("Leaving all servers.").ConfigureAwait(false);
@@ -272,103 +263,101 @@ public class OwnerModule<T> : SudoModule<T> where T : PKM, new()
             return;
         }
 
-        using MemoryStream ms = new(bytes);
-        var img = "cap.jpg";
+        await using MemoryStream ms = new(bytes);
+        const string img = "cap.jpg";
         var embed = new EmbedBuilder { ImageUrl = $"attachment://{img}", Color = (DiscordColor?)Color.Purple }
-            .WithFooter(new EmbedFooterBuilder { Text = $"Here's your screenshot." });
+            .WithFooter(new EmbedFooterBuilder { Text = "Here's your screenshot." });
 
         await Context.Channel.SendFileAsync(ms, img, embed: embed.Build());
     }
 
     [Command("video")]
-    [Alias("Video")]
+    [Alias("video")]
     [Summary("Take and send a GIF from the currently configured Switch.")]
     [RequireSudo]
     public async Task RePeekGIF()
     {
         await Context.Channel.SendMessageAsync("Processing GIF request...").ConfigureAwait(false);
 
-        // Offload processing to a separate task so we dont hold up gateway tasks
-        _ = Task.Run(async () =>
+        try
         {
-            try
-            {
-                string ip = OwnerModule<T>.GetBotIPFromJsonConfig();
-                var source = new CancellationTokenSource();
-                var token = source.Token;
-                var bot = SysCord<T>.Runner.GetBot(ip);
+            string ip = OwnerModule<T>.GetBotIPFromJsonConfig();
+            var source = new CancellationTokenSource();
+            var token = source.Token;
+            var bot = SysCord<T>.Runner.GetBot(ip);
 
-                if (bot == null)
+            if (bot == null)
+            {
+                await ReplyAsync($"No bot found with the specified IP address ({ip}).").ConfigureAwait(false);
+                return;
+            }
+
+            const int screenshotCount = 10;
+            var screenshotInterval = TimeSpan.FromSeconds(0.1 / 10);
+            var gifFrames = new List<byte[]>();
+
+            for (int i = 0; i < screenshotCount; i++)
+            {
+                byte[] bytes;
+                try
                 {
-                    await ReplyAsync($"No bot found with the specified IP address ({ip}).").ConfigureAwait(false);
+                    bytes = await bot.Bot.Connection.PixelPeek(token).ConfigureAwait(false) ?? Array.Empty<byte>();
+                }
+                catch (Exception ex)
+                {
+                    await ReplyAsync($"Error while fetching pixels: {ex.Message}").ConfigureAwait(false);
                     return;
                 }
 
-                var screenshotCount = 10;
-                var screenshotInterval = TimeSpan.FromSeconds(0.1 / 10);
-#pragma warning disable CA1416 // Validate platform compatibility
-                var gifFrames = new List<System.Drawing.Image>();
-#pragma warning restore CA1416 // Validate platform compatibility
-
-                for (int i = 0; i < screenshotCount; i++)
+                if (bytes.Length == 0)
                 {
-                    byte[] bytes;
-                    try
-                    {
-                        bytes = await bot.Bot.Connection.PixelPeek(token).ConfigureAwait(false) ?? [];
-                    }
-                    catch (Exception ex)
-                    {
-                        await ReplyAsync($"Error while fetching pixels: {ex.Message}").ConfigureAwait(false);
-                        return;
-                    }
+                    await ReplyAsync("No screenshot data received.").ConfigureAwait(false);
+                    return;
+                }
 
-                    if (bytes.Length == 0)
-                    {
-                        await ReplyAsync("No screenshot data received.").ConfigureAwait(false);
-                        return;
-                    }
+                gifFrames.Add(bytes);
 
-                    using (var ms = new MemoryStream(bytes))
-                    {
-                        using var bitmap = new Bitmap(ms);
-                        var frame = bitmap.Clone(new Rectangle(0, 0, bitmap.Width, bitmap.Height), System.Drawing.Imaging.PixelFormat.Format32bppArgb);
-                        gifFrames.Add(frame);
-                    }
-
+                if (i < screenshotCount - 1)
+                {
                     await Task.Delay(screenshotInterval).ConfigureAwait(false);
                 }
-
-                using (var ms = new MemoryStream())
-                {
-                    using (var gif = new AnimatedGifCreator(ms, 200))
-                    {
-                        foreach (var frame in gifFrames)
-                        {
-                            gif.AddFrame(frame);
-                            frame.Dispose();
-                        }
-                    }
-
-                    ms.Position = 0;
-                    var gifFileName = "screenshot.gif";
-                    var embed = new EmbedBuilder { ImageUrl = $"attachment://{gifFileName}", Color = (DiscordColor?)Color.Red }
-                        .WithFooter(new EmbedFooterBuilder { Text = "Here's your GIF." });
-
-                    await Context.Channel.SendFileAsync(ms, gifFileName, embed: embed.Build()).ConfigureAwait(false);
-                }
-
-                foreach (var frame in gifFrames)
-                {
-                    frame.Dispose();
-                }
-                gifFrames.Clear();
             }
-            catch (Exception ex)
+
+            await using (var ms = new MemoryStream())
             {
-                await ReplyAsync($"Error while processing GIF: {ex.Message}").ConfigureAwait(false);
+                await CreateGifAsync(ms, gifFrames).ConfigureAwait(false);
+
+                ms.Position = 0;
+                const string gifFileName = "screenshot.gif";
+                var embed = new EmbedBuilder { ImageUrl = $"attachment://{gifFileName}", Color = (DiscordColor?)Color.Red }
+                    .WithFooter(new EmbedFooterBuilder { Text = "Here's your GIF." });
+
+                await Context.Channel.SendFileAsync(ms, gifFileName, embed: embed.Build()).ConfigureAwait(false);
             }
-        });
+
+            gifFrames.Clear();
+        }
+        catch (Exception ex)
+        {
+            await ReplyAsync($"Error while processing GIF: {ex.Message}").ConfigureAwait(false);
+        }
+    }
+
+    private async Task CreateGifAsync(Stream outputStream, List<byte[]> frames)
+    {
+#pragma warning disable CA1416 // Validate platform compatibility
+        using var gif = new AnimatedGifCreator(outputStream, 200);
+        foreach (var frameBytes in frames)
+        {
+            using (var ms = new MemoryStream(frameBytes))
+            using (var bitmap = new Bitmap(ms))
+            using (var frame = bitmap.Clone(new Rectangle(0, 0, bitmap.Width, bitmap.Height), System.Drawing.Imaging.PixelFormat.Format32bppArgb))
+            {
+                gif.AddFrame(frame);
+            }
+            await Task.Yield(); // Allow other tasks to run
+        }
+#pragma warning restore CA1416 // Validate platform compatibility
     }
 
     private static string GetBotIPFromJsonConfig()
@@ -378,8 +367,15 @@ public class OwnerModule<T> : SudoModule<T> where T : PKM, new()
             var jsonData = File.ReadAllText(TradeBot.ConfigPath);
             var config = JObject.Parse(jsonData);
 
-            var ip = config["Bots"][0]["Connection"]["IP"].ToString();
-            return ip;
+            var botsArray = config["Bots"] as JArray;
+            if (botsArray == null || botsArray.Count == 0)
+                return "192.168.1.1";
+            
+            var firstBot = botsArray[0] as JObject;
+            var connection = firstBot?["Connection"] as JObject;
+            var ip = connection?["IP"]?.ToString();
+            
+            return ip ?? "192.168.1.1";
         }
         catch (Exception ex)
         {
@@ -390,9 +386,8 @@ public class OwnerModule<T> : SudoModule<T> where T : PKM, new()
 
     [Command("kill")]
     [Alias("shutdown")]
-    [Summary("Causes the bot to shutdown on the host computer.")]
+    [Summary("Causes the entire process to end itself!")]
     [RequireOwner]
-    // ReSharper disable once UnusedParameter.Global
     public async Task ExitProgram()
     {
         await Context.Channel.EchoAndReply("Shutting down... goodbye! **Bot services are going offline.**").ConfigureAwait(false);
@@ -413,7 +408,7 @@ public class OwnerModule<T> : SudoModule<T> where T : PKM, new()
             Description = message,
             Color = (DiscordColor?)Color.Gold,
             Timestamp = DateTimeOffset.Now,
-            ThumbnailUrl = "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/pikamail.png"
+            ThumbnailUrl = "https://raw.githubusercontent.com/hexbyt3/sprites/main/pikamail.png"
         };
 
         try
@@ -435,8 +430,10 @@ public class OwnerModule<T> : SudoModule<T> where T : PKM, new()
                 await dmChannel.SendMessageAsync(embed: embed.Build());
             }
 
+            var confirmationMessage = await ReplyAsync($"Message successfully sent to {user.Username}.");
             await Context.Message.DeleteAsync();
             await Task.Delay(TimeSpan.FromSeconds(10));
+            await confirmationMessage.DeleteAsync();
         }
         catch (Exception ex)
         {
@@ -451,26 +448,32 @@ public class OwnerModule<T> : SudoModule<T> where T : PKM, new()
     {
         var attachments = Context.Message.Attachments;
         var hasAttachments = attachments.Count != 0;
-        var channelMentionMatch = System.Text.RegularExpressions.Regex.Match(message, @"<#(\d+)>");
-        if (!channelMentionMatch.Success)
+
+        var indexOfChannelMentionStart = message.LastIndexOf('<');
+        var indexOfChannelMentionEnd = message.LastIndexOf('>');
+        if (indexOfChannelMentionStart == -1 || indexOfChannelMentionEnd == -1)
         {
             await ReplyAsync("Please mention a channel properly using #channel.");
             return;
         }
-        var channelId = ulong.Parse(channelMentionMatch.Groups[1].Value);
-        var actualMessage = message.Substring(0, channelMentionMatch.Index).TrimEnd();
-        var channel = Context.Guild.GetChannel(channelId) as IMessageChannel;
+
+        var channelMention = message.Substring(indexOfChannelMentionStart, indexOfChannelMentionEnd - indexOfChannelMentionStart + 1);
+        var actualMessage = message.Substring(0, indexOfChannelMentionStart).TrimEnd();
+
+        var channel = Context.Guild.Channels.FirstOrDefault(c => $"<#{c.Id}>" == channelMention);
+
         if (channel == null)
         {
             await ReplyAsync("Channel not found.");
             return;
         }
-        // Check if the message has content or attachments
-        if (string.IsNullOrWhiteSpace(actualMessage) && !hasAttachments)
+
+        if (channel is not IMessageChannel messageChannel)
         {
-            await ReplyAsync("At least one of 'Content', 'Embeds', 'Components', 'Stickers' or 'Attachments' must be specified.");
+            await ReplyAsync("The mentioned channel is not a text channel.");
             return;
         }
+
         // If there are attachments, send them to the channel
         if (hasAttachments)
         {
@@ -478,145 +481,30 @@ public class OwnerModule<T> : SudoModule<T> where T : PKM, new()
             {
                 using var httpClient = new HttpClient();
                 var stream = await httpClient.GetStreamAsync(attachment.Url);
-                await channel.SendFileAsync(stream, attachment.Filename, actualMessage);
+                var file = new FileAttachment(stream, attachment.Filename);
+                await messageChannel.SendFileAsync(file, actualMessage);
             }
         }
         else
         {
-            await channel.SendMessageAsync(actualMessage);
+            await messageChannel.SendMessageAsync(actualMessage);
         }
-        await Context.Message.DeleteAsync();
+
+        // Send confirmation message to the user
+        await ReplyAsync($"Message successfully posted in {channelMention}.");
     }
 
     private RemoteControlAccess GetReference(IUser channel) => new()
-        {
-            ID = channel.Id,
-            Name = channel.Username,
-            Comment = $"Added by {Context.User.Username} on {DateTime.Now:yyyy.MM.dd-hh:mm:ss}",
-        };
-
-        private RemoteControlAccess GetReference(IChannel channel) => new()
-        {
-            ID = channel.Id,
-            Name = channel.Name,
-            Comment = $"Added by {Context.User.Username} on {DateTime.Now:yyyy.MM.dd-hh:mm:ss}",
-        };
-
-        [Command("startSysdvr")]
-        [Alias("dvrstart", "startdvr", "sysdvrstart", "dvr", "stream")]
-        [Summary("Makes the bot open SysDVR to stream your Switch on the current PC.")]
-        [RequireOwner]
-        public async Task StartSysDvr()
-        {
-            try
-            {
-                var sysDvrBATPath = Path.Combine("SysDVR.bat");
-                if (File.Exists(sysDvrBATPath))
-                {
-                    Process.Start(sysDvrBATPath);
-                    await ReplyAsync("SysDVR has been initiated. You're now streaming your Switch on PC!");
-                }
-                else
-                {
-                    await ReplyAsync("**SysDVR.bat** cannot be found at the specified location.");
-                }
-            }
-            catch (Exception ex)
-            {
-                await ReplyAsync($"**SysDVR Error:** {ex.Message}");
-            }
-        }
-
-        [Command("sysDvr")]
-        [Summary("Displays instructions on how to use SysDVR.")]
-        [RequireOwner]
-        public async Task SysDVRInstructionsAsync()
-        {
-            var embed0 = new EmbedBuilder()
-                .WithTitle("//////SYSDVR SETUP INSTRUCTIONS//////");
-
-            embed0.WithImageUrl("https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/homereadybreak.png");
-            var message0 = await ReplyAsync(embed: embed0.Build());
-
-
-            var embed1 = new EmbedBuilder()
-                .AddField("01) SETTING UP THE SYSBOT WITH SYSDVR",
-                          "- [Click here](https://github.com/exelix11/SysDVR/releases/tag/v5.5.6) to download **SysDVR-Client-Windows-x64.7z**.\n" +
-                          "- Unpack the archive and place the extracted folder anywhere you want.\n" +
-                          "- Inside the folder, open **SysDVR-ClientGUI.exe.**\n" +
-                          "- Select either *Video* or *Both* under the channels to stream.\n" +
-                          "- Select **TCP Bridge** and enter your Switch's IP address.\n" +
-                          "- Select **Create quick launch shortcut** to create a **SysDVR Launcher.bat**.\n" +
-                          "- Exit the program window that launches.\n" +
-                          "- Place the **SysDVR Launcher.bat** in the same folder as your SysBot.\n" +
-                          "- Rename the bat file to **SysDVR.bat.**\n" +
-                          "- You can then use the `dvrstart` command once you add SysDVR to your Switch.");
-
-            embed1.WithImageUrl("https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/homereadybreak.png");
-            var message1 = await ReplyAsync(embed: embed1.Build());
-
-
-            var embed2 = new EmbedBuilder()
-                .AddField("02) SETTING UP SYSDVR ON THE SWITCH",
-                          "- [Click here](https://github.com/exelix11/SysDVR/releases/tag/v5.5.6) to download **SysDVR.zip**.\n" +
-                          "- Unpack the archive and place the extracted folders on the Switch SD card.\n" +
-                          "- Reboot your Switch.\n" +
-                          "- Open the SysDVR program in the Switch.\n" +
-                          "- Select **TCP Bridge.**\n" +
-                          "- Select **Save current mode as default.**\n" +
-                          "- Select **Save and exit.**\n" +
-                          "- As long as you followed Step 01, the `dvrstart` command can be used.\n");
-
-            embed2.WithImageUrl("https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/homereadybreak.png");
-            var message2 = await ReplyAsync(embed: embed2.Build());
-
-            _ = Task.Run(async () =>
-            {
-                await Task.Delay(90_000);
-                await message0.DeleteAsync();
-                await message1.DeleteAsync();
-                await message2.DeleteAsync();
-            });
-        }
-
-    [Command("startController")]
-    [Alias("controllerstart", "startcontrol", "controlstart", "startremote", "remotestart", "sbr", "controller")]
-    [Summary("Makes the bot open Switch Remote for PC - a GUI game controller for your Switch.")]
-    [RequireOwner]
-    public async Task StartSysRemote()
     {
-        try
-        {
-            var sysBotRemotePath = SysCord<T>.Runner.Config.SysBotRemoteFolder;
+        ID = channel.Id,
+        Name = channel.Username,
+        Comment = $"Added by {Context.User.Username} on {DateTime.Now:yyyy.MM.dd-hh:mm:ss}",
+    };
 
-            if (Directory.Exists(sysBotRemotePath))
-            {
-                string executablePath = Path.Combine(sysBotRemotePath, "SwitchRemoteForPC.exe");
-
-                if (File.Exists(executablePath))
-                {
-                    ProcessStartInfo startInfo = new ProcessStartInfo(executablePath)
-                    {
-                        WorkingDirectory = sysBotRemotePath
-                    };
-                    Process.Start(startInfo);
-
-                    await ReplyAsync("Switch Remote for PC has been initiated. You can now control your Switch!");
-                }
-                else
-                {
-                    await ReplyAsync("**SwitchRemoteForPC.exe** cannot be found in the specified folder.");
-                }
-            }
-            else
-            {
-                await ReplyAsync("**SwitchRemoteForPC** folder does not exist.");
-            }
-        }
-        catch (Exception ex)
-        {
-            await ReplyAsync($"**SwitchRemoteForPC Error:** {ex.Message}");
-        }
-    }
+    private RemoteControlAccess GetReference(IChannel channel) => new()
+    {
+        ID = channel.Id,
+        Name = channel.Name,
+        Comment = $"Added by {Context.User.Username} on {DateTime.Now:yyyy.MM.dd-hh:mm:ss}",
+    };
 }
-

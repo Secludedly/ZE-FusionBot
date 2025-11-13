@@ -1,14 +1,13 @@
 using PKHeX.Core;
 using SysBot.Base;
+using SysBot.Pokemon.Helpers;
 using System;
 using System.Collections.Generic;
+using System.Security.Cryptography;
 using System.Globalization;
-using SysBot.Pokemon.Helpers;
 using System.IO;
-using static SysBot.Base.SwitchButton;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Security.Cryptography;
 
 namespace SysBot.Pokemon;
 
@@ -18,7 +17,6 @@ public abstract class PokeRoutineExecutor<T>(IConsoleBotManaged<IConsoleConnecti
 {
     private const ulong dmntID = 0x010000000000000d;
     public BatchTradeTracker<T> BatchTracker => BatchTradeTracker<T>.Instance;
-
     // Check if either Tesla or dmnt are active if the sanity check for Trainer Data fails, as these are common culprits.
     private const ulong ovlloaderID = 0x420000000007e51a;
 
@@ -30,12 +28,11 @@ public abstract class PokeRoutineExecutor<T>(IConsoleBotManaged<IConsoleConnecti
         return BitConverter.ToString(hashBytes).Replace("-", "").Substring(0, 12).ToUpperInvariant();
     }
 
-    // Fix for CS0693: Renaming the inner type parameter to avoid conflict with the outer type parameter.
-    public static void DumpPokemon<TPKM>(string folder, string subfolder, TPKM pk) where TPKM : PKM
+    // Dumps a PKM to a file in the specified folder in the format: OT - Species (Localized) Shiny[SHA1].pkx
+    public static void DumpPokemon<T>(string folder, string subfolder, T pk) where T : PKM
     {
         if (!Directory.Exists(folder))
             return;
-
         var dir = Path.Combine(folder, subfolder);
         Directory.CreateDirectory(dir);
 
@@ -69,7 +66,6 @@ public abstract class PokeRoutineExecutor<T>(IConsoleBotManaged<IConsoleConnecti
 
         LogUtil.LogInfo($"Saved file: {finalPath}", "Dump");
     }
-
 
     public static void LogSuccessfulTrades(PokeTradeDetail<T> poke, ulong TrainerNID, string TrainerName)
     {
@@ -108,9 +104,13 @@ public abstract class PokeRoutineExecutor<T>(IConsoleBotManaged<IConsoleConnecti
     }
 
     public abstract Task<T> ReadBoxPokemon(int box, int slot, CancellationToken token);
+
     public abstract Task<T> ReadPokemon(ulong offset, CancellationToken token);
+
     public abstract Task<T> ReadPokemon(ulong offset, int size, CancellationToken token);
+
     public abstract Task<T> ReadPokemonPointer(IEnumerable<long> jumps, int size, CancellationToken token);
+
     public async Task<T?> ReadUntilPresent(ulong offset, int waitms, int waitInterval, int size, CancellationToken token)
     {
         int msWaited = 0;
@@ -178,7 +178,8 @@ public abstract class PokeRoutineExecutor<T>(IConsoleBotManaged<IConsoleConnecti
 
     // Tesla Menu
     // dmnt used for cheats
-    protected PokeTradeResult CheckPartnerReputation(PokeRoutineExecutor<T> bot, PokeTradeDetail<T> poke, ulong TrainerNID, string TrainerName, TradeAbuseSettings AbuseSettings, CancellationToken token)
+    protected PokeTradeResult CheckPartnerReputation(PokeRoutineExecutor<T> bot, PokeTradeDetail<T> poke, ulong TrainerNID, string TrainerName,
+        TradeAbuseSettings AbuseSettings, CancellationToken token)
     {
         bool quit = false;
         var user = poke.Trainer;

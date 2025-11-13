@@ -10,7 +10,7 @@ public static class LanguageHelper
     {
         try
         {
-            var strings = GameInfo.GetStrings((int)lang);
+            var strings = GameInfo.GetStrings("lang");
             if (strings?.Species == null || speciesIndex < 0 || speciesIndex >= strings.Species.Count)
                 return "???";
 
@@ -43,7 +43,7 @@ public static class LanguageHelper
     {
         try
         {
-            var strings = GameInfo.GetStrings((int)lang);
+            var strings = GameInfo.GetStrings("lang");
             if (strings?.Species == null || speciesIndex < 0 || speciesIndex >= strings.Species.Count)
                 return "???";
 
@@ -75,6 +75,7 @@ public static class LanguageHelper
                     "italian" or "ita" => (byte)LanguageID.Italian,
                     "german" or "ger" or "deu" => (byte)LanguageID.German,
                     "spanish" or "spa" or "esp" => (byte)LanguageID.Spanish,
+                    "spanishl" or "spl" or "esl" => (byte)LanguageID.SpanishL,
                     "korean" or "kor" or "한국어" => (byte)LanguageID.Korean,
                     "chinese" or "chs" or "中文" => (byte)LanguageID.ChineseS,
                     "cht" => (byte)LanguageID.ChineseT,
@@ -101,6 +102,7 @@ public static class LanguageHelper
             Type t when t == typeof(PB8) => TrainerSettings.GetSavedTrainerData(GameVersion.BDSP, 8, lang: language),
             Type t when t == typeof(PA8) => TrainerSettings.GetSavedTrainerData(GameVersion.PLA, 8, lang: language),
             Type t when t == typeof(PK9) => TrainerSettings.GetSavedTrainerData(GameVersion.SV, 9, lang: language),
+            Type t when t == typeof(PA9) => TrainerSettings.GetSavedTrainerData(GameVersion.ZA, 9, lang: language),
             Type t when t == typeof(PB7) => TrainerSettings.GetSavedTrainerData(GameVersion.GE, 7, lang: language),
             _ => throw new ArgumentException("Type does not have a recognized trainer fetch.", typeof(T).Name)
         };
@@ -116,6 +118,7 @@ public static class LanguageHelper
             LanguageID.Italian => "Italian",
             LanguageID.German => "German",
             LanguageID.Spanish => "Spanish",
+            LanguageID.SpanishL => "SpanishL",
             LanguageID.Korean => "Korean",
             LanguageID.ChineseT => "Chinese (Traditional)",
             LanguageID.ChineseS => "Chinese (Simplified)",

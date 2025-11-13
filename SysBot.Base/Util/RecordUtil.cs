@@ -1,9 +1,8 @@
-using System;
 using System.IO;
+using System;
 
 namespace SysBot.Base.Util
 {
-    // ReSharper disable once StaticMemberInGenericType
     public static class RecordUtil<T>
     {
         private static readonly string LogPath;

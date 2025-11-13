@@ -44,9 +44,9 @@ public abstract class SwitchSocket : IConsoleConnection
 
     public void Log(string message) => LogInfo(message);
 
-    public void LogError(string message) => LogUtil.LogError(message, Label);
+    public void LogError(string message) => LogUtil.LogError(Label, message);
 
-    public void LogInfo(string message) => LogUtil.LogInfo(message, Label);
+    public void LogInfo(string message) => LogUtil.LogInfo(Label, message);
 
     public abstract void Reset();
 }

@@ -124,8 +124,8 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState config) : Poke
             {
                 if (e.StackTrace != null)
                     Connection.LogError(e.StackTrace);
-                var attempts = hub.Config.Timings.MiscellaneousSettings.ReconnectAttempts;
-                var delay = hub.Config.Timings.MiscellaneousSettings.ExtraReconnectDelay;
+                var attempts = hub.Config.Timings.ReconnectAttempts;
+                var delay = hub.Config.Timings.ExtraReconnectDelay;
                 var protocol = Config.Connection.Protocol;
                 if (!await TryReconnect(attempts, delay, protocol, token).ConfigureAwait(false))
                     return;
@@ -304,7 +304,7 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState config) : Poke
 
         if (poke.Type != PokeTradeType.Random)
             hub.Config.Stream.StartEnterCode(this);
-        await Task.Delay(hub.Config.Timings.MiscellaneousSettings.ExtraTimeOpenCodeEntry, token).ConfigureAwait(false);
+        await Task.Delay(hub.Config.Timings.ExtraTimeOpenCodeEntry, token).ConfigureAwait(false);
 
         var code = poke.Code;
         Log($"Entering Link Trade code: {code:0000 0000}...");
@@ -345,7 +345,7 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState config) : Poke
             return PokeTradeResult.NoTrainerFound;
         }
 
-        await Task.Delay(5_500 + hub.Config.Timings.MiscellaneousSettings.ExtraTimeOpenBox, token).ConfigureAwait(false);
+        await Task.Delay(5_500 + hub.Config.Timings.ExtraTimeOpenBox, token).ConfigureAwait(false);
 
         // Get and cache trade partner info
         var trainerName = await GetTradePartnerName(TradeMethod.LinkTrade, token).ConfigureAwait(false);
@@ -728,7 +728,7 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState config) : Poke
         // Loading Screen
         if (poke.Type != PokeTradeType.Random)
             hub.Config.Stream.StartEnterCode(this);
-        await Task.Delay(hub.Config.Timings.MiscellaneousSettings.ExtraTimeOpenCodeEntry, token).ConfigureAwait(false);
+        await Task.Delay(hub.Config.Timings.ExtraTimeOpenCodeEntry, token).ConfigureAwait(false);
 
         var code = poke.Code;
         Log($"Entering Link Trade code: {code:0000 0000}...");
@@ -774,7 +774,7 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState config) : Poke
 
         // Select Pokémon
         // pkm already injected to b1s1
-        await Task.Delay(5_500 + hub.Config.Timings.MiscellaneousSettings.ExtraTimeOpenBox, token).ConfigureAwait(false); // necessary delay to get to the box properly
+        await Task.Delay(5_500 + hub.Config.Timings.ExtraTimeOpenBox, token).ConfigureAwait(false); // necessary delay to get to the box properly
 
         var trainerName = await GetTradePartnerName(TradeMethod.LinkTrade, token).ConfigureAwait(false);
         var trainerTID = await GetTradePartnerTID7(TradeMethod.LinkTrade, token).ConfigureAwait(false);
@@ -1544,7 +1544,7 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState config) : Poke
         if (hub.Config.Discord.ReturnPKMs)
             poke.SendNotification(this, offered, $"Here's what you showed me - {GameInfo.GetStrings("en").Species[offered.Species]}");
 
-        var adOT = AbstractTrade<PK8>.HasAdName(offered, out _);
+        var adOT = TradeExtensions<PK8>.HasAdName(offered, out _);
         var laInit = new LegalityAnalysis(offered);
         if (!adOT && laInit.Valid)
         {
@@ -1559,7 +1559,7 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState config) : Poke
             clone.Tracker = 0;
 
         string shiny = string.Empty;
-        if (!AbstractTrade<PK8>.ShinyLockCheck(offered.Species, AbstractTrade<PK8>.FormOutput(offered.Species, offered.Form, out _), $"{(Ball)offered.Ball}"))
+        if (!TradeExtensions<PK8>.ShinyLockCheck(offered.Species, TradeExtensions<PK8>.FormOutput(offered.Species, offered.Form, out _), $"{(Ball)offered.Ball}"))
             shiny = $"\nShiny: {(offered.ShinyXor == 0 ? "Square" : offered.IsShiny ? "Star" : "No")}";
         else shiny = "\nShiny: No";
 
@@ -1588,7 +1588,7 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState config) : Poke
             var info = new SimpleTrainerInfo { Gender = clone.OriginalTrainerGender, Language = clone.Language, OT = name, TID16 = clone.TID16, SID16 = clone.SID16, Generation = 8 };
             var mg = EncounterEvent.GetAllEvents().Where(x => x.Species == clone.Species && x.Form == clone.Form && x.IsShiny == clone.IsShiny && x.OriginalTrainerName == clone.OriginalTrainerName).ToList();
             if (mg.Count > 0)
-                clone = AbstractTrade<PK8>.CherishHandler(mg.First(), info);
+                clone = TradeExtensions<PK8>.CherishHandler(mg.First(), info);
             else clone = (PK8)sav.GetLegal(AutoLegalityWrapper.GetTemplate(new ShowdownSet(string.Join("\n", set))), out _);
         }
         else
@@ -1596,18 +1596,18 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState config) : Poke
             clone = (PK8)sav.GetLegal(AutoLegalityWrapper.GetTemplate(new ShowdownSet(string.Join("\n", set))), out _);
         }
         var la = new LegalityAnalysis(clone);
-        clone = (PK8)AbstractTrade<PK8>.TrashBytes(clone, la);
+        clone = (PK8)TradeExtensions<PK8>.TrashBytes(clone, la);
         clone.ResetPartyStats();
 
         la = new LegalityAnalysis(clone);
         if (!la.Valid)
         {
             poke.SendNotification(this, "This Pokémon is not legal per PKHeX's legality checks. I was unable to fix this. Exiting trade.");
-      
+
             return (clone, PokeTradeResult.IllegalTrade);
         }
 
-        AbstractTrade<PK8>.HasAdName(offered, out string detectedAd);
+        TradeExtensions<PK8>.HasAdName(offered, out string detectedAd);
         poke.SendNotification(this, $"{(!laInit.Valid ? "**Legalized" : "**Fixed Nickname/OT for")} {(Species)clone.Species}** (found ad: {detectedAd})! Now confirm the trade!");
         Log($"{(!laInit.Valid ? "Legalized" : "Fixed Nickname/OT for")} {LanguageHelper.GetLocalizedSpeciesLog(clone)}!");
         TradeProgressChanged?.Invoke(92);

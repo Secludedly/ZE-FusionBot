@@ -13,7 +13,7 @@ public class HubModule<T> : ModuleBase<SocketCommandContext> where T : PKM, new(
 {
     [Command("status")]
     [Alias("stats")]
-    [Summary("Gets the status of the current bot environment.")]
+    [Summary("Gets the status of the bot environment.")]
     public async Task GetStatusAsync()
     {
         var me = SysCord<T>.Runner;

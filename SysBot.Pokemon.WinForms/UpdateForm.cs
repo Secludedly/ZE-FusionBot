@@ -31,6 +31,10 @@ namespace SysBot.Pokemon.WinForms
             UpdateFormText();
         }
 
+        public void PerformUpdate()
+        {
+            Application.Restart();
+        }
 
         private void ConfigureDynamicUpdateInfo()
         {

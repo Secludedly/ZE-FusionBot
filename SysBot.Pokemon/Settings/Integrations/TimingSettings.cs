@@ -1,144 +1,91 @@
 using System.ComponentModel;
 
-namespace SysBot.Pokemon
+namespace SysBot.Pokemon;
+
+public class TimingSettings
 {
-    public class TimingSettings
-    {
-        private const string TimingsCategory = "Timings";
-        internal int ExtraTimeDeleteFriend;
-        internal int ExtraTimeLoadRaid;
-        internal int ExtraTimeOpenRaid;
-        internal int ExtraTimeOpenYMenu;
+    private const string CloseGame = nameof(CloseGame);
 
-        [Category(TimingsCategory), TypeConverter(typeof(ExpandableObjectConverter))]
-        public MiscellaneousSettingsCategory MiscellaneousSettings { get; set; } = new();
+    private const string Misc = nameof(Misc);
 
-        [Category(TimingsCategory), TypeConverter(typeof(ExpandableObjectConverter))]
-        public OpeningGameSettingsCategory OpeningGameSettings { get; set; } = new();
+    private const string OpenGame = nameof(OpenGame);
 
-        [Category(TimingsCategory), TypeConverter(typeof(ExpandableObjectConverter))]
-        public RaidSettingsCategory RaidSettings { get; set; } = new();
+    private const string Raid = nameof(Raid);
 
-        [Category(TimingsCategory), TypeConverter(typeof(ExpandableObjectConverter))]
-        public ClosingGameSettingsCategory ClosingGameSettings { get; set; } = new();
-        public bool AvoidSystemUpdate { get; internal set; }
-        public bool CheckGameDelay { get; internal set; }
-        public int ExtraTimeCheckDLC { get; internal set; }
-        public int ExtraTimeCheckGame { get; internal set; }
-        public int ExtraTimeCloseGame { get; internal set; }
-        public int ExtraTimeConnectOnline { get; internal set; }
-        public int ExtraTimeLoadGame { get; internal set; }
-        public int ExtraTimeLoadOverworld { get; internal set; }
-        public int ExtraTimeLoadProfile { get; internal set; }
-        public int ExtraTimeReturnHome { get; internal set; }
-        public int KeypressTime { get; internal set; }
-        public bool ProfileSelectionRequired { get; internal set; }
-        public int ExtraReconnectDelay { get; internal set; }
-        public int ReconnectAttempts { get; internal set; }
-        public int ExtraTimeAddFriend { get; internal set; }
-        public int ExtraTimeEndRaid { get; internal set; }
-        public int ExtraTimeJoinUnionRoom { get; internal set; }
-        public int ExtraTimeLeaveUnionRoom { get; internal set; }
-        public int ExtraTimeLoadPortal { get; internal set; }
-        public int ExtraTimeOpenBox { get; internal set; }
-        public int ExtraTimeOpenCodeEntry { get; internal set; }
+    [Category(Misc), Description("Enable this to decline incoming system updates.")]
+    public bool AvoidSystemUpdate { get; set; }
 
-        public override string ToString() => "Timing Settings";
-    }
+    [Category(Misc), Description("Extra time in milliseconds to wait between attempts to reconnect. Base time is 30 seconds.")]
+    public int ExtraReconnectDelay { get; set; }
 
-    // Miscellaneous settings category
-    public class MiscellaneousSettingsCategory
-    {
-        public override string ToString() => "Miscellaneous Settings";
+    [Category(Raid), Description("[RaidBot] Extra time in milliseconds to wait after accepting a friend.")]
+    public int ExtraTimeAddFriend { get; set; }
 
-        [Description("Enable this to decline incoming system updates.")]
-        public bool AvoidSystemUpdate { get; set; }
+    [Category(CloseGame), Description("Extra time in milliseconds to wait after clicking to close the game.")]
+    public int ExtraTimeCloseGame { get; set; }
 
-        [Description("Extra time in milliseconds to wait between attempts to reconnect. Base time is 30 seconds.")]
-        public int ExtraReconnectDelay { get; set; }
+    // Miscellaneous settings.
+    [Category(Misc), Description("[SWSH/SV/PLZA] Extra time in milliseconds to wait after clicking + to connect to Y-Comm (SWSH), L to connect online (SV), or after connecting to Portal (PLZA). Base time for PLZA is 8 seconds.")]
+    public int ExtraTimeConnectOnline { get; set; }
 
-        [Description("[SWSH/SV] Extra time in milliseconds to wait after clicking + to connect to Y-Comm (SWSH) or L to connect online (SV).")]
-        public int ExtraTimeConnectOnline { get; set; }
+    [Category(Raid), Description("[RaidBot] Extra time in milliseconds to wait after deleting a friend.")]
+    public int ExtraTimeDeleteFriend { get; set; }
 
-        [Description("[BDSP] Extra time in milliseconds to wait for the Union Room to load before trying to call for a trade.")]
-        public int ExtraTimeJoinUnionRoom { get; set; } = 500;
+    [Category(Raid), Description("[RaidBot] Extra time in milliseconds to wait before closing the game to reset the raid.")]
+    public int ExtraTimeEndRaid { get; set; }
 
-        [Description("[BDSP] Extra time in milliseconds to wait for the overworld to load after leaving the Union Room.")]
-        public int ExtraTimeLeaveUnionRoom { get; set; } = 1000;
+    [Category(Misc), Description("[BDSP] Extra time in milliseconds to wait for the Union Room to load before trying to call for a trade.")]
+    public int ExtraTimeJoinUnionRoom { get; set; } = 500;
 
-        [Description("[SV] Extra time in milliseconds to wait for the Poké Portal to load.")]
-        public int ExtraTimeLoadPortal { get; set; } = 1000;
+    [Category(Misc), Description("[BDSP] Extra time in milliseconds to wait for the overworld to load after leaving the Union Room.")]
+    public int ExtraTimeLeaveUnionRoom { get; set; } = 1000;
 
-        [Description("Extra time in milliseconds to wait for the box to load after finding a trade.")]
-        public int ExtraTimeOpenBox { get; set; } = 1000;
+    [Category(OpenGame), Description("Extra time in milliseconds to wait before clicking A in title screen.")]
+    public int ExtraTimeLoadGame { get; set; } = 5000;
 
-        [Description("Time to wait after opening the keyboard for code entry during trades.")]
-        public int ExtraTimeOpenCodeEntry { get; set; } = 1000;
+    [Category(OpenGame), Description("Extra time in milliseconds to wait for the overworld to load after the title screen.")]
+    public int ExtraTimeLoadOverworld { get; set; } = 3000;
 
-        [Description("[BDSP] Extra time in milliseconds to wait for the Y Menu to load at the start of each trade loop.")]
-        public int ExtraTimeOpenYMenu { get; set; } = 500;
+    [Category(Misc), Description("[SV] Extra time in milliseconds to wait for the Poké Portal to load.")]
+    public int ExtraTimeLoadPortal { get; set; } = 1000;
 
-        [Description("Time to wait after each keypress when navigating Switch menus or entering Link Code.")]
-        public int KeypressTime { get; set; } = 200;
+    // Opening the game.
+    [Category(OpenGame), Description("Enable this if you need to select a profile when starting the game.")]
+    public bool ProfileSelectionRequired { get; set; } = true;
 
-        [Description("Number of times to attempt reconnecting to a socket connection after a connection is lost. Set this to -1 to try indefinitely.")]
-        public int ReconnectAttempts { get; set; } = 30;
-    }
+    [Category(OpenGame), Description("Extra time in milliseconds to wait for profiles to load when starting the game.")]
+    public int ExtraTimeLoadProfile { get; set; }
 
-    // Opening the game settings category
-    public class OpeningGameSettingsCategory
-    {
-        public override string ToString() => "Opening the Game";
+    [Category(OpenGame), Description("Enable this to add a delay for \"Checking if Game Can be Played\" Pop-up.")]
+    public bool CheckGameDelay { get; set; } = false;
 
-        [Description("Extra time in milliseconds to wait before clicking A in title screen.")]
-        public int ExtraTimeLoadGame { get; set; } = 5000;
+    [Category(OpenGame), Description("Extra Time to wait for the \"Checking if Game Can Be Played\" Pop-up.")]
+    public int ExtraTimeCheckGame { get; set; } = 200;
 
-        [Description("Extra time in milliseconds to wait for the overworld to load after the title screen.")]
-        public int ExtraTimeLoadOverworld { get; set; } = 3000;
+    // Raid-specific timings.
+    [Category(Raid), Description("[RaidBot] Extra time in milliseconds to wait for the raid to load after clicking on the den.")]
+    public int ExtraTimeLoadRaid { get; set; }
 
-        [Description("Enable this if you need to select a profile when starting the game.")]
-        public bool ProfileSelectionRequired { get; set; } = true;
+    [Category(Misc), Description("Extra time in milliseconds to wait for the box to load after finding a trade.")]
+    public int ExtraTimeOpenBox { get; set; } = 1000;
 
-        [Description("Extra time in milliseconds to wait for profiles to load when starting the game.")]
-        public int ExtraTimeLoadProfile { get; set; }
+    [Category(Misc), Description("Time to wait after opening the keyboard for code entry during trades.")]
+    public int ExtraTimeOpenCodeEntry { get; set; } = 1000;
 
-        [Description("Enable this to add a delay for \"Checking if Game Can be Played\" Pop-up.")]
-        public bool CheckGameDelay { get; set; } = false;
+    [Category(Raid), Description("[RaidBot] Extra time in milliseconds to wait after clicking \"Invite Others\" before locking into a Pokémon.")]
+    public int ExtraTimeOpenRaid { get; set; }
 
-        [Description("Extra Time to wait for the \"Checking if Game Can Be Played\" Pop-up.")]
-        public int ExtraTimeCheckGame { get; set; } = 200;
-    }
+    [Category(Misc), Description("[BDSP] Extra time in milliseconds to wait for the Y Menu to load at the start of each trade loop.")]
+    public int ExtraTimeOpenYMenu { get; set; } = 500;
 
-    // Raid-specific timings settings category
-    public class RaidSettingsCategory
-    {
-        public override string ToString() => "Raid-specific Timings";
+    // Closing the game.
+    [Category(CloseGame), Description("Extra time in milliseconds to wait after pressing HOME to minimize the game.")]
+    public int ExtraTimeReturnHome { get; set; }
 
-        [Description("[RaidBot] Extra time in milliseconds to wait after accepting a friend.")]
-        public int ExtraTimeAddFriend { get; set; }
+    [Category(Misc), Description("Time to wait after each keypress when navigating Switch menus or entering Link Code.")]
+    public int KeypressTime { get; set; } = 200;
 
-        [Description("[RaidBot] Extra time in milliseconds to wait after deleting a friend.")]
-        public int ExtraTimeDeleteFriend { get; set; }
-
-        [Description("[RaidBot] Extra time in milliseconds to wait before closing the game to reset the raid.")]
-        public int ExtraTimeEndRaid { get; set; }
-
-        [Description("[RaidBot] Extra time in milliseconds to wait for the raid to load after clicking on the den.")]
-        public int ExtraTimeLoadRaid { get; set; }
-
-        [Description("[RaidBot] Extra time in milliseconds to wait after clicking \"Invite Others\" before locking into a Pokémon.")]
-        public int ExtraTimeOpenRaid { get; set; }
-    }
-
-    // Closing the game settings category
-    public class ClosingGameSettingsCategory
-    {
-        public override string ToString() => "Closing the Game";
-
-        [Description("Extra time in milliseconds to wait after clicking to close the game.")]
-        public int ExtraTimeCloseGame { get; set; }
-
-        [Description("Extra time in milliseconds to wait after pressing HOME to minimize the game.")]
-        public int ExtraTimeReturnHome { get; set; }
-    }
+    [Category(Misc), Description("Number of times to attempt reconnecting to a socket connection after a connection is lost. Set this to -1 to try indefinitely.")]
+    public int ReconnectAttempts { get; set; } = 30;
+    public override string ToString() => "Extra Time Settings";
 }

@@ -34,7 +34,7 @@ namespace SysBot.Pokemon.Discord
                 await ReplyAsync("You already have an existing trade in the queue. Please wait until it is processed.").ConfigureAwait(false);
                 return;
             }
-            var code = Info.GetRandomTradeCode(userID, Context.Channel, Context.User);
+            var code = Info.GetRandomTradeCode(userID);
             await Task.Run(async () =>
             {
                 await TradeRandomPokemonAsync(code).ConfigureAwait(false);

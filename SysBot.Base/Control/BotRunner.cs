@@ -10,7 +10,7 @@ public class BotRunner<T> where T : class, IConsoleBotConfig
 
     public bool IsRunning => Bots.Any(z => z.IsRunning);
 
-    public bool RunOnce { get; private set; }
+    public bool RunOnce { get; protected set; }
 
     public virtual void Add(RoutineExecutor<T> bot)
     {

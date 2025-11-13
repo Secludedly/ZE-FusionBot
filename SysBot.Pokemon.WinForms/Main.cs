@@ -31,7 +31,7 @@ namespace SysBot.Pokemon.WinForms
         private IPokeBotRunner RunningEnvironment { get; set; } // Bot runner based on game mode
 
         // Program configuration
-        private ProgramConfig Config { get; set; }
+        public static ProgramConfig Config { get; set; }
 
         // Static properties for update state
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] // Do not serialize in the designer
@@ -116,8 +116,8 @@ namespace SysBot.Pokemon.WinForms
                 "SegUIVar.ttf",
                 "Montserrat-Bold.ttf",
                 "Montserrat-Regular.ttf",
-                "Enter-The-Grid.ttf",
-                "GNUOLANE RG.TTF"
+                "Enter The Grid.ttf",
+                "Gnuolane Rg.ttf"
                 );
 
             // Set up left‑panel buttons & effects
@@ -204,7 +204,7 @@ namespace SysBot.Pokemon.WinForms
             }
             else
             {
-                // Does one of these config.json shits exist? No? Make it exist because you are god.
+                // config.json shits
                 Config = new ProgramConfig();
                 RunningEnvironment = GetRunner(Config); // What mode is this bitch on?
                 Config.Hub.Folder.CreateDefaults(Program.WorkingDirectory); // Hubbabubba
@@ -230,8 +230,23 @@ namespace SysBot.Pokemon.WinForms
             _botsForm.AddBotButton.Click += B_New_Click;            // Add button
 
             lblTitle.Text = Text; // Set the title label text to the form's text
-        }
 
+            this.ActiveControl = null;
+            LogUtil.LogInfo("System", "Bot initialization complete");
+
+            // Start web server async to avoid UI blocking
+            _ = Task.Run(() =>
+            {
+                try
+                {
+                    this.InitWebServer();
+                }
+                catch (Exception ex)
+                {
+                    LogUtil.LogError($"Failed to initialize web server: {ex.Message}", "System");
+                }
+            });
+        }
 
         // Save the current running environment config
         private static IPokeBotRunner GetRunner(ProgramConfig cfg) => cfg.Mode switch
@@ -240,7 +255,7 @@ namespace SysBot.Pokemon.WinForms
             ProgramMode.BDSP => new PokeBotRunnerImpl<PB8>(cfg.Hub, new BotFactory8BS()),
             ProgramMode.LA => new PokeBotRunnerImpl<PA8>(cfg.Hub, new BotFactory8LA()),
             ProgramMode.SV => new PokeBotRunnerImpl<PK9>(cfg.Hub, new BotFactory9SV()),
-      //    ProgramMode.PLZA => new PokeBotRunnerImpl<PZ10>(cfg.Hub, new BotFactory10ZA()),
+            ProgramMode.PLZA => new PokeBotRunnerImpl<PA9>(cfg.Hub, new BotFactory9PLZA()),
             ProgramMode.LGPE => new PokeBotRunnerImpl<PB7>(cfg.Hub, new BotFactory7LGPE()),
             _ => throw new IndexOutOfRangeException("Unsupported mode."), // A LIE
         };
@@ -286,6 +301,22 @@ namespace SysBot.Pokemon.WinForms
             _botsForm.ProtocolBox.DataSource = protocols;                              // Bind the ProtocolBox to the list of protocols (Dropdown list)
             _botsForm.ProtocolBox.SelectedValue = (int)SwitchProtocol.WiFi;            // Set the default to WiFi in ProtocolBox
             SaveCurrentConfig();                                                       // Save the current config for BotsForm data
+            this.StopWebServer();
+            try
+            {
+                string? exePath = Application.ExecutablePath;
+                if (!string.IsNullOrEmpty(exePath))
+                {
+                    string? dirPath = Path.GetDirectoryName(exePath);
+                    if (!string.IsNullOrEmpty(dirPath))
+                    {
+                        string portInfoPath = Path.Combine(dirPath, $"MergeBot_{Environment.ProcessId}.port");
+                        if (File.Exists(portInfoPath))
+                            File.Delete(portInfoPath);
+                    }
+                }
+            }
+            catch { }
         }
 
         // Start the bot with the current config
@@ -585,9 +616,9 @@ namespace SysBot.Pokemon.WinForms
 
             switch (mode)
             {
-      //        case ProgramMode.PLZA:
-      //            leftSideImage.Image = Resources.plza_mode_image;   // Set the image for SV mode
-      //            break;
+                case ProgramMode.PLZA:
+                    leftSideImage.Image = Resources.plza_mode_image; // Set the image for SV mode
+                    break;
                 case ProgramMode.SV:
                     leftSideImage.Image = Resources.sv_mode_image;   // Set the image for SV mode
                     break;
@@ -630,9 +661,9 @@ namespace SysBot.Pokemon.WinForms
 
             switch (bot)
             {
-      //        case PokeTradeBotZA zaBot:
-      //            zaBot.TradeProgressChanged += SetProgress;
-      //            break;
+        //        case PokeTradeBotPLZA zaBot:
+        //            zaBot.TradeProgressChanged += SetProgress;
+        //            break;
                 case PokeTradeBotSV svBot:
                     svBot.TradeProgressChanged += SetProgress;
                     break;

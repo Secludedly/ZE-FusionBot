@@ -1,4 +1,3 @@
-using Discord.WebSocket;
 using PKHeX.Core;
 using SysBot.Base;
 using SysBot.Pokemon.Helpers;
@@ -57,51 +56,90 @@ public sealed record TradeQueueInfo<T>(PokeTradeHub<T> Hub)
     {
         lock (_sync)
         {
+            // First, try to find the trade in UsersInQueue (more reliable for recently added trades)
+            var tradeEntry = UsersInQueue.FirstOrDefault(z => z.UserID == uid && z.UniqueTradeID == uniqueTradeID);
+            
+            // Try to find the trade in the queue system
             var allTrades = Hub.Queues.AllQueues.SelectMany(q => q.Queue.Select(x => x.Value)).ToList();
-
-            // Check if the user is in the queue
             var index = allTrades.FindIndex(z => z.Trainer.ID == uid && z.UniqueTradeID == uniqueTradeID);
-            if (index < 0)
-                return QueueCheckResult<T>.None;
-
-            var entry = allTrades[index];
-
-            // Count total trades accounting for batch trades
-            int totalTradesAhead = 0;
-            int processingCount = 0;
-            for (int i = 0; i < allTrades.Count; i++)
+            
+            if (index >= 0)
             {
-                var trade = allTrades[i];
+                // Trade found in queue - use queue-based position calculation
+                var entry = allTrades[index];
 
-                // Count processing trades
-                if (trade.IsProcessing)
+                // Count total trades accounting for batch trades
+                int totalTradesAhead = 0;
+                int processingCount = 0;
+
+                for (int i = 0; i < allTrades.Count; i++)
                 {
-                    processingCount++;
-                    continue;
+                    var trade = allTrades[i];
+
+                    // Count processing trades
+                    if (trade.IsProcessing)
+                    {
+                        processingCount++;
+                        continue;
+                    }
+
+                    // For trades ahead of us, count their actual trade count
+                    if (i < index)
+                    {
+                        if (trade.TotalBatchTrades > 1 && trade.BatchTrades != null)
+                            totalTradesAhead += trade.BatchTrades.Count;
+                        else
+                            totalTradesAhead += 1;
+                    }
                 }
 
-                // For trades ahead of us, count their actual trade count
-                if (i < index)
+                // Calculate actual position
+                var actualIndex = totalTradesAhead + 1 + processingCount;
+
+                // Calculate total trades in queue
+                var totalInQueue = allTrades.Sum(trade =>
                 {
                     if (trade.TotalBatchTrades > 1 && trade.BatchTrades != null)
-                        totalTradesAhead += trade.BatchTrades.Count;
+                        return trade.BatchTrades.Count;
+                    return 1;
+                }) + processingCount;
+
+                // Use tradeEntry if available, otherwise create new one
+                var resultEntry = tradeEntry ?? new TradeEntry<T>(entry, uid, type, entry.Trainer.TrainerName, uniqueTradeID);
+                return new QueueCheckResult<T>(true, resultEntry, actualIndex, totalInQueue, entry.BatchTradeNumber, entry.TotalBatchTrades);
+            }
+            else if (tradeEntry != null)
+            {
+                // Trade found in UsersInQueue but not in queue yet - calculate position based on UsersInQueue order
+                var userIndex = UsersInQueue.FindIndex(z => z.UserID == uid && z.UniqueTradeID == uniqueTradeID);
+                
+                // Count trades ahead in UsersInQueue
+                int totalTradesAhead = 0;
+                for (int i = 0; i < userIndex; i++)
+                {
+                    var entry = UsersInQueue[i];
+                    if (entry.Trade.TotalBatchTrades > 1 && entry.Trade.BatchTrades != null)
+                        totalTradesAhead += entry.Trade.BatchTrades.Count;
                     else
                         totalTradesAhead += 1;
                 }
+
+                // Count processing trades
+                int processingCount = UsersInQueue.Count(z => z.Trade.IsProcessing);
+
+                var actualIndex = totalTradesAhead + 1 + processingCount;
+                var totalInQueue = UsersInQueue.Sum(entry =>
+                {
+                    if (entry.Trade.TotalBatchTrades > 1 && entry.Trade.BatchTrades != null)
+                        return entry.Trade.BatchTrades.Count;
+                    return 1;
+                }) + processingCount;
+
+                return new QueueCheckResult<T>(true, tradeEntry, actualIndex, totalInQueue, tradeEntry.Trade.BatchTradeNumber, tradeEntry.Trade.TotalBatchTrades);
             }
-
-            // Calculate actual position
-            var actualIndex = totalTradesAhead + 1 + processingCount;
-
-            // Calculate total trades in queue
-            var totalInQueue = allTrades.Sum(trade =>
-            {
-                if (trade.TotalBatchTrades > 1 && trade.BatchTrades != null)
-                    return trade.BatchTrades.Count;
-                return 1;
-            }) + processingCount;
-
-            return new QueueCheckResult<T>(true, new TradeEntry<T>(entry, uid, type, entry.Trainer.TrainerName, uniqueTradeID), actualIndex, totalInQueue);
+            
+            // Trade not found anywhere
+            return QueueCheckResult<T>.None;
         }
     }
 
@@ -140,6 +178,7 @@ public sealed record TradeQueueInfo<T>(PokeTradeHub<T> Hub)
             {
                 trade.Trade.IsProcessing = false;
                 Remove(trade);
+
                 // Also release batch tracker if it's a batch trade
                 if (trade.Trade.TotalBatchTrades > 1)
                 {
@@ -244,7 +283,7 @@ public sealed record TradeQueueInfo<T>(PokeTradeHub<T> Hub)
     {
         lock (_sync)
         {
-            LogUtil.LogInfo($"Removing {detail.Trade.Trainer.TrainerName}", nameof(TradeQueueInfo<T>));
+            LogUtil.LogInfo(nameof(TradeQueueInfo<T>), $"Removing {detail.Trade.Trainer.TrainerName}");
             return UsersInQueue.Remove(detail);
         }
     }
@@ -253,15 +292,78 @@ public sealed record TradeQueueInfo<T>(PokeTradeHub<T> Hub)
     {
         lock (_sync)
         {
-            if (UsersInQueue.Any(z => z.UserID == userID) && !allowMultiple && !sudo)
-                return QueueResultAdd.AlreadyInQueue;
+            // Check if user is already in queue (sudo users bypass this check entirely)
+            if (!sudo)
+            {
+                // Get ALL existing entries for this user (not just the first one)
+                var existingEntries = UsersInQueue.Where(z => z.UserID == userID).ToList();
+
+                if (existingEntries.Count > 0)
+                {
+                    // For regular trades (allowMultiple = false), ALWAYS block duplicate entries
+                    // This prevents users from joining the queue multiple times
+                    if (!allowMultiple)
+                    {
+                        LogUtil.LogInfo(nameof(TradeQueueInfo<T>),
+                            $"Blocked duplicate queue entry: User {userID} already has {existingEntries.Count} entry(s) in queue");
+                        return QueueResultAdd.AlreadyInQueue;
+                    }
+
+                    // For batch trades (allowMultiple = true), only allow if same UniqueTradeID
+                    // This allows multiple Pokemon from the same batch, but prevents starting a new batch
+                    if (existingEntries.Any(e => e.UniqueTradeID != trade.Trade.UniqueTradeID))
+                    {
+                        LogUtil.LogInfo(nameof(TradeQueueInfo<T>),
+                            $"Blocked different batch: User {userID} trying to queue UniqueTradeID {trade.Trade.UniqueTradeID} " +
+                            $"but already has UniqueTradeID {existingEntries.First().UniqueTradeID}");
+                        return QueueResultAdd.AlreadyInQueue;
+                    }
+                }
+            }
+
+            // Check if queue is full (unless user is sudo)
+            if (!sudo && UsersInQueue.Count >= Hub.Config.Queues.MaxQueueCount)
+                return QueueResultAdd.QueueFull;
+
+            // PLZA blocked item validation - check if Pokemon has blocked held item
+            // This central check ensures NO bypass is possible from any entry point
+            if (NonTradableItemsPLZA.IsPLZAMode(Hub))
+            {
+                // Check the main pokemon
+                if (NonTradableItemsPLZA.IsBlocked(trade.Trade.TradeData))
+                {
+                    var held = trade.Trade.TradeData.HeldItem;
+                    var itemName = held > 0 ? PKHeX.Core.GameInfo.GetStrings("en").Item[held] : "(none)";
+                    LogUtil.LogInfo(nameof(TradeQueueInfo<T>),
+                        $"Blocked trade for user {userID}: held item '{itemName}' is not allowed in PLZA");
+                    return QueueResultAdd.NotAllowedItem;
+                }
+
+                // For batch trades, also check all pokemon in the batch
+                if (trade.Trade.BatchTrades != null && trade.Trade.BatchTrades.Count > 0)
+                {
+                    for (int i = 0; i < trade.Trade.BatchTrades.Count; i++)
+                    {
+                        if (NonTradableItemsPLZA.IsBlocked(trade.Trade.BatchTrades[i]))
+                        {
+                            var held = trade.Trade.BatchTrades[i].HeldItem;
+                            var itemName = held > 0 ? PKHeX.Core.GameInfo.GetStrings("en").Item[held] : "(none)";
+                            var speciesName = GameInfo.Strings.Species[trade.Trade.BatchTrades[i].Species];
+                            LogUtil.LogInfo(nameof(TradeQueueInfo<T>),
+                                $"Blocked batch trade for user {userID}: Pokemon #{i + 1} ({speciesName}) has held item '{itemName}' which is not allowed in PLZA");
+                            return QueueResultAdd.NotAllowedItem;
+                        }
+                    }
+                }
+            }
 
             if (Hub.Config.Legality.ResetHOMETracker && trade.Trade.TradeData is IHomeTrack t)
                 t.Tracker = 0;
 
-            var priority = sudo ? PokeTradePriorities.Tier1 :
-                           trade.Trade.IsFavored ? PokeTradePriorities.Tier2 :
-                           PokeTradePriorities.TierFree;
+            // Sudo users get Tier1 (highest priority)
+            // Both favored and regular users get TierFree - favoritism is handled by queue positioning logic
+            var priority = sudo ? PokeTradePriorities.Tier1 : PokeTradePriorities.TierFree;
+
             var queue = Hub.Queues.GetQueue(trade.Type);
 
             queue.Enqueue(trade.Trade, priority);
@@ -272,11 +374,11 @@ public sealed record TradeQueueInfo<T>(PokeTradeHub<T> Hub)
         }
     }
 
-    public int GetRandomTradeCode(ulong trainerID, ISocketMessageChannel channel, SocketUser user)
+    public int GetRandomTradeCode(ulong trainerID)
     {
         if (Hub.Config.Trade.TradeConfiguration.StoreTradeCodes)
         {
-            return _tradeCodeStorage.GetTradeCode(trainerID, channel, user);
+            return _tradeCodeStorage.GetTradeCode(trainerID);
         }
         else
         {
@@ -291,7 +393,6 @@ public sealed record TradeQueueInfo<T>(PokeTradeHub<T> Hub)
         {
             code.Add((Pictocodes)Util.Rand.Next(10));
             code.Add(Pictocodes.Pikachu);
-
         }
         return code;
     }
@@ -302,6 +403,7 @@ public sealed record TradeQueueInfo<T>(PokeTradeHub<T> Hub)
             return UsersInQueue.Count(func);
     }
 
+    // Genpkm method
     public (int effectiveCount, int processingBatchTrades) GetQueueStats()
     {
         lock (_sync)
@@ -310,21 +412,16 @@ public sealed record TradeQueueInfo<T>(PokeTradeHub<T> Hub)
 
             // Count effective queue size (batch trades count as their full size)
             int effectiveCount = allTrades
-            .GroupBy(t => new { t.Trainer.ID, t.UniqueTradeID })
-            .Sum(g => g.First().TotalBatchTrades > 1 ? g.First().TotalBatchTrades : g.Count());
+                .GroupBy(t => new { t.Trainer.ID, t.UniqueTradeID })
+                .Sum(g => g.First().TotalBatchTrades > 1 ? g.First().TotalBatchTrades : g.Count());
 
             // Count how many batch trades are currently processing
             int processingBatchTrades = allTrades
-            .Where(t => t.IsProcessing && t.TotalBatchTrades > 1)
-            .GroupBy(t => new { t.Trainer.ID, t.UniqueTradeID })
-            .Count();
+                .Where(t => t.IsProcessing && t.TotalBatchTrades > 1)
+                .GroupBy(t => new { t.Trainer.ID, t.UniqueTradeID })
+                .Count();
+
             return (effectiveCount, processingBatchTrades);
         }
-    }
-
-    public int GetRandomTradeCode(int trainerID)
-    {
-        ulong id = (ulong)trainerID;
-        return GetRandomTradeCode(id, null, null); // You can safely ignore `null` here if logging isn't mandatory
     }
 }

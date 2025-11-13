@@ -21,7 +21,7 @@ public class LogModule : ModuleBase<SocketCommandContext>
                 AddLogChannel(c, ch.ID);
         }
 
-        LogUtil.LogInfo("Added logging to Discord channel(s) on Bot startup.", "Discord");
+        LogUtil.LogInfo("Discord", "Added logging to Discord channel(s) on Bot startup.");
     }
 
     [Command("logHere")]

@@ -419,7 +419,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
 
                 // Connection attempt logic
                 await Click(X, 3_000, token).ConfigureAwait(false);
-                await Click(L, 5_000 + config.Timings.MiscellaneousSettings.ExtraTimeConnectOnline, token).ConfigureAwait(false);
+                await Click(L, 5_000 + config.Timings.ExtraTimeConnectOnline, token).ConfigureAwait(false);
 
                 // Wait a bit before rechecking the connection status
                 await Task.Delay(5000, token).ConfigureAwait(false); // Wait 5 seconds before rechecking
@@ -447,7 +447,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
         }
 
         // Final steps after connection is established
-        await Task.Delay(3_000 + config.Timings.MiscellaneousSettings.ExtraTimeConnectOnline, token).ConfigureAwait(false);
+        await Task.Delay(3_000 + config.Timings.ExtraTimeConnectOnline, token).ConfigureAwait(false);
 
         return true;
     }
@@ -667,7 +667,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
         if (Hub.Config.Discord.ReturnPKMs)
             poke.SendNotification(this, offered, $"Here's what you showed me - {LanguageHelper.GetLocalizedSpeciesLog(offered)}");
 
-        var adOT = AbstractTrade<PK9>.HasAdName(offered, out _);
+        var adOT = TradeExtensions<PK9>.HasAdName(offered, out _);
         var laInit = new LegalityAnalysis(offered);
         if (!adOT && laInit.Valid)
         {
@@ -682,7 +682,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
             clone.Tracker = 0;
 
         string shiny = string.Empty;
-        if (!AbstractTrade<PK9>.ShinyLockCheck(offered.Species, AbstractTrade<PK9>.FormOutput(offered.Species, offered.Form, out _), $"{(Ball)offered.Ball}"))
+        if (!TradeExtensions<PK9>.ShinyLockCheck(offered.Species, TradeExtensions<PK9>.FormOutput(offered.Species, offered.Form, out _), $"{(Ball)offered.Ball}"))
             shiny = $"\nShiny: {(offered.ShinyXor == 0 ? "Square" : offered.IsShiny ? "Star" : "No")}";
         else shiny = "\nShiny: No";
 
@@ -709,7 +709,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
             var info = new SimpleTrainerInfo { Gender = clone.OriginalTrainerGender, Language = clone.Language, OT = name, TID16 = clone.TID16, SID16 = clone.SID16, Generation = 9 };
             var mg = EncounterEvent.GetAllEvents().Where(x => x.Species == clone.Species && x.Form == clone.Form && x.IsShiny == clone.IsShiny && x.OriginalTrainerName == clone.OriginalTrainerName).ToList();
             if (mg.Count > 0)
-                clone = AbstractTrade<PK9>.CherishHandler(mg.First(), info);
+                clone = TradeExtensions<PK9>.CherishHandler(mg.First(), info);
             else clone = (PK9)sav.GetLegal(AutoLegalityWrapper.GetTemplate(new ShowdownSet(string.Join("\n", set))), out _);
         }
         else
@@ -718,7 +718,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
         }
 
         var la = new LegalityAnalysis(clone);
-        clone = (PK9)AbstractTrade<PK9>.TrashBytes(clone, la);
+        clone = (PK9)TradeExtensions<PK9>.TrashBytes(clone, la);
         clone.ResetPartyStats();
 
         la = new LegalityAnalysis(clone);
@@ -730,7 +730,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
             return (clone, PokeTradeResult.IllegalTrade);
         }
 
-        AbstractTrade<PK9>.HasAdName(offered, out string detectedAd);
+        TradeExtensions<PK9>.HasAdName(offered, out string detectedAd);
         poke.SendNotification(this, $"{(!laInit.Valid ? "**Legalized" : "**Fixed Nickname/OT for")} {(Species)clone.Species}** (found ad: {detectedAd})! Now confirm the trade!");
         Log($"{(!laInit.Valid ? "Legalized" : "Fixed Nickname/OT for")} {LanguageHelper.GetLocalizedSpeciesLog(clone)}!");
         TradeProgressChanged?.Invoke(72);
@@ -838,8 +838,8 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
             {
                 if (e.StackTrace != null)
                     Connection.LogError(e.StackTrace);
-                var attempts = Hub.Config.Timings.MiscellaneousSettings.ReconnectAttempts;
-                var delay = Hub.Config.Timings.MiscellaneousSettings.ExtraReconnectDelay;
+                var attempts = Hub.Config.Timings.ReconnectAttempts;
+                var delay = Hub.Config.Timings.ExtraReconnectDelay;
                 var protocol = Config.Connection.Protocol;
                 if (!await TryReconnect(attempts, delay, protocol, token).ConfigureAwait(false))
                     return;
@@ -1023,7 +1023,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
                         return PokeTradeResult.RecoverOpenBox;
                     }
                 }
-                await Task.Delay(3_000 + Hub.Config.Timings.MiscellaneousSettings.ExtraTimeOpenBox, token).ConfigureAwait(false);
+                await Task.Delay(3_000 + Hub.Config.Timings.ExtraTimeOpenBox, token).ConfigureAwait(false);
 
                 // Get trade partner info and verify
                 var tradePartnerFullInfo = await GetTradePartnerFullInfo(token).ConfigureAwait(false);
@@ -1345,7 +1345,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
                 Hub.Config.Stream.StartEnterCode(this);
                 startedEnterCode = true;
             }
-            await Task.Delay(Hub.Config.Timings.MiscellaneousSettings.ExtraTimeOpenCodeEntry, token).ConfigureAwait(false);
+            await Task.Delay(Hub.Config.Timings.ExtraTimeOpenCodeEntry, token).ConfigureAwait(false);
             Log($"Entering Link Trade code: {code:0000 0000}...");
             TradeProgressChanged?.Invoke(36);
             await EnterLinkCode(code, Hub.Config, token).ConfigureAwait(false);
@@ -1420,7 +1420,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
                 return PokeTradeResult.RecoverOpenBox;
             }
         }
-        await Task.Delay(3_000 + Hub.Config.Timings.MiscellaneousSettings.ExtraTimeOpenBox, token).ConfigureAwait(false);
+        await Task.Delay(3_000 + Hub.Config.Timings.ExtraTimeOpenBox, token).ConfigureAwait(false);
 
         var tradePartnerFullInfo = await GetTradePartnerFullInfo(token).ConfigureAwait(false);
         var tradePartner = new TradePartnerSV(tradePartnerFullInfo);
@@ -1764,7 +1764,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
                 return false;
             }
         }
-        await Task.Delay(2_000 + Hub.Config.Timings.MiscellaneousSettings.ExtraTimeLoadPortal, token).ConfigureAwait(false);
+        await Task.Delay(2_000 + Hub.Config.Timings.ExtraTimeLoadPortal, token).ConfigureAwait(false);
 
         // Connect online if not already.
         if (!await ConnectToOnline(Hub.Config, token).ConfigureAwait(false))
@@ -1779,7 +1779,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
         {
             Log("News detected, will close once it's loaded!");
             await Task.Delay(5_000, token).ConfigureAwait(false);
-            await Click(B, 2_000 + Hub.Config.Timings.MiscellaneousSettings.ExtraTimeLoadPortal, token).ConfigureAwait(false);
+            await Click(B, 2_000 + Hub.Config.Timings.ExtraTimeLoadPortal, token).ConfigureAwait(false);
         }
 
         Log("Adjusting the cursor in the Portal.");

@@ -1,44 +1,35 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net9.0-windows</TargetFramework>
+    <RuntimeIdentifier>win-x86</RuntimeIdentifier>
     <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>ZE_FusionBot</AssemblyName>
+    <SelfContained>false</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <DebugType>pdbonly</DebugType>
   </PropertyGroup>
-
   <PropertyGroup>
     <PackageId>SysBot.Pokemon.WinForms</PackageId>
-    <AssemblyName>SysBot</AssemblyName>
     <Description>Nintendo Switch Pokémon Bot Manager</Description>
     <ApplicationIcon>icon.ico</ApplicationIcon>
     <StartupObject>SysBot.Pokemon.WinForms.Program</StartupObject>
     <Version>01.00.00</Version>
     <GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>
   </PropertyGroup>
-
   <PropertyGroup>
     <EmbedAllSources>true</EmbedAllSources>
     <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
     <PublishTrimmed>false</PublishTrimmed>
-    <SelfContained>false</SelfContained>
-    <Authors>Kaphotics, Gengar, Secludedly</Authors>
+    <Authors>Kaphotics, hexbyt3, Secludedly</Authors>
   </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <DebugType>pdbonly</DebugType>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <DebugType>pdbonly</DebugType>
-  </PropertyGroup>
-
   <ItemGroup>
     <None Remove="Fonts\bahnschrift.ttf" />
     <None Remove="Fonts\Bobbleboddy_light.ttf" />
-    <None Remove="Fonts\Enter-The-Grid.ttf" />
+    <None Remove="Fonts\Enter The Grid.ttf" />
     <None Remove="Fonts\gadugi.ttf" />
     <None Remove="Fonts\gadugib.ttf" />
-    <None Remove="Fonts\GNUOLANE RG.TTF" />
+    <None Remove="Fonts\Gnuolane Rg.ttf" />
     <None Remove="Fonts\Montserrat-Bold.ttf" />
     <None Remove="Fonts\Montserrat-Regular.ttf" />
     <None Remove="Fonts\segoeui.ttf" />
@@ -58,15 +49,24 @@
     <None Remove="Fonts\UbuntuMono-BI.ttf" />
     <None Remove="Fonts\UbuntuMono-R.ttf" />
     <None Remove="Fonts\UbuntuMono-RI.ttf" />
-    <None Remove="Resources\plza_mode_image.png" />
+    <None Remove="Resources\bdsp_mode_image.png" />
+    <None Remove="Resources\BotControlPanel.css" />
+    <None Remove="Resources\BotControlPanel.html" />
+    <None Remove="Resources\BotControlPanel.js" />
+    <None Remove="Resources\LeftJoyCon.png" />
+    <None Remove="Resources\lgpe_mode_image.png" />
+    <None Remove="Resources\pla_mode_image.png" />
+    <None Remove="Resources\RightJoyCon.png" />
+    <None Remove="Resources\sv_mode_image.png" />
+    <None Remove="Resources\swsh_mode_image.png" />
   </ItemGroup>
-
   <ItemGroup>
     <EmbeddedResource Include="Fonts\bahnschrift.ttf" />
-    <EmbeddedResource Include="Fonts\Enter-The-Grid.ttf" />
+    <EmbeddedResource Include="Fonts\Bobbleboddy_light.ttf" />
+    <EmbeddedResource Include="Fonts\Enter The Grid.ttf" />
     <EmbeddedResource Include="Fonts\gadugi.ttf" />
     <EmbeddedResource Include="Fonts\gadugib.ttf" />
-    <EmbeddedResource Include="Fonts\GNUOLANE RG.TTF" />
+    <EmbeddedResource Include="Fonts\Gnuolane Rg.ttf" />
     <EmbeddedResource Include="Fonts\Montserrat-Bold.ttf" />
     <EmbeddedResource Include="Fonts\Montserrat-Regular.ttf" />
     <EmbeddedResource Include="Fonts\segoeui.ttf" />
@@ -86,30 +86,53 @@
     <EmbeddedResource Include="Fonts\UbuntuMono-BI.ttf" />
     <EmbeddedResource Include="Fonts\UbuntuMono-R.ttf" />
     <EmbeddedResource Include="Fonts\UbuntuMono-RI.ttf" />
-    <EmbeddedResource Include="Resources\plza_mode_image.png" />
+    <EmbeddedResource Include="Resources\bdsp_mode_image.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Resources\BotControlPanel.css">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Resources\BotControlPanel.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Resources\BotControlPanel.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Resources\LeftJoyCon.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Resources\lgpe_mode_image.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Resources\pla_mode_image.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Resources\RightJoyCon.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Resources\sv_mode_image.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Resources\swsh_mode_image.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
   </ItemGroup>
-
   <ItemGroup>
     <PackageReference Include="FontAwesome.Sharp" Version="6.6.0" />
-    <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.4" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.4" />
-    <PackageReference Include="PKHeX.Core" Version="25.9.25" />
-    <PackageReference Include="System.Drawing.Common" Version="9.0.4" />
     <PackageReference Include="System.Resources.Extensions" Version="9.0.4" />
   </ItemGroup>
-
-  <ItemGroup>
-    <EmbeddedResource Include="Fonts\Bobbleboddy_light.ttf" />
-  </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\SysBot.Base\SysBot.Base.csproj" />
     <ProjectReference Include="..\SysBot.Pokemon.Discord\SysBot.Pokemon.Discord.csproj" />
+    <ProjectReference Include="..\SysBot.Pokemon.Twitch\SysBot.Pokemon.Twitch.csproj" />
+    <ProjectReference Include="..\SysBot.Pokemon.YouTube\SysBot.Pokemon.YouTube.csproj" />
     <ProjectReference Include="..\SysBot.Pokemon\SysBot.Pokemon.csproj" />
     <ProjectReference Include="..\SysBot.Pokemon.Z3\SysBot.Pokemon.Z3.csproj" />
   </ItemGroup>
-
   <ItemGroup>
+    <Reference Include="PKHeX.Core">
+      <HintPath>..\SysBot.Pokemon\deps\PKHeX.Core.dll</HintPath>
+    </Reference>
     <Reference Include="PKHeX.Drawing">
       <HintPath>deps\PKHeX.Drawing.dll</HintPath>
     </Reference>
@@ -117,7 +140,6 @@
       <HintPath>deps\PKHeX.Drawing.PokeSprite.dll</HintPath>
     </Reference>
   </ItemGroup>
-
   <ItemGroup>
     <Compile Update="Properties\Resources.Designer.cs">
       <DesignTime>True</DesignTime>
@@ -125,18 +147,10 @@
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
   </ItemGroup>
-
   <ItemGroup>
     <EmbeddedResource Update="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
   </ItemGroup>
-
-  <ItemGroup>
-    <None Update="icon.ico">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-
 </Project>

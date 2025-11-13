@@ -22,7 +22,7 @@ public class BatchEditingModule : ModuleBase<SocketCommandContext>
     }
 
     [Command("batchValidate"), Alias("bev")]
-    [Summary("Tries to get validation info about the requested property.")]
+    [Summary("Tries to get info about the requested property.")]
     public async Task ValidateBatchInfo(string instructions)
     {
         bool valid = IsValidInstructionSet(instructions, out var invalid);

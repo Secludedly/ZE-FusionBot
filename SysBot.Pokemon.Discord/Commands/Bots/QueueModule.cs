@@ -3,6 +3,7 @@ using Discord.Commands;
 using PKHeX.Core;
 using SysBot.Base;
 using System;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
@@ -25,7 +26,7 @@ public class QueueModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
 
     [Command("queueClearAll")]
     [Alias("qca", "tca")]
-    [Summary("Clears all users from all of the trade queues.")]
+    [Summary("Clears all users from the trade queues.")]
     [RequireSudo]
     public async Task ClearAllTradesAsync()
     {
@@ -35,7 +36,7 @@ public class QueueModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
 
     [Command("queueClear")]
     [Alias("qc", "tc")]
-    [Summary("Allows a user to remove themselves from the trade queues. Will not remove a user if they are being processed.")]
+    [Summary("Clears the user from the trade queues. Will not remove a user if they are being processed.")]
     public async Task ClearTradeAsync()
     {
         string msg = ClearTrade(Context.User.Id);
@@ -44,7 +45,7 @@ public class QueueModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
 
     [Command("queueClearUser")]
     [Alias("qcu", "tcu")]
-    [Summary("Clears a specified user from the trade queues (requires sudo). Will not remove a user if they are being processed.")]
+    [Summary("Clears the user from the trade queues. Will not remove a user if they are being processed.")]
     [RequireSudo]
     public async Task ClearTradeUserAsync([Summary("Discord user ID")] ulong id)
     {
@@ -54,7 +55,7 @@ public class QueueModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
 
     [Command("queueClearUser")]
     [Alias("qcu", "tcu")]
-    [Summary("Clears a specified user from the trade queues (requires sudo). Will not remove a user if they are being processed.")]
+    [Summary("Clears the user from the trade queues. Will not remove a user if they are being processed.")]
     [RequireSudo]
     public async Task ClearTradeUserAsync([Summary("Username of the person to clear")] string _)
     {
@@ -67,7 +68,7 @@ public class QueueModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
 
     [Command("queueClearUser")]
     [Alias("qcu", "tcu")]
-    [Summary("Clears a specified user from the trade queues (requires sudo). Will not remove a user if they are being processed.")]
+    [Summary("Clears the user from the trade queues. Will not remove a user if they are being processed.")]
     [RequireSudo]
     public async Task ClearTradeUserAsync()
     {
@@ -103,7 +104,7 @@ public class QueueModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         if (tradeEntry != null)
         {
             var uniqueTradeID = tradeEntry.UniqueTradeID;
-            msg = Context.User.Mention + " - " + Info.GetPositionString(userID, uniqueTradeID);
+            msg = Context.User.Mention + " - " + Info.GetPositionString(userID, uniqueTradeID, tradeEntry.Type);
         }
         else
         {
@@ -115,16 +116,44 @@ public class QueueModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
 
     [Command("queueList")]
     [Alias("ql")]
-    [Summary("Private messages the list of users in the queue.")]
+    [Summary("Shows a nice embed of the current queue with species, trade type, and username.")]
     [RequireSudo]
     public async Task ListUserQueue()
     {
-        var lines = SysCord<T>.Runner.Hub.Queues.Info.GetUserList("(ID {0}) - Code: {1} - {2} - {3}");
-        var msg = string.Join("\n", lines);
-        if (msg.Length < 3)
+        var queue = SysCord<T>.Runner.Hub.Queues.Info.GetUserList("{4}|{2}|{3}"); // Species|Type|Username
+
+        if (!queue.Any())
+        {
             await ReplyAsync("Queue list is empty.").ConfigureAwait(false);
-        else
-            await Context.User.SendMessageAsync(msg).ConfigureAwait(false);
+            return;
+        }
+
+        var embedBuilder = new EmbedBuilder()
+            .WithTitle($"📋 Current Trade Queue ({queue.Count()} users)")
+            .WithColor(Color.Blue)
+            .WithCurrentTimestamp();
+
+        var queueList = queue.Select((entry, index) =>
+        {
+            var parts = entry.Split('|');
+            var species = parts[0];
+            var tradeType = parts[1];
+            var username = parts[2];
+
+            return $"`{index + 1}.` **{species}** - {tradeType} - *{username}*";
+        });
+
+        var description = string.Join("\n", queueList);
+
+        // Discord embeds have a 4096 character limit for description
+        if (description.Length > 4000)
+        {
+            description = description.Substring(0, 4000) + "\n... (list truncated)";
+        }
+
+        embedBuilder.WithDescription(description);
+
+        await ReplyAsync(embed: embedBuilder.Build()).ConfigureAwait(false);
     }
 
     [Command("queueToggle")]
@@ -174,6 +203,10 @@ public class QueueModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
     {
         try
         {
+            // Don't attempt to delete messages in DM channels - Discord doesn't allow it
+            if (sentMessage.Channel is IDMChannel)
+                return;
+
             await Task.Delay(delaySeconds * 1000);
             await sentMessage.DeleteAsync();
             if (messageToDelete != null)

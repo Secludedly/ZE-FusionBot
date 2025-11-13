@@ -6,22 +6,37 @@ public enum PokeTradeResult
 
     // Trade Partner Failures
     NoTrainerFound,
+
     TrainerTooSlow,
+
     TrainerLeft,
+
     TrainerOfferCanceledQuick,
+
     TrainerRequestBad,
+
     IllegalTrade,
+
     SuspiciousActivity,
+
+    UserCanceled,
 
     // Recovery -- General Bot Failures
     // Anything below here should be retried once if possible.
     RoutineCancel,
+
     ExceptionConnection,
+
     ExceptionInternal,
+
     RecoverStart,
+
     RecoverPostLinkCode,
+
     RecoverOpenBox,
+
     RecoverReturnOverworld,
+
     RecoverEnterUnionRoom,
 }
 

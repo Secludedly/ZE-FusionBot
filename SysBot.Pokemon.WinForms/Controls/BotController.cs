@@ -567,11 +567,98 @@ public partial class BotController : UserControl
         }
     }
 
-    private BotSource<PokeBotState> GetBot()
+    public BotSource<PokeBotState> GetBot()
     {
         if (Runner == null) throw new ArgumentNullException(nameof(Runner));
         var bot = Runner.GetBot(State) ?? throw new ArgumentNullException("bot");
         return bot;
+    }
+
+    private void ShowRecoveryStatus(object? sender, EventArgs e)
+    {
+        var bot = GetBot();
+        if (bot is null)
+        {
+            MessageBox.Show("Bot not found.", "Recovery Status", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
+        var recoveryState = bot.GetRecoveryState();
+        if (recoveryState is null)
+        {
+            MessageBox.Show("Recovery service is not enabled for this bot.", "Recovery Status", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
+        var status = $"Bot: {bot.Bot.Connection.Name}\n" +
+                    $"Status: {(bot.IsRunning ? "Running" : "Stopped")}\n" +
+                    $"Recovery Attempts: {recoveryState.ConsecutiveFailures}\n" +
+                    $"Total Crashes: {recoveryState.CrashHistory.Count}\n" +
+                    $"Is Recovering: {(recoveryState.IsRecovering ? "Yes" : "No")}\n";
+
+        if (recoveryState.LastRecoveryAttempt is not null)
+        {
+            status += $"Last Recovery: {recoveryState.LastRecoveryAttempt.Value:yyyy-MM-dd HH:mm:ss}\n";
+        }
+
+        if (recoveryState.CrashHistory.Count > 0)
+        {
+            var lastCrash = recoveryState.CrashHistory.OrderByDescending(c => c).FirstOrDefault();
+            if (lastCrash != default)
+            {
+                status += $"Last Crash: {lastCrash:yyyy-MM-dd HH:mm:ss}\n";
+            }
+        }
+
+        MessageBox.Show(status, "Recovery Status", MessageBoxButtons.OK, MessageBoxIcon.Information);
+    }
+
+    public string ReadBotState()
+    {
+        try
+        {
+            var botSource = GetBot();
+            if (botSource is null)
+                return "ERROR";
+
+            var bot = botSource.Bot;
+            if (bot is null)
+                return "ERROR";
+
+            if (!botSource.IsRunning)
+                return "STOPPED";
+
+            if (botSource.IsStopping)
+                return "STOPPING";
+
+            if (botSource.IsPaused)
+            {
+                if (bot.Config?.CurrentRoutineType != PokeRoutineType.Idle)
+                    return "IDLING";
+                else
+                    return "IDLE";
+            }
+
+            if (botSource.IsRunning && !bot.Connection.Connected)
+                return "REBOOTING";
+
+            var cfg = bot.Config;
+            if (cfg == null)
+                return "UNKNOWN";
+
+            if (cfg.CurrentRoutineType == PokeRoutineType.Idle)
+                return "IDLE";
+
+            if (botSource.IsRunning && bot.Connection.Connected)
+                return cfg.CurrentRoutineType.ToString();
+
+            return "UNKNOWN";
+        }
+        catch (Exception ex)
+        {
+            LogUtil.LogError($"Error reading bot state: {ex.Message}", "BotController");
+            return "ERROR";
+        }
     }
 
     public void ReadAllBotStates()

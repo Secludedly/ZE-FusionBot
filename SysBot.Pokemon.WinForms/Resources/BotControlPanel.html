@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, maximum-scale=5.0, viewport-fit=cover">
+    <meta name="description" content="Pokemon Bot Control Panel - Manage and monitor your Pokemon automation bots">
+    <title>ZE_FusionBot Control Center</title>
+    <link rel="icon" type="image/x-icon" href="/icon.ico">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="BotControlPanel.css?v=2.0.0">
+</head>
+<body>
+    <div class="app" id="app">
+        <header class="header" role="banner">
+            <div class="container">
+                <div class="header-content">
+                    <div class="logo-section">
+                        <div class="pokeball-logo" aria-hidden="true">
+                            <div class="pokeball-top"></div>
+                            <div class="pokeball-center">
+                                <div class="pokeball-button"></div>
+                            </div>
+                            <div class="pokeball-bottom"></div>
+                        </div>
+                        <h1 class="main-title">
+                            <span class="title-prefix">Poké</span>
+                            <span class="title-main">Bot</span>
+                            <span class="title-suffix">Control Center</span>
+                        </h1>
+                    </div>
+                    <nav class="header-controls" role="navigation" aria-label="Main controls">
+                        <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme" title="Toggle dark/light mode">
+                            <svg class="theme-icon sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="5"></circle>
+                                <line x1="12" y1="1" x2="12" y2="3"></line>
+                                <line x1="12" y1="21" x2="12" y2="23"></line>
+                                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                                <line x1="1" y1="12" x2="3" y2="12"></line>
+                                <line x1="21" y1="12" x2="23" y2="12"></line>
+                                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                            </svg>
+                            <svg class="theme-icon moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                            </svg>
+                        </button>
+                        <button class="btn btn-refresh" id="refresh-button" aria-label="Refresh data">
+                            <svg class="refresh-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                            </svg>
+                            <span>Refresh</span>
+                        </button>
+                        <div class="refresh-status" role="status" aria-live="polite">
+                            <span class="refresh-indicator" id="refresh-indicator" title="Auto-refresh active"></span>
+                            <span class="refresh-text">Auto</span>
+                        </div>
+                    </nav>
+                </div>
+            </div>
+        </header>
+
+        <main class="container" role="main">
+            <section class="dashboard-overview" aria-labelledby="dashboard-title">
+                <h2 id="dashboard-title" class="visually-hidden">Dashboard Overview</h2>
+                <div class="overview-grid" id="overview-grid" role="region" aria-label="Bot statistics">
+                    <article class="stat-card stat-card-instances">
+                        <div class="stat-icon-wrapper">
+                            <div class="stat-icon stat-icon-robot">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="11" width="18" height="10" rx="2" ry="2"></rect>
+                                    <circle cx="12" cy="5" r="2"></circle>
+                                    <path d="M12 7v4"></path>
+                                    <line x1="8" y1="16" x2="8" y2="16"></line>
+                                    <line x1="16" y1="16" x2="16" y2="16"></line>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="stat-content">
+                            <h3 class="stat-value" id="total-instances">0</h3>
+                            <p class="stat-label">Total Instances</p>
+                        </div>
+                        <div class="stat-background" aria-hidden="true"></div>
+                    </article>
+                    <article class="stat-card stat-card-active">
+                        <div class="stat-icon-wrapper">
+                            <div class="stat-icon stat-icon-active">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="stat-content">
+                            <h3 class="stat-value" id="active-bots">0</h3>
+                            <p class="stat-label">Active Bots</p>
+                        </div>
+                        <div class="stat-background" aria-hidden="true"></div>
+                    </article>
+                    <article class="stat-card stat-card-idle">
+                        <div class="stat-icon-wrapper">
+                            <div class="stat-icon stat-icon-pause">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="6" y="4" width="4" height="16"></rect>
+                                    <rect x="14" y="4" width="4" height="16"></rect>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="stat-content">
+                            <h3 class="stat-value" id="idle-bots">0</h3>
+                            <p class="stat-label">Idle Bots</p>
+                        </div>
+                        <div class="stat-background" aria-hidden="true"></div>
+                    </article>
+                    <article class="stat-card stat-card-online">
+                        <div class="stat-icon-wrapper">
+                            <div class="stat-icon stat-icon-signal">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M5 12.55a11 11 0 0 1 14.08 0"></path>
+                                    <path d="M1.42 9a16 16 0 0 1 21.16 0"></path>
+                                    <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+                                    <line x1="12" y1="20" x2="12.01" y2="20"></line>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="stat-content">
+                            <h3 class="stat-value" id="online-instances">0</h3>
+                            <p class="stat-label">Online</p>
+                        </div>
+                        <div class="stat-background" aria-hidden="true"></div>
+                    </article>
+                </div>
+
+                <div class="control-buttons" role="toolbar" aria-label="Global bot controls">
+                    <button class="btn btn-action btn-start" data-global-action="start" aria-label="Start all bots">
+                        <span class="btn-icon">
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M8 5v14l11-7z"/>
+                            </svg>
+                        </span>
+                        <span class="btn-text">Start All</span>
+                    </button>
+                    <button class="btn btn-action btn-stop" data-global-action="stop" aria-label="Stop all bots">
+                        <span class="btn-icon">
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                <rect x="6" y="6" width="12" height="12"/>
+                            </svg>
+                        </span>
+                        <span class="btn-text">Stop All</span>
+                    </button>
+                    <button class="btn btn-action btn-idle" data-global-action="idle" aria-label="Idle all bots">
+                        <span class="btn-icon">
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                <rect x="6" y="4" width="4" height="16"/>
+                                <rect x="14" y="4" width="4" height="16"/>
+                            </svg>
+                        </span>
+                        <span class="btn-text">Idle All</span>
+                    </button>
+                    <button class="btn btn-action btn-resume" data-global-action="resume" aria-label="Resume all bots">
+                        <span class="btn-icon">
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M8 5v14l11-7z"/>
+                                <rect x="6" y="6" width="3" height="12" opacity="0.5"/>
+                            </svg>
+                        </span>
+                        <span class="btn-text">Resume All</span>
+                    </button>
+                    <button class="btn btn-action btn-screen-on" data-global-action="screenon" aria-label="Turn on all screens">
+                        <span class="btn-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="5"/>
+                                <line x1="12" y1="1" x2="12" y2="3"/>
+                                <line x1="12" y1="21" x2="12" y2="23"/>
+                                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                                <line x1="1" y1="12" x2="3" y2="12"/>
+                                <line x1="21" y1="12" x2="23" y2="12"/>
+                                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                            </svg>
+                        </span>
+                        <span class="btn-text">Screen On</span>
+                    </button>
+                    <button class="btn btn-action btn-screen-off" data-global-action="screenoff" aria-label="Turn off all screens">
+                        <span class="btn-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                            </svg>
+                        </span>
+                        <span class="btn-text">Screen Off</span>
+                    </button>
+                    <button class="btn btn-action btn-update" data-global-action="update" aria-label="Update all bots">
+                        <span class="btn-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="16 3 21 3 21 8"/>
+                                <line x1="4" y1="20" x2="21" y2="3"/>
+                                <polyline points="21 16 21 21 16 21"/>
+                                <line x1="15" y1="15" x2="21" y2="21"/>
+                                <line x1="4" y1="4" x2="9" y2="9"/>
+                            </svg>
+                        </span>
+                        <span class="btn-text">Update All</span>
+                    </button>
+                    <button class="btn btn-action btn-restart" data-global-action="restart" aria-label="Restart all bots">
+                        <span class="btn-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                            </svg>
+                        </span>
+                        <span class="btn-text">Restart All</span>
+                    </button>
+                </div>
+            </section>
+
+            <section class="schedule-section" aria-labelledby="schedule-title">
+                <div class="schedule-card">
+                    <div class="schedule-header">
+                        <h3 id="schedule-title" class="schedule-title">
+                            <svg class="schedule-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <polyline points="12 6 12 12 16 14"/>
+                            </svg>
+                            <span>Scheduled Restart</span>
+                        </h3>
+                        <div class="schedule-controls">
+                            <label class="toggle-switch" for="schedule-restart-toggle">
+                                <input type="checkbox" id="schedule-restart-toggle" aria-label="Enable scheduled restart">
+                                <span class="toggle-slider"></span>
+                                <span class="toggle-label-on">ON</span>
+                                <span class="toggle-label-off">OFF</span>
+                            </label>
+                            <input type="time" id="restart-time" class="time-input" value="00:00" disabled aria-label="Restart time">
+                        </div>
+                    </div>
+                    <div class="schedule-status" id="schedule-status" style="display: none;" role="status" aria-live="polite">
+                        <svg class="status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                            <polyline points="22 4 12 14.01 9 11.01"/>
+                        </svg>
+                        <span>Next restart: <strong id="next-restart-time">-</strong></span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="instances-section" aria-labelledby="instances-title">
+                <h2 id="instances-title" class="section-title">
+                    <span class="section-title-text">Bot Instances</span>
+                    <span class="section-title-count" id="instance-count">(0)</span>
+                </h2>
+                <div class="instances-container" id="instances-container" role="region" aria-label="Bot instances list">
+                    <div class="skeleton-card" aria-hidden="true">
+                        <div class="skeleton-shimmer"></div>
+                    </div>
+                    <div class="skeleton-card" aria-hidden="true">
+                        <div class="skeleton-shimmer"></div>
+                    </div>
+                    <div class="skeleton-card" aria-hidden="true">
+                        <div class="skeleton-shimmer"></div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div class="modal" id="update-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>System Update</h2>
+                <button class="modal-close" id="close-update-modal">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="update-info" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+                    <div class="version-card">
+                        <div class="version-label">Current Version</div>
+                        <div class="version-value" id="current-version">Loading...</div>
+                    </div>
+                    <div class="version-card">
+                        <div class="version-label">Repository Version</div>
+                        <div class="version-value" id="new-version" style="color: var(--status-online);">Loading...</div>
+                    </div>
+                </div>
+
+                <div style="background: var(--glass-highlight); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1rem;">
+                    <p style="margin: 0; font-size: 0.875rem; color: var(--text-secondary);">
+                        ⚡ All instances will be updated to the latest version from the repository, regardless of their current version.
+                    </p>
+                </div>
+
+                <div class="changelog-section">
+                    <h3 style="margin-bottom: 1rem;">📝 What's New</h3>
+                    <div class="changelog-content" id="changelog-content" style="background: var(--glass-highlight); padding: 1rem; border-radius: var(--radius-md); max-height: 300px; overflow-y: auto;">
+                        Loading changelog...
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancel-update">Cancel</button>
+                <button class="btn btn-primary" id="confirm-update">
+                    📦 Update Now
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="progress-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="progress-modal-title">Update in Progress</h2>
+            </div>
+            <div class="modal-body">
+                <div class="progress-header">
+                    <div class="step-icon" id="step-icon">⏳</div>
+                    <div class="step-details">
+                        <div class="step-status" id="progress-status">Initializing...</div>
+                        <div class="step-description" id="progress-details">Starting update process</div>
+                    </div>
+                </div>
+
+                <div class="progress-container">
+                    <div class="progress-bar" id="progress-bar" style="width: 0%;"></div>
+                </div>
+
+                <div class="update-timeline" id="update-timeline"></div>
+
+                <div class="idle-status" id="idle-status" style="display: none;">
+                    <div class="idle-progress">
+                        <div class="idle-count">
+                            <strong id="bots-idled">0</strong> / <strong id="bots-total">0</strong> bots idled
+                        </div>
+                        <div class="timeout-warning">
+                            ⏱️ Timeout in <strong id="timeout-countdown">300</strong>s
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-message" id="force-update-info" style="display: none; background: var(--glass-highlight); padding: 1rem; border-radius: var(--radius-md); margin-top: 1rem;">
+                    ⚡ Update will be forced automatically after timeout
+                </div>
+
+                <div class="update-log" id="update-log"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast">
+        <span class="toast-icon">ℹ️</span>
+        <div class="toast-content">
+            <div class="toast-title">Title</div>
+            <div class="toast-message">Message</div>
+        </div>
+    </div>
+
+    <div class="modal" id="remote-control-modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2>🎮 Remote Control</h2>
+                <button class="modal-close" id="close-remote-control">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="remote-control-container">
+                    <div class="bot-selector">
+                        <label for="remote-bot-select">Select Bot/Switch:</label>
+                        <select id="remote-bot-select" class="bot-select">
+                            <option value="">Loading bots...</option>
+                        </select>
+                        <span id="bot-connection-info" class="connection-info"></span>
+                    </div>
+                    
+                    <div class="controller-section">
+                        <div class="left-controller">
+                            <button class="system-btn btn-minus" data-button="MINUS">−</button>
+                            <button class="control-btn lstick-btn" data-button="LSTICK" title="Left Stick - Click and drag to move">LS</button>
+                            <div class="dpad">
+                                <button class="dpad-btn dpad-up" data-button="UP">▲</button>
+                                <button class="dpad-btn dpad-left" data-button="LEFT">◄</button>
+                                <button class="dpad-btn dpad-center"></button>
+                                <button class="dpad-btn dpad-right" data-button="RIGHT">►</button>
+                                <button class="dpad-btn dpad-down" data-button="DOWN">▼</button>
+                            </div>
+                            <button class="system-btn btn-capture" data-button="CAPTURE">□</button>
+                        </div>
+                        
+                        <div class="right-controller">
+                            <button class="system-btn btn-plus" data-button="PLUS">+</button>
+                            <div class="action-buttons">
+                                <button class="control-btn action-btn btn-x" data-button="X">X</button>
+                                <button class="control-btn action-btn btn-y" data-button="Y">Y</button>
+                                <button class="control-btn action-btn btn-a" data-button="A">A</button>
+                                <button class="control-btn action-btn btn-b" data-button="B">B</button>
+                            </div>
+                            <button class="control-btn rstick-btn" data-button="RSTICK" title="Right Stick - Click and drag to move">RS</button>
+                            <button class="system-btn btn-home" data-button="HOME">⌂</button>
+                        </div>
+                    </div>
+                    
+                    <div class="shoulder-buttons">
+                        <div class="shoulder-left">
+                            <button class="control-btn shoulder-btn" data-button="L">L</button>
+                            <button class="control-btn shoulder-btn" data-button="ZL">ZL</button>
+                        </div>
+                        <div class="shoulder-right">
+                            <button class="control-btn shoulder-btn" data-button="R">R</button>
+                            <button class="control-btn shoulder-btn" data-button="ZR">ZR</button>
+                        </div>
+                    </div>
+                    
+                    <div class="macro-section">
+                        <h3>Macro Commands</h3>
+                        <div class="macro-controls">
+                            <textarea id="macro-input" class="macro-input" placeholder="Enter macro commands (e.g., A B X Y d100 UP DOWN)"></textarea>
+                            <button id="execute-macro" type="button" aria-label="Execute macro commands">Execute Macro</button>
+                        </div>
+                        <div class="macro-presets">
+                            <button class="macro-preset" data-macro="A">Confirm</button>
+                            <button class="macro-preset" data-macro="B B B">Back x3</button>
+                            <button class="macro-preset" data-macro="HOME">Home</button>
+                            <button class="macro-preset" data-macro="A d500 A d500 A">Spam A</button>
+                            <button class="macro-preset" data-macro="X d200 A d200 A">Save Game</button>
+                            <button class="macro-preset" data-macro="UP UP UP UP UP">Up x5</button>
+                            <button class="macro-preset" data-macro="A d1000 A d1000 A d1000 A">Dialog Skip</button>
+                            <button class="macro-preset" data-macro="L d200 A d500 A">Trade Accept</button>
+                        </div>
+                    </div>
+                    
+                    <div class="remote-settings">
+                        <label class="toggle-switch" for="remote-live-mode">
+                            <input type="checkbox" id="remote-live-mode" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                        <span class="toggle-label">Live Mode (instant button press)</span>
+                    </div>
+                    
+                    <div class="remote-status">
+                        <span id="remote-status-text">Ready</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="actions-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>⚡ Actions</h2>
+                <button class="modal-close" id="close-actions-modal">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="actions-modal-content" id="actions-modal-content">
+                    <button class="action-modal-item success" data-action="start">
+                        ▶️ Start
+                    </button>
+                    <button class="action-modal-item danger" data-action="stop">
+                        ⏹️ Stop
+                    </button>
+                    <button class="action-modal-item warning" data-action="idle">
+                        ⏸️ Idle
+                    </button>
+                    <button class="action-modal-item" data-action="resume">
+                        ⏯️ Resume
+                    </button>
+                    <div class="action-modal-divider"></div>
+                    <button class="action-modal-item" data-action="restart">
+                        🔄 Restart
+                    </button>
+                    <button class="action-modal-item danger" data-action="reboot">
+                        🔌 Reboot
+                    </button>
+                    <div class="action-modal-divider"></div>
+                    <button class="action-modal-item" data-action="screenon">
+                        💡 Screen On
+                    </button>
+                    <button class="action-modal-item" data-action="screenoff">
+                        🌙 Screen Off
+                    </button>
+                    <div class="action-modal-divider"></div>
+                    <button class="action-modal-item" data-action="remote">
+                        🎮 Remote Control
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="BotControlPanel.js?v=2.0.0" type="module"></script>
+    <script>
+        // Immediate theme initialization to prevent flash
+        (function() {
+            const stored = localStorage.getItem('bot-panel-theme');
+            const theme = stored || 'dark';
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
+</body>
+</html>

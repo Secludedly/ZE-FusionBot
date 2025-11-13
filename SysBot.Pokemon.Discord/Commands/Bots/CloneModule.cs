@@ -1,8 +1,6 @@
 using Discord;
 using Discord.Commands;
 using PKHeX.Core;
-using SysBot.Base;
-using System;
 using System.Threading.Tasks;
 
 namespace SysBot.Pokemon.Discord;
@@ -18,43 +16,59 @@ public class CloneModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
     [RequireQueueRole(nameof(DiscordManager.RolesClone))]
     public async Task CloneAsync(int code)
     {
+        // PA9 (Legends Z-A) clone trades are currently disabled
+        if (typeof(T) == typeof(PA9))
+        {
+            await ReplyAsync("Clone trades are currently disabled for Legends Z-A due to bugs. Please try again later.").ConfigureAwait(false);
+            return;
+        }
+
+        // Check if the user is already in the queue
         var userID = Context.User.Id;
         if (Info.IsUserInQueue(userID))
         {
-            await SafeReplyAsync("You already have an existing trade in the queue. Please wait until it is processed.");
+            await ReplyAsync("You already have an existing trade in the queue. Please wait until it is processed.").ConfigureAwait(false);
             return;
         }
 
         var sig = Context.User.GetFavor();
         var lgcode = Info.GetRandomLGTradeCode();
 
-        _ = QueueHelper<T>.AddToQueueAsync(
-            Context,
-            code,
-            Context.User.Username,
-            sig,
-            new T(),
-            PokeRoutineType.Clone,
-            PokeTradeType.Clone,
-            Context.User,
-            false, 1, 1, false, false, lgcode
-        );
+        // Add to queue asynchronously
+        _ = QueueHelper<T>.AddToQueueAsync(Context, code, Context.User.Username, sig, new T(), PokeRoutineType.Clone, PokeTradeType.Clone, Context.User, false, 1, 1, false, false, lgcode: lgcode);
 
-        var confirmationMessage = await SafeReplyAsync("Processing your clone request...");
+        // Immediately send a confirmation message without waiting
+        var confirmationMessage = await ReplyAsync("Processing your clone request...").ConfigureAwait(false);
 
-        _ = SafeDeleteMessagesAsync(Context.Message as IUserMessage, confirmationMessage, 2000);
+        // Use a fire-and-forget approach for the delay and deletion
+        _ = Task.Delay(2000).ContinueWith(async _ =>
+        {
+            if (Context.Message is IUserMessage userMessage)
+                await userMessage.DeleteAsync().ConfigureAwait(false);
+
+            if (confirmationMessage != null)
+                await confirmationMessage.DeleteAsync().ConfigureAwait(false);
+        }).ConfigureAwait(false);
     }
 
     [Command("clone")]
     [Alias("c")]
     [Summary("Clones the Pokémon you show via Link Trade.")]
     [RequireQueueRole(nameof(DiscordManager.RolesClone))]
-    public async Task CloneAsync([Remainder] string code)
+    public async Task CloneAsync([Summary("Trade Code")][Remainder] string code)
     {
+        // PA9 (Legends Z-A) clone trades are currently disabled
+        if (typeof(T) == typeof(PA9))
+        {
+            await ReplyAsync("Clone trades are currently disabled for Legends Z-A due to bugs. Please try again later.").ConfigureAwait(false);
+            return;
+        }
+
+        // Check if the user is already in the queue
         var userID = Context.User.Id;
         if (Info.IsUserInQueue(userID))
         {
-            await SafeReplyAsync("You already have an existing trade in the queue. Please wait until it is processed.");
+            await ReplyAsync("You already have an existing trade in the queue. Please wait until it is processed.").ConfigureAwait(false);
             return;
         }
 
@@ -62,20 +76,21 @@ public class CloneModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         var sig = Context.User.GetFavor();
         var lgcode = Info.GetRandomLGTradeCode();
 
-        _ = QueueHelper<T>.AddToQueueAsync(
-            Context,
-            tradeCode == 0 ? Info.GetRandomTradeCode(userID, Context.Channel, Context.User) : tradeCode,
-            Context.User.Username,
-            sig,
-            new T(),
-            PokeRoutineType.Clone,
-            PokeTradeType.Clone,
-            Context.User,
-            false, 1, 1, false, false, lgcode
-        );
+        // Add to queue asynchronously
+        _ = QueueHelper<T>.AddToQueueAsync(Context, tradeCode == 0 ? Info.GetRandomTradeCode(userID) : tradeCode, Context.User.Username, sig, new T(), PokeRoutineType.Clone, PokeTradeType.Clone, Context.User, false, 1, 1, false, false, lgcode: lgcode);
 
-        var confirmationMessage = await SafeReplyAsync("Processing your clone request...");
-        _ = SafeDeleteMessagesAsync(Context.Message as IUserMessage, confirmationMessage, 2000);
+        // Immediately send a confirmation message without waiting
+        var confirmationMessage = await ReplyAsync("Processing your clone request...").ConfigureAwait(false);
+
+        // Use a fire-and-forget approach for the delay and deletion
+        _ = Task.Delay(2000).ContinueWith(async _ =>
+        {
+            if (Context.Message is IUserMessage userMessage)
+                await userMessage.DeleteAsync().ConfigureAwait(false);
+
+            if (confirmationMessage != null)
+                await confirmationMessage.DeleteAsync().ConfigureAwait(false);
+        }).ConfigureAwait(false);
     }
 
     [Command("clone")]
@@ -85,7 +100,7 @@ public class CloneModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
     public Task CloneAsync()
     {
         var userID = Context.User.Id;
-        var code = Info.GetRandomTradeCode(userID, Context.Channel, Context.User);
+        var code = Info.GetRandomTradeCode(userID);
         return CloneAsync(code);
     }
 
@@ -103,48 +118,6 @@ public class CloneModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             x.Value = msg;
             x.IsInline = false;
         });
-
-        await SafeReplyAsync("These are the users who are currently waiting:", embed: embed.Build());
+        await ReplyAsync("These are the users who are currently waiting:", embed: embed.Build()).ConfigureAwait(false);
     }
-
-    #region Helpers
-
-    private async Task<IUserMessage?> SafeReplyAsync(string text, Embed? embed = null)
-    {
-        try
-        {
-            return await ReplyAsync(text, embed: embed).ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            LogUtil.LogSafe(ex, nameof(CloneModule<T>));
-            return null;
-        }
-    }
-
-    private async Task SafeDeleteMessagesAsync(IUserMessage? original, IUserMessage? confirmation, int delayMs)
-    {
-        try
-        {
-            await Task.Delay(delayMs).ConfigureAwait(false);
-
-            if (original != null)
-            {
-                try { await original.DeleteAsync().ConfigureAwait(false); }
-                catch (Exception ex) { LogUtil.LogSafe(ex, nameof(CloneModule<T>)); }
-            }
-
-            if (confirmation != null)
-            {
-                try { await confirmation.DeleteAsync().ConfigureAwait(false); }
-                catch (Exception ex) { LogUtil.LogSafe(ex, nameof(CloneModule<T>)); }
-            }
-        }
-        catch (Exception ex)
-        {
-            LogUtil.LogSafe(ex, nameof(CloneModule<T>));
-        }
-    }
-
-    #endregion
 }
