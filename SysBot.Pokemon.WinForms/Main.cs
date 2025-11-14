@@ -31,6 +31,8 @@ namespace SysBot.Pokemon.WinForms
         private IPokeBotRunner RunningEnvironment { get; set; } // Bot runner based on game mode
 
         // Program configuration
+        [Browsable(false)]
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public static ProgramConfig Config { get; set; }
 
         // Static properties for update state

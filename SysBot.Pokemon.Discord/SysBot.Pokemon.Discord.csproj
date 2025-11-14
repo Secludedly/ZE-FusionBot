@@ -16,6 +16,7 @@
     <PackageReference Include="System.Drawing.Common" Version="9.0.4" />
     <ProjectReference Include="..\SysBot.Base\SysBot.Base.csproj" />
     <ProjectReference Include="..\SysBot.Pokemon\SysBot.Pokemon.csproj" />
+	<PackageReference Include="HtmlAgilityPack" Version="1.11.57" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="PKHeX.Core">
