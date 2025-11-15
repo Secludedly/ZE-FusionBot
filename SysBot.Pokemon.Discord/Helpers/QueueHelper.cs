@@ -205,8 +205,9 @@ public static class QueueHelper<T> where T : PKM, new()
             var baseEta = position.Position > botct ? Info.Hub.Config.Queues.EstimateDelay(position.Position, botct) : 0;
             var etaMessage = $"Wait Estimate: {baseEta:F1} min(s) for trade.";
             string footerText = $"Current Queue Position: {(position.Position == -1 ? 1 : position.Position)}";
+            string trainerMention = trader.Mention;
+            string userDetailsText = DetailsExtractor<T>.GetUserDetails(totalTradeCount, tradeDetails, trainerMention);
 
-            string userDetailsText = DetailsExtractor<T>.GetUserDetails(totalTradeCount, tradeDetails);
             if (!string.IsNullOrEmpty(userDetailsText))
             {
                 footerText += $"\n{userDetailsText}";
@@ -425,7 +426,9 @@ public static class QueueHelper<T> where T : PKM, new()
                     if (i == 0) // Only show position and ETA on first embed
                     {
                         footerText += $" | Current Queue Position: {position.Position}";
-                        string userDetailsText = DetailsExtractor<T>.GetUserDetails(totalTradeCount, tradeDetails);
+                        string trainerMention = trader.Mention;
+                        string userDetailsText = DetailsExtractor<T>.GetUserDetails(totalTradeCount, tradeDetails, trainerMention);
+
                         if (!string.IsNullOrEmpty(userDetailsText))
                         {
                             footerText += $"\n{userDetailsText}";

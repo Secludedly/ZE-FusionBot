@@ -36,7 +36,7 @@ public static class DetailsExtractor<T> where T : PKM, new()
     /// <param name="pk">Pokémon data.</param>
     public static void AddNormalTradeFields(EmbedBuilder embedBuilder, EmbedData embedData, string trainerMention, T pk)
     {
-        string leftSideContent = $"**Trainer:** {trainerMention}\n";
+        string leftSideContent = $"**User:** {trainerMention}\n";
         leftSideContent +=
             (pk.Version is GameVersion.SL or GameVersion.VL && SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.ShowTeraType ? $"**Tera Type:** {embedData.TeraType}\n" : "") +
             (pk.Version is GameVersion.SL or GameVersion.VL && SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.ShowScale ? $"**Scale:** {embedData.Scale.Item1} ({embedData.Scale.Item2})\n" : "") +
@@ -45,7 +45,7 @@ public static class DetailsExtractor<T> where T : PKM, new()
             (SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.ShowMetLevel ? $"**Met Level:** {embedData.MetLevel}\n" : "") +
             (SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.ShowMetDate ? $"**Met Date:** {embedData.MetDate}\n" : "") +
             (SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.ShowAbility ? $"**Ability:** {embedData.Ability}\n" : "") +
-            (SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.ShowNature ? $"**Nature**: {embedData.Nature}\n" : "") +
+            (SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.ShowNature ? $"**{embedData.Nature}** Nature\n" : "") +
             (SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.ShowIVs ? $"**IVs**: {embedData.IVsDisplay}\n" : "") +
             (SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.ShowLanguage ? $"**Language**: {embedData.Language}\n" : "") +
             (SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.ShowEVs && !string.IsNullOrWhiteSpace(embedData.EVsDisplay) ? $"**EVs**: {embedData.EVsDisplay}\n" : "");
@@ -139,23 +139,41 @@ public static class DetailsExtractor<T> where T : PKM, new()
 
         Span<int> ivs = stackalloc int[6];
         pk.GetIVs(ivs);
-        string ivsDisplay;
-        if (ivs.ToArray().All(iv => iv == 31))
+
+        // IV order & labels (HP → Atk → Def → SpA → SpD → Spe)
+        string[] labels = { "HP", "Atk", "Def", "SpA", "SpD", "Spe" };
+
+        // Count perfect IVs (31s)
+        int perfectIVCount = 0;
+        for (int i = 0; i < ivs.Length; i++)
         {
-            ivsDisplay = "6IV";
+            if (ivs[i] == 31) perfectIVCount++;
+        }
+
+        // Build the list of non-perfect IVs (including 0s), skip 31s
+        var nonPerfectIVs = new List<string>();
+        for (int i = 0; i < ivs.Length; i++)
+        {
+            if (ivs[i] != 31)
+                nonPerfectIVs.Add($"{ivs[i]} {labels[i]}");
+        }
+
+        // Compose final display
+        string ivsDisplay;
+        if (perfectIVCount == 6)
+        {
+            ivsDisplay = "6IV"; // All perfect
         }
         else
         {
-            ivsDisplay = string.Join("/", new[]
-            {
-                ivs[0].ToString(),
-                ivs[1].ToString(),
-                ivs[2].ToString(),
-                ivs[4].ToString(),
-                ivs[5].ToString(),
-                ivs[3].ToString()
-            });
+            // Always show the count of perfect IVs first
+            ivsDisplay = perfectIVCount > 0 ? $"{perfectIVCount}IV" : "0IV";
+
+            // Append non-perfect IVs
+            if (nonPerfectIVs.Count > 0)
+                ivsDisplay += " | " + string.Join(" / ", nonPerfectIVs);
         }
+
         embedData.IVsDisplay = ivsDisplay;
 
         int[] evs = GetEVs(pk);
@@ -207,33 +225,48 @@ public static class DetailsExtractor<T> where T : PKM, new()
     /// </summary>
     /// <param name="totalTradeCount">Total number of trades for this user.</param>
     /// <param name="tradeDetails">Trade code details if available.</param>
+    /// <param name="trainerMention">If no details available, set a static message with Discord username.</param>
     /// <returns>Formatted user details string.</returns>
-    public static string GetUserDetails(int totalTradeCount, TradeCodeStorage.TradeCodeDetails? tradeDetails)
+    public static string GetUserDetails(int totalTradeCount, TradeCodeStorage.TradeCodeDetails? tradeDetails, string trainerMention)
     {
         string userDetailsText = "";
+
+        // Add Total User Trades and Medals
         if (totalTradeCount > 0)
         {
-            // Add Total Medals
             int totalMedals = CalculateMedals(totalTradeCount);
-            userDetailsText = $"Total User Trades: {totalTradeCount} | Medals: {totalMedals}\n";
+            userDetailsText += $"Total User Trades: {totalTradeCount} | Medals: {totalMedals}\n";
         }
+
+        // Add Trainer Info
         if (SysCord<T>.Runner.Config.Trade.TradeConfiguration.StoreTradeCodes && tradeDetails != null)
         {
-            if (!string.IsNullOrEmpty(tradeDetails?.OT))
+            // If SID is 0 → treat this as unusable trainer data
+            if (tradeDetails.SID == 0)
             {
-                userDetailsText += $"OT: {tradeDetails?.OT}";
+                userDetailsText += "Unable to Find Trainer Info";
             }
-            if (tradeDetails?.TID != null)
+            else
             {
-                userDetailsText += $" | TID: {tradeDetails?.TID}";
-            }
-            if (tradeDetails?.TID != null)
-            {
-                userDetailsText += $" | SID: {tradeDetails?.SID}";
+                // We have at least *some* valid trainer info
+                List<string> trainerParts = new();
+
+                if (!string.IsNullOrEmpty(tradeDetails.OT))
+                    trainerParts.Add($"OT: {tradeDetails.OT}");
+
+                if (tradeDetails.TID != 0)
+                    trainerParts.Add($"TID: {tradeDetails.TID}");
+
+                // SID is guaranteed nonzero here
+                trainerParts.Add($"SID: {tradeDetails.SID}");
+
+                userDetailsText += string.Join(" | ", trainerParts);
             }
         }
+
         return userDetailsText;
     }
+
 
     private static string GetLanguageDisplay<T>(T pk) where T : PKM
     {

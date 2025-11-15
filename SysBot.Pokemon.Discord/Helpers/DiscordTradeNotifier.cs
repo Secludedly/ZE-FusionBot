@@ -146,8 +146,8 @@ public class DiscordTradeNotifier<T> : IPokeTradeNotifier<T>, IDisposable
         _lastReportedPosition = currentPosition;
 
         var batchDescription = TotalBatchTrades > 1
-            ? $"Your batch trade request ({TotalBatchTrades} Pokémon) has been queued.\n\n⚠️ **Important Instructions:**\n• Stay in the trade for all {TotalBatchTrades} trades\n• Have all {TotalBatchTrades} Pokémon ready to trade\n• Do not exit until you see the completion message\n\nPosition in queue: **{currentPosition}**"
-            : $"Your trade request has been queued. Position in queue: **{currentPosition}**";
+            ? $"Your batch trade request ({TotalBatchTrades} Pokémon) has been queued.\n\n⚠️ **Important Instructions:**\n• Stay in the trade for all {TotalBatchTrades} trades\n• Have all {TotalBatchTrades} Pokémon ready to trade\n• Do not exit until you see the completion message\n\n**Queue Position**: {currentPosition}"
+            : $"Your trade request has been queued.\n**Queue Position**: {currentPosition}";
 
         var initialEmbed = new EmbedBuilder
         {

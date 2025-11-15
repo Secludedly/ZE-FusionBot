@@ -71,28 +71,6 @@ namespace SysBot.Pokemon.WinForms
         // Main Constructor
         public Main()
         {
-            // GLOBAL EXCEPTION HANDLERS — LOG BEFORE BOT DIES
-            TaskScheduler.UnobservedTaskException += (sender, e) =>
-            {
-                LogUtil.LogSafe(e.Exception, "🔥 UnobservedTaskException");
-                e.SetObserved(); // Prevents app crash
-            };
-
-            AppDomain.CurrentDomain.UnhandledException += (sender, e) =>
-            {
-                if (e.ExceptionObject is Exception ex)
-                    LogUtil.LogSafe(ex, "💥 UnhandledException");
-                else
-                    LogUtil.LogGeneric($"💀 Non-Exception UnhandledException: {e.ExceptionObject}", "💥 UnhandledException");
-            };
-            Task.Run(BotMonitor);      // Start the bot monitor
-            InitializeComponent();     // Initialize all the form components before program
-            Instance = this;
-            InitializeLeftSideImage(); // Initialize the left side BG image in panelLeftSide
-
-            // Wait for the form crap to load before initializing
-            this.Load += async (s, e) => await InitializeAsync();
-
             // Load custom fonts before initializing
             FontManager.LoadFonts(
                 "bahnschrift.ttf",
@@ -121,6 +99,29 @@ namespace SysBot.Pokemon.WinForms
                 "Enter The Grid.ttf",
                 "Gnuolane Rg.ttf"
                 );
+
+            // GLOBAL EXCEPTION HANDLERS — LOG BEFORE BOT DIES
+            TaskScheduler.UnobservedTaskException += (sender, e) =>
+            {
+                LogUtil.LogSafe(e.Exception, "🔥 UnobservedTaskException");
+                e.SetObserved(); // Prevents app crash
+            };
+
+            AppDomain.CurrentDomain.UnhandledException += (sender, e) =>
+            {
+                if (e.ExceptionObject is Exception ex)
+                    LogUtil.LogSafe(ex, "💥 UnhandledException");
+                else
+                    LogUtil.LogGeneric($"💀 Non-Exception UnhandledException: {e.ExceptionObject}", "💥 UnhandledException");
+            };
+
+            Task.Run(BotMonitor);      // Start the bot monitor
+            InitializeComponent();     // Initialize all the form components before program
+            Instance = this;
+            InitializeLeftSideImage(); // Initialize the left side BG image in panelLeftSide
+
+            // Wait for the form crap to load before initializing
+            this.Load += async (s, e) => await InitializeAsync();
 
             // Set up left‑panel buttons & effects
             ApplyButtonEffects();

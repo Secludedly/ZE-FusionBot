@@ -116,7 +116,7 @@ public class TradeStartModule<T> : ModuleBase<SocketCommandContext> where T : PK
 
             string footerText = detail.Type == PokeTradeType.Clone || detail.Type == PokeTradeType.Dump || detail.Type == PokeTradeType.Seed || detail.Type == PokeTradeType.FixOT
                 ? "Starting trade..."
-                : $"Starting trade...\nEnjoy your {(detail.IsMysteryEgg ? "✨ Mystery Egg" : speciesName)}!";
+                : $"Starting trade...\n{(detail.IsMysteryEgg ? "✨ Mystery Egg" : speciesName)} is on its way!";
 
             var embed = new EmbedBuilder()
                 .WithColor(new DiscordColor(r, g, b))
@@ -124,7 +124,6 @@ public class TradeStartModule<T> : ModuleBase<SocketCommandContext> where T : PK
                 .WithAuthor($"Up Next: {user.Username}", user.GetAvatarUrl() ?? user.GetDefaultAvatarUrl())
                 .WithDescription($"**Receiving**: {tradeTitle}\n**Trade ID**: {detail.ID}")
                 .WithFooter($"{footerText}\u200B", ballImgUrl)
-                .WithTimestamp(DateTime.Now)
                 .Build();
 
             await c.SendMessageAsync(embed: embed);

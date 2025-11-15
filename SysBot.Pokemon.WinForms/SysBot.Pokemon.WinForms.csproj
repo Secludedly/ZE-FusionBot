@@ -27,6 +27,7 @@
     <None Remove="Fonts\bahnschrift.ttf" />
     <None Remove="Fonts\Bobbleboddy_light.ttf" />
     <None Remove="Fonts\Enter The Grid.ttf" />
+    <None Remove="Fonts\Enter-The-Grid.ttf" />
     <None Remove="Fonts\gadugi.ttf" />
     <None Remove="Fonts\gadugib.ttf" />
     <None Remove="Fonts\Gnuolane Rg.ttf" />
@@ -120,6 +121,9 @@
   <ItemGroup>
     <PackageReference Include="FontAwesome.Sharp" Version="6.6.0" />
     <PackageReference Include="System.Resources.Extensions" Version="9.0.4" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Fonts\Enter-The-Grid.ttf" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\SysBot.Base\SysBot.Base.csproj" />

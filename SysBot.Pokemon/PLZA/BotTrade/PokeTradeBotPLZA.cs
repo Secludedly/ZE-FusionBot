@@ -881,11 +881,11 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
         {
             detail.IsRetry = true;
             Hub.Queues.Enqueue(type, detail, Math.Min(priority, PokeTradePriorities.Tier2));
-            detail.SendNotification(this, "Oops! Something happened. I'll requeue you for another attempt.");
+            detail.SendNotification(this, "Something unexpected happened.\nI'll requeue you for another attempt.");
         }
         else
         {
-            detail.SendNotification(this, $"Oops! Something happened. Canceling the trade: {result}.");
+            detail.SendNotification(this, $"Something unexpected happened.\nCanceling the trade: {result}.");
             detail.TradeCanceled(this, result);
         }
     }
@@ -1787,7 +1787,7 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
             {
                 detail.IsRetry = true;
                 Hub.Queues.Enqueue(type, detail, Math.Min(priority, PokeTradePriorities.Tier2));
-                detail.SendNotification(this, "Oops! Something happened during your batch trade. I'll requeue you for another attempt.");
+                detail.SendNotification(this, "Something unexpected happened during your batch trade.\nI'll requeue you for another attempt.");
             }
             else
             {

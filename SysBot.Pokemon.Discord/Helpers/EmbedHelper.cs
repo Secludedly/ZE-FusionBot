@@ -11,10 +11,10 @@ public static class EmbedHelper
     public static async Task SendNotificationEmbedAsync(IUser user, string message)
     {
         var embed = new EmbedBuilder()
-            .WithTitle("Notice")
+            .WithTitle("Notice...")
             .WithDescription(message)
             .WithTimestamp(DateTimeOffset.Now)
-            .WithThumbnailUrl("https://raw.githubusercontent.com/hexbyt3/sprites/main/exclamation.gif")
+            .WithThumbnailUrl("https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/dm-legalityerror.gif")
             .WithColor(Color.Red)
             .Build();
 
@@ -24,10 +24,10 @@ public static class EmbedHelper
     public static async Task SendTradeCanceledEmbedAsync(IUser user, string reason)
     {
         var embed = new EmbedBuilder()
-            .WithTitle("Your Trade was Canceled...")
-            .WithDescription($"Your trade was canceled.\nPlease try again. If the issue persists, restart your switch and check your internet connection.\n\n**Reason**: {reason}")
+            .WithTitle("Trade Canceled...")
+            .WithDescription($"Your trade was canceled.\n**Reason**: {reason}")
             .WithTimestamp(DateTimeOffset.Now)
-            .WithThumbnailUrl("https://raw.githubusercontent.com/hexbyt3/sprites/main/dmerror.gif")
+            .WithThumbnailUrl("https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/dm-uhoherror.gif")
             .WithColor(Color.Red)
             .Build();
 
@@ -37,11 +37,11 @@ public static class EmbedHelper
     public static async Task SendTradeCodeEmbedAsync(IUser user, int code)
     {
         var embed = new EmbedBuilder()
-            .WithTitle("Here's your trade code!")
-            .WithDescription($"# {code:0000 0000}")
+            .WithTitle("Here's your Link Trade Code!")
+            .WithDescription($"# {code:0000 0000}\n*I'll notify you when your trade starts!*")
             .WithTimestamp(DateTimeOffset.Now)
-            .WithThumbnailUrl("https://raw.githubusercontent.com/hexbyt3/sprites/main/tradecode.gif")
-            .WithColor(Color.Blue)
+            .WithThumbnailUrl("https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/dm-tradecode.gif")
+            .WithColor(Color.Gold)
             .Build();
 
         await user.SendMessageAsync(embed: embed).ConfigureAwait(false);
@@ -80,11 +80,11 @@ public static class EmbedHelper
         }
 
         var embed = new EmbedBuilder()
-            .WithTitle("Loading the Trade Portal...")
+            .WithTitle("Loading the Trade Menu...")
             .WithDescription($"**Pokemon**: {speciesName}\n**Trade Code**: {code:0000 0000}")
             .WithTimestamp(DateTimeOffset.Now)
-            .WithThumbnailUrl("https://raw.githubusercontent.com/hexbyt3/sprites/main/initializing.gif")
-            .WithColor(Color.Orange);
+            .WithThumbnailUrl("https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/dm-initializingbot.gif")
+            .WithColor(Color.Green);
 
         if (!string.IsNullOrEmpty(message))
         {
@@ -98,11 +98,11 @@ public static class EmbedHelper
     public static async Task SendTradeSearchingEmbedAsync(IUser user, string trainerName, string inGameName, string? message = null)
     {
         var embed = new EmbedBuilder()
-            .WithTitle($"Now Searching for You, {trainerName}...")
-            .WithDescription($"**Waiting for**: {trainerName}\n**My IGN**: {inGameName}")
+            .WithTitle($"Now Searching...")
+            .WithDescription($"**Waiting For**: {trainerName}\n**My IGN**: {inGameName}\n\n**Insert your Trade Code!**")
             .WithTimestamp(DateTimeOffset.Now)
-            .WithThumbnailUrl("https://raw.githubusercontent.com/hexbyt3/sprites/main/searching.gif")
-            .WithColor(Color.Green);
+            .WithThumbnailUrl("https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/dm-nowsearching.gif")
+            .WithColor(Color.DarkGreen);
 
         if (!string.IsNullOrEmpty(message))
         {
