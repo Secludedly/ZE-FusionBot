@@ -5,7 +5,6 @@ using PKHeX.Core;
 using PKHeX.Core.AutoMod;
 using SysBot.Base;
 using SysBot.Pokemon.Discord.Helpers;
-using SysBot.Pokemon.Discord.Helpers.TradeModule;
 using SysBot.Pokemon.Helpers;
 using System;
 using System.Collections.Generic;
@@ -692,9 +691,9 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
                 }
 
                 // ***** FORCE NATURE (ZA) *****
-                // Ensure you have a ZAHelper implementation placed in SysBot.Pokemon.Helpers namespace.
+                // Ensure you have a ZANatureHelper implementation placed in SysBot.Pokemon.Helpers namespace.
                 // This will reroll PID until PID%25 == requested nature and keep IV/EVs consistent.
-                ZANatureHelper.ForceNatureZA(pkm, set.Nature);
+                ZANatureHelper.ForceNatureZA(pkm, set.Nature, set.Shiny);
 
                 // Convert to the bot's runtime type (T)
                 var pk = EntityConverter.ConvertToType(pkm, typeof(T), out _) as T;
