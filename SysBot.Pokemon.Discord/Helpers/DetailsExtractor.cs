@@ -46,8 +46,8 @@ public static class DetailsExtractor<T> where T : PKM, new()
             (SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.ShowMetDate ? $"**Met Date:** {embedData.MetDate}\n" : "") +
             (SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.ShowAbility ? $"**Ability:** {embedData.Ability}\n" : "") +
             (SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.ShowNature ? $"**{embedData.Nature}** Nature\n" : "") +
-            (SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.ShowIVs ? $"**IVs**: {embedData.IVsDisplay}\n" : "") +
             (SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.ShowLanguage ? $"**Language**: {embedData.Language}\n" : "") +
+            (SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.ShowIVs ? $"**IVs**: {embedData.IVsDisplay}\n" : "") +
             (SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.ShowEVs && !string.IsNullOrWhiteSpace(embedData.EVsDisplay) ? $"**EVs**: {embedData.EVsDisplay}\n" : "");
 
         leftSideContent = leftSideContent.TrimEnd('\n');
@@ -238,17 +238,23 @@ public static class DetailsExtractor<T> where T : PKM, new()
             userDetailsText += $"Total User Trades: {totalTradeCount} | Medals: {totalMedals}\n";
         }
 
-        // Add Trainer Info
-        if (SysCord<T>.Runner.Config.Trade.TradeConfiguration.StoreTradeCodes && tradeDetails != null)
+        // Handle first-trade scenario (no record exists yet)
+        if (tradeDetails == null)
         {
-            // If SID is 0 → treat this as unusable trainer data
+            userDetailsText += "First Trade, No Trainer Info";
+            return userDetailsText;
+        }
+
+        // Add Trainer Info if data exists & storing is enabled
+        if (SysCord<T>.Runner.Config.Trade.TradeConfiguration.StoreTradeCodes)
+        {
+            // Invalid trainer data (SID 0 = unresolved)
             if (tradeDetails.SID == 0)
             {
                 userDetailsText += "Unable to Find Trainer Info";
             }
             else
             {
-                // We have at least *some* valid trainer info
                 List<string> trainerParts = new();
 
                 if (!string.IsNullOrEmpty(tradeDetails.OT))
@@ -257,7 +263,6 @@ public static class DetailsExtractor<T> where T : PKM, new()
                 if (tradeDetails.TID != 0)
                     trainerParts.Add($"TID: {tradeDetails.TID}");
 
-                // SID is guaranteed nonzero here
                 trainerParts.Add($"SID: {tradeDetails.SID}");
 
                 userDetailsText += string.Join(" | ", trainerParts);
@@ -266,7 +271,6 @@ public static class DetailsExtractor<T> where T : PKM, new()
 
         return userDetailsText;
     }
-
 
     private static string GetLanguageDisplay<T>(T pk) where T : PKM
     {
