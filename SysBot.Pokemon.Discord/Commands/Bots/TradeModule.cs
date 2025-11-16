@@ -5,6 +5,7 @@ using PKHeX.Core;
 using PKHeX.Core.AutoMod;
 using SysBot.Base;
 using SysBot.Pokemon.Discord.Helpers;
+using SysBot.Pokemon.Discord.Helpers.TradeModule;
 using SysBot.Pokemon.Helpers;
 using System;
 using System.Collections.Generic;
@@ -653,6 +654,8 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
     private async Task ProcessTradeAsync(int code, string content, bool isHiddenTrade = false)
     {
         var userID = Context.User.Id;
+
+        // Prevent duplicate queued trades for the same user
         if (!await Helpers<T>.EnsureUserNotInQueueAsync(userID))
         {
             await Helpers<T>.ReplyAndDeleteAsync(Context,
@@ -664,35 +667,69 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         {
             try
             {
-                // Detect custom trainer info BEFORE generating the Pokemon
+                // Parse the Showdown set and detect manual trainer overrides
+                var set = new ShowdownSet(content);
                 var ignoreAutoOT = content.Contains("OT:") || content.Contains("TID:") || content.Contains("SID:");
 
-                var result = await Helpers<T>.ProcessShowdownSetAsync(content, ignoreAutoOT);
-
-                if (result.Pokemon == null)
+                // Legacy helper: returns the processed pokemon + extra info (errors, lgcode, etc.)
+                var processed = await Helpers<T>.ProcessShowdownSetAsync(content, ignoreAutoOT);
+                if (processed.Pokemon == null)
                 {
-                    await Helpers<T>.SendTradeErrorEmbedAsync(Context, result);
+                    await Helpers<T>.SendTradeErrorEmbedAsync(Context, processed);
                     return;
                 }
 
-                var sig = Context.User.GetFavor();
+                // Get AutoLegality trainer/save info and template
+                var sav = AutoLegalityWrapper.GetTrainerInfo<T>();
+                var template = AutoLegalityWrapper.GetTemplate(set);
 
+                // Generate the legal pokemon (ALM)
+                var pkm = sav.GetLegal(template, out var result);
+                if (pkm == null)
+                {
+                    await Helpers<T>.ReplyAndDeleteAsync(Context, "Failed to generate Pokémon from your set.", 2);
+                    return;
+                }
+
+                // ***** FORCE NATURE (ZA) *****
+                // Ensure you have a ZAHelper implementation placed in SysBot.Pokemon.Helpers namespace.
+                // This will reroll PID until PID%25 == requested nature and keep IV/EVs consistent.
+                ZANatureHelper.ForceNatureZA(pkm, set.Nature);
+
+                // Convert to the bot's runtime type (T)
+                var pk = EntityConverter.ConvertToType(pkm, typeof(T), out _) as T;
+                if (pk == null)
+                {
+                    await Helpers<T>.ReplyAndDeleteAsync(Context, "Failed to convert Pokémon to correct type.", 2);
+                    return;
+                }
+
+                // Final safety refresh
+                pk.RefreshChecksum();
+
+                // Queue the trade
+                var sig = Context.User.GetFavor();
                 await Helpers<T>.AddTradeToQueueAsync(
-                    Context, code, Context.User.Username, result.Pokemon, sig, Context.User,
+                    Context,
+                    code,
+                    Context.User.Username,
+                    pk,
+                    sig,
+                    Context.User,
                     isHiddenTrade: isHiddenTrade,
-                    lgcode: result.LgCode,
+                    lgcode: processed.LgCode,
                     ignoreAutoOT: ignoreAutoOT,
-                    isNonNative: result.IsNonNative
+                    isNonNative: processed.IsNonNative
                 );
             }
             catch (Exception ex)
             {
                 LogUtil.LogSafe(ex, nameof(TradeModule<T>));
-                var msg = "Oops! An unexpected problem happened with this Showdown Set.";
-                await Helpers<T>.ReplyAndDeleteAsync(Context, msg, 2);
+                await Helpers<T>.ReplyAndDeleteAsync(Context, "Oops! An unexpected problem happened with this Showdown Set.", 2);
             }
         });
 
+        // Auto-delete original message (as before)
         if (Context.Message is IUserMessage userMessage)
             _ = Helpers<T>.DeleteMessagesAfterDelayAsync(userMessage, null, isHiddenTrade ? 0 : 2);
     }
