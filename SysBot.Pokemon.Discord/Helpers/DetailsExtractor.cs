@@ -231,42 +231,40 @@ public static class DetailsExtractor<T> where T : PKM, new()
     {
         string userDetailsText = "";
 
-        // Add Total User Trades and Medals
+        // Add Total User Trades + Medals
         if (totalTradeCount > 0)
         {
             int totalMedals = CalculateMedals(totalTradeCount);
             userDetailsText += $"Total User Trades: {totalTradeCount} | Medals: {totalMedals}\n";
         }
 
-        // Handle first-trade scenario (no record exists yet)
+        // First trade — no record exists yet
         if (tradeDetails == null)
         {
-            userDetailsText += "First Trade, No Trainer Info";
+            userDetailsText += "First Trade, No Trainer Info Saved.";
             return userDetailsText;
         }
 
-        // Add Trainer Info if data exists & storing is enabled
+        // Display trainer info if storage enabled
         if (SysCord<T>.Runner.Config.Trade.TradeConfiguration.StoreTradeCodes)
         {
-            // Invalid trainer data (SID 0 = unresolved)
-            if (tradeDetails.SID == 0)
-            {
-                userDetailsText += "Unable to Find Trainer Info";
-            }
-            else
-            {
-                List<string> trainerParts = new();
+            List<string> trainerParts = new();
 
-                if (!string.IsNullOrEmpty(tradeDetails.OT))
-                    trainerParts.Add($"OT: {tradeDetails.OT}");
+            if (!string.IsNullOrEmpty(tradeDetails.OT))
+                trainerParts.Add($"OT: {tradeDetails.OT}");
 
-                if (tradeDetails.TID != 0)
-                    trainerParts.Add($"TID: {tradeDetails.TID}");
+            if (tradeDetails.TID > 0)
+                trainerParts.Add($"TID: {tradeDetails.TID}");
 
+            // SID is no longer force-rejected, we just show it if it exists
+            if (tradeDetails.SID > 0)
                 trainerParts.Add($"SID: {tradeDetails.SID}");
 
-                userDetailsText += string.Join(" | ", trainerParts);
-            }
+            // If user exists but no trainer fields are populated
+            if (trainerParts.Count == 0)
+                trainerParts.Add("Trainer Info Not Yet Recorded");
+
+            userDetailsText += string.Join(" | ", trainerParts);
         }
 
         return userDetailsText;
