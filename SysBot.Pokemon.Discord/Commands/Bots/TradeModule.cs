@@ -4,11 +4,13 @@ using Discord.WebSocket;
 using PKHeX.Core;
 using PKHeX.Core.AutoMod;
 using SysBot.Base;
+using SysBot.Pokemon.Discord;
 using SysBot.Pokemon.Discord.Helpers;
 using SysBot.Pokemon.Helpers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace SysBot.Pokemon.Discord;
@@ -17,6 +19,7 @@ namespace SysBot.Pokemon.Discord;
 public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, new()
 {
     private static TradeQueueInfo<T> Info => SysCord<T>.Runner.Hub.Queues.Info;
+    private static string Prefix => SysCordSettings.Settings.CommandPrefix;
 
     #region Medal Achievement Command
 
@@ -30,7 +33,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
 
         if (totalTrades == 0)
         {
-            await ReplyAsync($"{Context.User.Username}, you haven't made any trades yet. Start trading to earn your first medal!");
+            await ReplyAsync($"{Context.User.Username}, you haven't made any trades yet.\nStart trading to earn your first medal!");
             return;
         }
 
@@ -192,7 +195,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         if (!await Helpers<T>.EnsureUserNotInQueueAsync(userID))
         {
             await Helpers<T>.ReplyAndDeleteAsync(Context,
-                "You already have an existing trade in the queue that cannot be cleared. Please wait until it is processed.", 2);
+                "You already have an existing trade in the queue that cannot be cleared. Please wait until it is processed.", 5);
             return;
         }
 
@@ -213,16 +216,16 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
                 if (result != LegalizationResult.Regenerated)
                 {
                     var reason = result == LegalizationResult.Timeout
-                        ? "Egg generation took too long."
-                        : "Failed to generate egg from the provided set.";
-                    await Helpers<T>.ReplyAndDeleteAsync(Context, reason, 2);
+                        ? "Egg generation took too long and the bot timed out."
+                        : "Failed to generate egg from the provided set.\nTry to remove possible illegal lines and try again.";
+                    await Helpers<T>.ReplyAndDeleteAsync(Context, reason, 6);
                     return;
                 }
 
                 pkm = EntityConverter.ConvertToType(pkm, typeof(T), out _) ?? pkm;
                 if (pkm is not T pk)
                 {
-                    await Helpers<T>.ReplyAndDeleteAsync(Context, "Oops! I wasn't able to create an egg for that.", 2);
+                    await Helpers<T>.ReplyAndDeleteAsync(Context, "Oops! I wasn't able to create an egg for that.\nTry to remove possible illegal lines and try again", 6);
                     return;
                 }
 
@@ -232,7 +235,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             catch (Exception ex)
             {
                 LogUtil.LogSafe(ex, nameof(TradeModule<T>));
-                await Helpers<T>.ReplyAndDeleteAsync(Context, "An error occurred while processing the request.", 2);
+                await Helpers<T>.ReplyAndDeleteAsync(Context, "An error occurred while processing the request.", 5);
             }
         });
 
@@ -250,7 +253,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         if (!await Helpers<T>.EnsureUserNotInQueueAsync(userID))
         {
             await Helpers<T>.ReplyAndDeleteAsync(Context,
-                "You already have an existing trade in the queue that cannot be cleared. Please wait until it is processed.", 2);
+                "You already have an existing trade in the queue that cannot be cleared. Please wait until it is processed.", 5);
             return;
         }
 
@@ -268,7 +271,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         if (!await Helpers<T>.EnsureUserNotInQueueAsync(userID))
         {
             await Helpers<T>.ReplyAndDeleteAsync(Context,
-                "You already have an existing trade in the queue that cannot be cleared. Please wait until it is processed.", 2);
+                "You already have an existing trade in the queue that cannot be cleared. Please wait until it is processed.", 5);
             return;
         }
 
@@ -298,7 +301,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         if (!await Helpers<T>.EnsureUserNotInQueueAsync(userID))
         {
             await Helpers<T>.ReplyAndDeleteAsync(Context,
-                "You already have an existing trade in the queue that cannot be cleared. Please wait until it is processed.", 2);
+                "You already have an existing trade in the queue that cannot be cleared. Please wait until it is processed.", 5);
             return;
         }
 
@@ -317,7 +320,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         if (!await Helpers<T>.EnsureUserNotInQueueAsync(userID))
         {
             await Helpers<T>.ReplyAndDeleteAsync(Context,
-                "You already have an existing trade in the queue that cannot be cleared. Please wait until it is processed.", 2);
+                "You already have an existing trade in the queue that cannot be cleared. Please wait until it is processed.", 5);
             return;
         }
 
@@ -330,7 +333,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
 
         if (!Enum.TryParse(language, true, out LanguageID lang))
         {
-            await Helpers<T>.ReplyAndDeleteAsync(Context, $"Couldn't recognize language: {language}.", 2);
+            await Helpers<T>.ReplyAndDeleteAsync(Context, $"Couldn't recognize language: {language}.", 5);
             return;
         }
 
@@ -364,7 +367,8 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         {
             if (TradeExtensions<T>.HasAdName(pk, out string ad))
             {
-                await Helpers<T>.ReplyAndDeleteAsync(Context, "Detected Adname in the Pokémon's name or trainer name, which is not allowed.", 5);
+                var botName = string.IsNullOrEmpty(SysCordSettings.HubConfig.BotName);
+                await Helpers<T>.ReplyAndDeleteAsync(Context, $"{Context.User.Username} just tried genning an Admon on {botName}\nEveryone laugh at them and start calling them stupid.", 15);
                 return;
             }
         }
@@ -386,7 +390,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         if (!await Helpers<T>.EnsureUserNotInQueueAsync(userID))
         {
             await Helpers<T>.ReplyAndDeleteAsync(Context,
-                "You already have an existing trade in the queue that cannot be cleared. Please wait until it is processed.", 2);
+                "You already have an existing trade in the queue that cannot be cleared. Please wait until it is processed.", 5);
             return;
         }
 
@@ -403,7 +407,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         if (!await Helpers<T>.EnsureUserNotInQueueAsync(userID))
         {
             await Helpers<T>.ReplyAndDeleteAsync(Context,
-                "You already have an existing trade in the queue that cannot be cleared. Please wait until it is processed.", 2);
+                "You already have an existing trade in the queue that cannot be cleared. Please wait until it is processed.", 5);
             return;
         }
 
@@ -431,7 +435,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
 
         if (pkm.HeldItem == 0)
         {
-            await Helpers<T>.ReplyAndDeleteAsync(Context, $"{Context.User.Username}, the item you entered wasn't recognized.", 2);
+            await Helpers<T>.ReplyAndDeleteAsync(Context, $"{Context.User.Username}, the item you entered wasn't recognized.", 5);
             return;
         }
 
@@ -439,7 +443,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         if (pkm is not T pk || !la.Valid)
         {
             var reason = result == "Timeout" ? "That set took too long to generate." : "I wasn't able to create something from that.";
-            var imsg = $"Oops! {reason} Here's my best attempt for that {species}!";
+            var imsg = $"{reason}\nHere's my best attempt for that {species}!";
             await Context.Channel.SendPKMAsync(pkm, imsg).ConfigureAwait(false);
             return;
         }
@@ -560,8 +564,9 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         // Check if batch trades are allowed
         if (!tradeConfig.AllowBatchTrades)
         {
+            var app = await Context.Client.GetApplicationInfoAsync().ConfigureAwait(false);
             await Helpers<T>.ReplyAndDeleteAsync(Context,
-                "Batch trades are currently disabled by the bot administrator.", 2);
+                $"Batch trades are currently disabled by the bot administrator, @{app.Owner}.", 6);
             return;
         }
 
@@ -569,7 +574,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         if (!await Helpers<T>.EnsureUserNotInQueueAsync(userID))
         {
             await Helpers<T>.ReplyAndDeleteAsync(Context,
-                "You already have an existing trade in the queue that cannot be cleared. Please wait until it is processed.", 2);
+                "You already have an existing trade in the queue that cannot be cleared. Please wait until it is processed.", 5);
             return;
         }
         content = ReusableActions.StripCodeBlock(content);
@@ -581,7 +586,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         if (trades.Count > maxTradesAllowed)
         {
             await Helpers<T>.ReplyAndDeleteAsync(Context,
-                $"You can only process up to {maxTradesAllowed} trades at a time. Please reduce the number of trades in your batch.", 5);
+                $"You can only process up to {maxTradesAllowed} trades at a time.\nPlease reduce the number of trades in your batch.", 5);
             return;
         }
 
@@ -643,7 +648,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         });
 
         if (Context.Message is IUserMessage userMessage)
-            _ = Helpers<T>.DeleteMessagesAfterDelayAsync(userMessage, null, 2);
+            _ = Helpers<T>.DeleteMessagesAfterDelayAsync(userMessage, null, 6);
     }
 
     #endregion
@@ -658,7 +663,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
         if (!await Helpers<T>.EnsureUserNotInQueueAsync(userID))
         {
             await Helpers<T>.ReplyAndDeleteAsync(Context,
-                "You already have an existing trade in the queue that cannot be cleared. Please wait until it is processed.", 2);
+                "You already have an existing trade in the queue that cannot be cleared.\nPlease wait until it is processed.", 5);
             return;
         }
 
@@ -686,7 +691,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
                 var pkm = sav.GetLegal(template, out var result);
                 if (pkm == null)
                 {
-                    await Helpers<T>.ReplyAndDeleteAsync(Context, "Failed to generate Pokémon from your set.", 2);
+                    await Helpers<T>.ReplyAndDeleteAsync(Context, $"Failed to generate Pokémon from your set.\nTry to use `{Prefix}convert` instead, or try removing some information.", 8);
                     return;
                 }
 
@@ -699,9 +704,22 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
                 var pk = EntityConverter.ConvertToType(pkm, typeof(T), out _) as T;
                 if (pk == null)
                 {
-                    await Helpers<T>.ReplyAndDeleteAsync(Context, "Failed to convert Pokémon to correct type.", 2);
+                    await Helpers<T>.ReplyAndDeleteAsync(Context, "Failed to convert Pokémon to correct type.", 5);
                     return;
                 }
+                // Raw message ad check BEFORE generating PKM
+                if (TradeExtensions<T>.ContainsAdText(content, out var domain))
+                {
+                    var botName = string.IsNullOrEmpty(SysCordSettings.HubConfig.BotName)
+                        ? "the bot"
+                        : SysCordSettings.HubConfig.BotName;
+                    var trainerMention = Context.User.Mention;
+                    await Helpers<T>.ReplyAndDeleteAsync(Context,
+                        $"{trainerMention} just tried to run an ad in my fuckin’ bot, {botName}.\n" +
+                        $"Point and laugh at them for being a bitch ass failure!", 15);
+                    return;
+                }
+
 
                 // Final safety refresh
                 pk.RefreshChecksum();
@@ -724,7 +742,7 @@ public class TradeModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
             catch (Exception ex)
             {
                 LogUtil.LogSafe(ex, nameof(TradeModule<T>));
-                await Helpers<T>.ReplyAndDeleteAsync(Context, "Oops! An unexpected problem happened with this Showdown Set.", 2);
+                await Helpers<T>.ReplyAndDeleteAsync(Context, $"An unexpected problem happened with this Showdown Set.\nTry to use `{Prefix}convert` instead, or try removing some information.", 8);
             }
         });
 

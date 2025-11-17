@@ -9,6 +9,9 @@ namespace SysBot.Pokemon.Helpers;
 
 public abstract class TradeExtensions<T> where T : PKM, new()
 {
+    // Global regex used by BOTH checks
+    public const string DomainPattern = @"(?<=\w)\.(com|org|net|gg|xyz|io|tv|co|me|us|uk|ca|de|fr|jp|au|eu|ch|it|nl|ru|br|in)\b";
+
     public static readonly string[] MarkTitle =
     [
         " The Peckish",
@@ -174,13 +177,27 @@ public abstract class TradeExtensions<T> where T : PKM, new()
 
     public static bool HasAdName(T pk, out string ad)
     {
-        // List of common TLDs to match
-        const string domainPattern = @"(?<=\w)\.(com|org|net|gg|xyz|io|tv|co|me|us|uk|ca|de|fr|jp|au|eu|ch|it|nl|ru|br|in)\b";
+        ad = "";
+        if (pk == null)
+            return false;
 
-        bool ot = Regex.IsMatch(pk.OriginalTrainerName, domainPattern, RegexOptions.IgnoreCase);
-        bool nick = Regex.IsMatch(pk.Nickname, domainPattern, RegexOptions.IgnoreCase);
+        bool ot = Regex.IsMatch(pk.OriginalTrainerName, DomainPattern, RegexOptions.IgnoreCase);
+        bool nick = Regex.IsMatch(pk.Nickname, DomainPattern, RegexOptions.IgnoreCase);
+
         ad = ot ? pk.OriginalTrainerName : nick ? pk.Nickname : "";
         return ot || nick;
+    }
+
+    public static bool ContainsAdText(string input, out string match)
+    {
+        match = "";
+        var m = Regex.Match(input, DomainPattern, RegexOptions.IgnoreCase);
+        if (m.Success)
+        {
+            match = m.Value;
+            return true;
+        }
+        return false;
     }
 
     public static bool HasMark(IRibbonIndex pk, out RibbonIndex result, out string markTitle)
