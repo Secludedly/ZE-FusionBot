@@ -8,10 +8,8 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using static SysBot.Base.SwitchButton;
-using SysBot.Pokemon.Helpers;
 using static SysBot.Pokemon.PokeDataOffsetsPLZA;
 using static SysBot.Pokemon.TradeHub.SpecialRequests;
-using System.Diagnostics;
 
 namespace SysBot.Pokemon;
 
@@ -32,7 +30,6 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
     private uint DisplayTID;
 
     private string OT = string.Empty;
-    private bool _hasMadeFirstTrade = false;
     private bool StartFromOverworld = true;
     private ulong? _cachedBoxOffset;
     private ulong TradePartnerStatusOffset;
@@ -184,7 +181,7 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
     {
         Log("Waiting for trainer...");
 
-        // Initial delay to let the game populate pointer in memory
+        // Initial delay to let the game populate NID pointer in memory
         await Task.Delay(3_000, token).ConfigureAwait(false);
 
         int maxWaitMs = Hub.Config.Trade.TradeConfiguration.TradeWaitTime * 1_000;
@@ -216,11 +213,6 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
             {
                 Log("Trade partner detected!");
                 _wasConnectedToPartner = false; // Reset flag when successfully back to overworld
-
-                // IMPORTANT: the trade box may map memory differently; invalidate cached box pointer
-                _cachedBoxOffset = null;
-                Log("Invalidated cached box offset on entering trade box to ensure fresh pointer resolution.");
-
                 return TradePartnerWaitResult.Success;
             }
 
@@ -231,7 +223,6 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
         Log("Timed out waiting for trade partner.");
         return TradePartnerWaitResult.Timeout;
     }
-
 
     #endregion
 
@@ -357,140 +348,21 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
 
     private async Task<PokeTradeResult> ConfirmAndStartTrading(PokeTradeDetail<PA9> detail, uint checksumBeforeTrade, CancellationToken token)
     {
-        // Press A once to confirm
         await Click(A, 3_000, token).ConfigureAwait(false);
 
-        // Force to resolve box pointer to verify we read the correct slot after user interaction 
-        _cachedBoxOffset = null;
         var boxOffset = await GetBoxStartOffset(token).ConfigureAwait(false);
-
-        // Logic that handles first trade timing vs subsequent trades
-        if (!_hasMadeFirstTrade)
-        {
-            Log("First trade detected — applying extended menu timing.");
-            // Give the UI more time to render the Pokémon box before pressing A
-            await Task.Delay(1000, token).ConfigureAwait(false);
-
-            // Step 1: Press A to open the B1S1 sub-menu
-            await Click(A, 500, token).ConfigureAwait(false);
-            Log("Opened trade sub-menu for B1S1.");
-
-            // Step 2: Give the game 1.5s to fully display 'Offer Up'
-            await Task.Delay(1500, token).ConfigureAwait(false);
-
-            // Step 3: Press A again to select 'Offer Up'
-            await Click(A, 1000, token).ConfigureAwait(false);
-            Log("Selected 'Offer up'.");
-
-            // Step 4: Wait a short moment for the 'Trade it' dialog
-            await Task.Delay(700, token).ConfigureAwait(false);
-
-            // Step 5: Press A to confirm 'Trade It'
-            await Click(A, 1000, token).ConfigureAwait(false);
-            Log("Confirmed 'Trade it'.");
-
-            _hasMadeFirstTrade = true;
-        }
-        else
-        {
-            // Normal behavior for all subsequent trades (faster trading after cache the pointer offsets)
-            await Task.Delay(500, token).ConfigureAwait(false);
-
-            await Click(A, 400, token).ConfigureAwait(false);
-            Log("Opened trade sub-menu (fast).");
-
-            await Task.Delay(800, token).ConfigureAwait(false);
-            await Click(A, 500, token).ConfigureAwait(false);
-            Log("Selected 'Offer Up' (fast).");
-
-            await Task.Delay(500, token).ConfigureAwait(false);
-            await Click(A, 500, token).ConfigureAwait(false);
-            Log("Confirmed 'Trade It' (fast).");
-        }
-
         bool b1s1Changed = false;
         bool warningSent = false;
         int maxTime = Hub.Config.Trade.TradeConfiguration.MaxTradeConfirmTime;
 
-        // Attempt a retry loop instead of A buttom spam.
-        int attempts = 0;
-        const int maxAttempts = 3;
-
-        var sw = Stopwatch.StartNew();
-
-        while (sw.Elapsed.TotalSeconds < maxTime)
+        for (int i = 0; i < maxTime; i++)
         {
-            if (token.IsCancellationRequested)
-                return PokeTradeResult.RoutineCancel;
+            await Click(A, 1_000, token).ConfigureAwait(false);
 
-            // Read B1S1 checksum to detect changes
-            try
+            // Send warning 10 seconds before timeout
+            if (!warningSent && i == maxTime - 10 && maxTime >= 10)
             {
-                var currentPokemon = await ReadPokemon(boxOffset, BoxFormatSlotSize, token).ConfigureAwait(false);
-                if (currentPokemon != null)
-                {
-                    if (currentPokemon.Checksum != checksumBeforeTrade)
-                        b1s1Changed = true;
-                }
-                else
-                {
-                    // If we fail on reading it on first pass, try resolving pointer once more
-                    if (attempts < maxAttempts)
-                    {
-                        Log("Failed to read B1S1, re-resolving pointer and retrying.");
-                        _cachedBoxOffset = null;
-                        boxOffset = await GetBoxStartOffset(token).ConfigureAwait(false);
-                        attempts++;
-                        await Task.Delay(500, token).ConfigureAwait(false);
-                        continue;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Log($"Error reading B1S1 checksum: {ex.Message}. Attempting re-resolve.");
-                if (attempts < maxAttempts)
-                {
-                    _cachedBoxOffset = null;
-                    boxOffset = await GetBoxStartOffset(token).ConfigureAwait(false);
-                    attempts++;
-                    await Task.Delay(500, token).ConfigureAwait(false);
-                    continue;
-                }
-            }
-
-            // If the partner has offered and we detect the slot change
-            if (b1s1Changed)
-            {
-                var currentGameState = await GetGameState(token).ConfigureAwait(false);
-                if (currentGameState == 0x02)
-                {
-                    Log("Trade started! Waiting for completion...");
-                    return PokeTradeResult.Success;
-                }
-
-                // Give the animation some more time to begin
-                int extraWait = 15;
-                for (int i = 0; i < extraWait; i++)
-                {
-                    await Task.Delay(1_000, token).ConfigureAwait(false);
-                    var gs = await GetGameState(token).ConfigureAwait(false);
-                    if (gs == 0x02)
-                    {
-                        Log("Trade animation started after confirmation.");
-                        return PokeTradeResult.Success;
-                    }
-                }
-
-                Log("Trade was confirmed by both players but animation did not start. Possible connection issue.");
-                return PokeTradeResult.TrainerTooSlow;
-            }
-
-            // No change — decide whether to retry or not with pressing A (but on a limit)
-            var elapsedSeconds = (int)sw.Elapsed.TotalSeconds;
-            if (!warningSent && elapsedSeconds >= Math.Max(1, maxTime - 10))
-            {
-                detail.SendNotification(this, "Hey! Pick a Pokémon to trade or I am leaving!");
+                detail.SendNotification(this, "Hey! Pick a Pokemon to trade or I am leaving!");
                 warningSent = true;
             }
 
@@ -502,41 +374,47 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
                 return PokeTradeResult.NoTrainerFound;
             }
 
-            // If it didn't change after 4 seconds, try to press A once up until "maxAttempts"
-            if (sw.Elapsed.TotalSeconds >= 4 && attempts < maxAttempts)
+            if (!b1s1Changed)
             {
-                Log($"B1S1 unchanged after {(int)sw.Elapsed.TotalSeconds}s, attempt {attempts + 1} re-pressing A.");
-                await Click(A, 1_000, token).ConfigureAwait(false);
-                attempts++;
-                // give short time to react
-                await Task.Delay(700, token).ConfigureAwait(false);
-                continue;
+                var currentPokemon = await ReadPokemon(boxOffset, BoxFormatSlotSize, token).ConfigureAwait(false);
+                var currentChecksum = currentPokemon.Checksum;
+
+                if (currentChecksum != checksumBeforeTrade)
+                    b1s1Changed = true;
             }
 
-            // Short delay before loop continues
-            await Task.Delay(500, token).ConfigureAwait(false);
+            if (b1s1Changed)
+            {
+                var currentGameState = await GetGameState(token).ConfigureAwait(false);
+                if (currentGameState == 0x02)
+                {
+                    Log("Trade started! Waiting for completion...");
+                    return PokeTradeResult.Success;
+                }
+            }
         }
 
-        // Final read, last chance
-        try
+        if (!b1s1Changed)
         {
             var finalPokemon = await ReadPokemon(boxOffset, BoxFormatSlotSize, token).ConfigureAwait(false);
-            if (finalPokemon != null && finalPokemon.Checksum != checksumBeforeTrade)
+            var finalChecksum = finalPokemon.Checksum;
+
+            if (finalChecksum != checksumBeforeTrade)
                 b1s1Changed = true;
-        }
-        catch
-        {
-            // swallow — we will treat as trainer too slow below
         }
 
         if (b1s1Changed)
         {
-            // If the box changed but we never saw animation start, wait a short extra window
-            Log("Trade confirmed by both players (post-loop). Awaiting game animation...");
-            for (int i = 0; i < 15; i++)
+            // B1S1 changed means BOTH players confirmed the trade
+            // Give additional time for the game state to transition to trade animation (0x02)
+            // This prevents disconnecting during an active trade that's about to start
+            Log("Trade confirmed by both players. Waiting for trade animation to start...");
+
+            int additionalWaitSeconds = 15; // Give 15 extra seconds for animation to start
+            for (int i = 0; i < additionalWaitSeconds; i++)
             {
-                var gs = await GetGameState(token).ConfigureAwait(false);
-                if (gs == 0x02)
+                var currentGameState = await GetGameState(token).ConfigureAwait(false);
+                if (currentGameState == 0x02)
                 {
                     Log("Trade started! Waiting for completion...");
                     return PokeTradeResult.Success;
@@ -553,16 +431,12 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
                 await Task.Delay(1_000, token).ConfigureAwait(false);
             }
 
+            // If we still haven't entered trade animation after 15 seconds, something is wrong
             Log("Trade was confirmed but animation never started. Possible connection issue.");
-            return PokeTradeResult.TrainerTooSlow;
         }
 
-        // If we reached here, partner didn't offer within our window
-        Log("Partner did not offer a Pokémon in time.");
-        detail.SendNotification(this, "Trade was not confirmed in time. Cancelling.");
         return PokeTradeResult.TrainerTooSlow;
     }
-
 
     #endregion
 
@@ -601,7 +475,6 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
                 if (++attempts > 30)
                 {
                     Log("Failed to connect online.");
-
                     return false;
                 }
             }
@@ -783,85 +656,14 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
 
     private async Task<ulong> GetBoxStartOffset(CancellationToken token)
     {
-        // If we have a cached value, do a check to see if it still looks valid.
         if (_cachedBoxOffset.HasValue)
-        {
-            try
-            {
-                var cached = _cachedBoxOffset.Value;
+            return _cachedBoxOffset.Value;
 
-                // Attempt a small read from the cached pointer to confirm validity
-                // reading BoxFormatSlotSize bytes should return something; check a few bytes
-                var sample = await SwitchConnection.ReadBytesAbsoluteAsync(cached, Math.Min(16, BoxFormatSlotSize), token).ConfigureAwait(false);
-                if (sample != null && sample.Length >= 4)
-                {
-                    // quick analysis: not all zeroes and not all FF (which can be invalid bytes)
-                    bool allZero = true;
-                    bool allFF = true;
-                    foreach (var b in sample)
-                    {
-                        if (b != 0) allZero = false;
-                        if (b != 0xFF) allFF = false;
-                    }
-
-                    if (!allZero && !allFF)
-                        return cached; // cache still valid
-                }
-
-                // fallback: cache invalid, clear it and re-resolve
-                _cachedBoxOffset = null;
-                Log("Cached box offset failed sanity check; re-resolving pointer.");
-            }
-            catch (Exception ex)
-            {
-                // If any read error occurs, treat as bad and re-resolve
-                _cachedBoxOffset = null;
-                Log($"Cached box offset read failed ({ex.Message}). Re-resolving pointer.");
-            }
-        }
-
-        // Resolve fresh pointer and validate it similarly
+        // Get Box 1 Slot 1 address
         var finalOffset = await ResolvePointer(Offsets.BoxStartPokemonPointer, token).ConfigureAwait(false);
-
-        try
-        {
-            var sample2 = await SwitchConnection.ReadBytesAbsoluteAsync(finalOffset, Math.Min(16, BoxFormatSlotSize), token).ConfigureAwait(false);
-            if (sample2 == null || sample2.Length < 4)
-            {
-                Log("Resolved box start pointer read returned insufficient data. Will keep resolving on next attempt.");
-                // Don't cache obviously invalid pointer
-                _cachedBoxOffset = null;
-                return finalOffset; // still return it, but don't cache
-            }
-
-            // Basic analysis again
-            bool allZero2 = true;
-            bool allFF2 = true;
-            foreach (var b in sample2)
-            {
-                if (b != 0) allZero2 = false;
-                if (b != 0xFF) allFF2 = false;
-            }
-
-            if (!allZero2 && !allFF2)
-            {
-                _cachedBoxOffset = finalOffset; // cache only if sanity checks pass
-            }
-            else
-            {
-                Log("Resolved box pointer appears suspicious (all-zero or all-FF). Not caching.");
-                _cachedBoxOffset = null;
-            }
-        }
-        catch (Exception ex)
-        {
-            Log($"Error while validating resolved box pointer: {ex.Message}");
-            _cachedBoxOffset = null;
-        }
-
+        _cachedBoxOffset = finalOffset;
         return finalOffset;
     }
-
 
     private async Task<bool> CheckIfOnOverworld(CancellationToken token)
     {
@@ -920,11 +722,11 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
         {
             detail.IsRetry = true;
             Hub.Queues.Enqueue(type, detail, Math.Min(priority, PokeTradePriorities.Tier2));
-            detail.SendNotification(this, "Something unexpected happened.\nI'll requeue you for another attempt.");
+            detail.SendNotification(this, "Oops! Something happened. I'll requeue you for another attempt.");
         }
         else
         {
-            detail.SendNotification(this, $"Something unexpected happened.\nCanceling the trade: {result}.");
+            detail.SendNotification(this, $"Oops! Something happened. Canceling the trade: {result}.");
             detail.TradeCanceled(this, result);
         }
     }
@@ -1003,12 +805,11 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
                 for (int j = 0; j < allReceived.Count; j++)
                 {
                     var pokemon = allReceived[j];
-                    var speciesLogName = LanguageHelper.GetLocalizedSpeciesLog(pokemon);
-
-                    Log($"Returning: {speciesLogName}");
+                    var speciesName = SpeciesName.GetSpeciesName(pokemon.Species, 2);
+                    Log($"Returning: {speciesName}");
 
                     // Send the Pokemon directly to the notifier
-                    poke.SendNotification(this, pokemon, $"Pokémon you traded to me: {speciesLogName}");
+                    poke.SendNotification(this, pokemon, $"Pokémon you traded to me: {speciesName}");
                     Thread.Sleep(500);
                 }
             }
@@ -1207,8 +1008,7 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
                     // B1S1 has changed - immediately read and save the received Pokemon
                     boxOffset = await GetBoxStartOffset(token).ConfigureAwait(false);
                     var receivedPokemon = await ReadPokemon(boxOffset, BoxFormatSlotSize, token).ConfigureAwait(false);
-                    var speciesLog = LanguageHelper.GetLocalizedSpeciesLog(receivedPokemon);
-                    Log($"Trade {currentTradeIndex + 1} confirmed - received {speciesLog}");
+                    Log($"Trade {currentTradeIndex + 1} confirmed - received {(Species)receivedPokemon.Species}");
 
                     // Immediately inject the next Pokemon if there is one
                     if (currentTradeIndex + 1 < totalBatchTrades)
@@ -1290,14 +1090,17 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
                 await ExitTradeToOverworld(false, token).ConfigureAwait(false);
                 return PokeTradeResult.TrainerTooSlow;
             }
-            Log($"Trade {currentTradeIndex + 1}/{totalBatchTrades} complete! Received {LanguageHelper.GetLocalizedSpeciesLog(received)}.");
+
+            Log($"Trade {currentTradeIndex + 1}/{totalBatchTrades} complete! Received {(Species)received.Species}.");
 
             // NOW prepare and inject the next Pokemon (after we've read what we received)
             if (currentTradeIndex + 1 < totalBatchTrades)
             {
                 Log($"Preparing next Pokémon ({currentTradeIndex + 2}/{totalBatchTrades})...");
+
                 var nextTradeIndex = currentTradeIndex + 1;
                 var nextToSend = tradesToProcess[nextTradeIndex];
+
                 if (nextToSend.Species != 0)
                 {
                     if (Hub.Config.Legality.UseTradePartnerInfo && !poke.IgnoreAutoOT && cachedTradePartnerInfo != null)
@@ -1312,8 +1115,10 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
                         await SetBoxPokemonAbsolute(nextBoxOffset, nextToSend, token, sav).ConfigureAwait(false);
                     }
                 }
+
                 Log($"Next Pokémon prepared and injected!");
             }
+
             UpdateCountsAndExport(poke, received, toSend);
 
             // Get the trainer NID and name for logging
@@ -1527,8 +1332,6 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
 
             await Task.Delay(1_000, token).ConfigureAwait(false);
         }
-
-
 
         // Enter the new code
         await EnterLinkCode(code, Hub.Config, token).ConfigureAwait(false);
@@ -1789,7 +1592,7 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
             return PokeTradeResult.TrainerTooSlow;
         }
 
-        Log($"Trade complete! Received {LanguageHelper.GetLocalizedSpeciesLog(received)}.");
+        Log($"Trade complete! Received {(Species)received.Species}.");
 
         poke.TradeFinished(this, received);
         UpdateCountsAndExport(poke, received, toSend);
@@ -1815,7 +1618,7 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
             {
                 detail.IsRetry = true;
                 Hub.Queues.Enqueue(type, detail, Math.Min(priority, PokeTradePriorities.Tier2));
-                detail.SendNotification(this, "Something unexpected happened during your batch trade.\nI'll requeue you for another attempt.");
+                detail.SendNotification(this, "Oops! Something happened during your batch trade. I'll requeue you for another attempt.");
             }
             else
             {
@@ -2073,7 +1876,6 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
             Log("Trade partner did not change their initial offer.");
             return false;
         }
-
         var offering = await ReadUntilChanged(TradePartnerStatusOffset, [0x3], 25_000, 1_000, true, true, token).ConfigureAwait(false);
         if (!offering)
         {
@@ -2192,7 +1994,6 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
             // Heal and refresh checksum to ensure valid data
             pk.Heal();
             pk.RefreshChecksum();
-
 
             // Save the new Pokemon for comparison next round
             pkprev = pk;
