@@ -30,13 +30,13 @@ public class QueueSettings
     private const string UserBias = nameof(UserBias);
 
     [Category(FeatureToggle), Description("Allows users to dequeue while being traded.")]
-    public bool CanDequeueIfProcessing { get; set; }
+    public bool CanDequeueIfProcessing { get; set; } = true;
 
     [Category(FeatureToggle), Description("Toggles if users can join the queue.")]
     public bool CanQueue { get; set; } = true;
 
     [Category(TimeBias), Description("Multiplies the amount of users in queue to give an estimate of how much time it will take until the user is processed.")]
-    public float EstimatedDelayFactor { get; set; } = 1.1f;
+    public float EstimatedDelayFactor { get; set; } = 1.2f;
 
     [Category(FeatureToggle), Description("Determines how Flex Mode will process the queues.")]
     public FlexYieldMode FlexMode { get; set; } = FlexYieldMode.Weighted;
@@ -49,7 +49,7 @@ public class QueueSettings
 
     // General
     [Category(FeatureToggle), Description("Prevents adding users if there are this many users in the queue already.")]
-    public int MaxQueueCount { get; set; } = 30;
+    public int MaxQueueCount { get; set; } = 200;
 
     [Category(FeatureToggle), Description("Determines when the queue is turned on and off.")]
     public QueueOpening QueueToggleMode { get; set; } = QueueOpening.Threshold;
@@ -58,10 +58,10 @@ public class QueueSettings
     public bool NotifyOnQueueClose { get; set; } = true;
 
     [Category(QueueToggle), Description("Threshold Mode: Count of users that will cause the queue to close.")]
-    public int ThresholdLock { get; set; } = 30;
+    public int ThresholdLock { get; set; } = 200;
 
     [Category(QueueToggle), Description("Threshold Mode: Count of users that will cause the queue to open.")]
-    public int ThresholdUnlock { get; set; }
+    public int ThresholdUnlock { get; set; } = 0;
 
     [Category(UserBias), Description("Biases the Clone Queue's weight based on how many users are in the queue.")]
     public int YieldMultCountClone { get; set; } = 100;

@@ -84,7 +84,7 @@ public class DiscordSettings
     public bool BotEmbedStatus { get; set; } = true;
 
     [Category(Startup), Description("Custom Status for playing a game.")]
-    public string BotGameStatus { get; set; } = "Pokémon";
+    public string BotGameStatus { get; set; } = "Trading Pokémon";
 
     [Category(Startup), Description("Will add online/offline emoji to channel name based on current status.  Whitelisted channels only.")]
     public bool ChannelStatus { get; set; } = true;
@@ -126,7 +126,7 @@ public class DiscordSettings
     public bool ReplyCannotUseCommandInChannel { get; set; } = true;
 
     [Category(Operation), Description("Will send a random response to a user that thanks the bot.")]
-    public bool ReplyToThanks { get; set; } = true;
+    public bool ReplyToThanks { get; set; } = false;
 
     [Category(Operation), Description("Returns PKMs of Pokémon shown in the trade to the user.")]
     public bool ReturnPKMs { get; set; } = true;
@@ -135,7 +135,7 @@ public class DiscordSettings
     public bool MessageDeletionEnabled { get; set; } = true;
 
     [Category(Operation), Description("Number of seconds to wait before deleting bot error/response messages. Only applies if MessageDeletionEnabled is true.")]
-    public int ErrorMessageDeleteDelaySeconds { get; set; } = 12;
+    public int ErrorMessageDeleteDelaySeconds { get; set; } = 10;
 
     [Category(Operation), Description("When enabled, user command messages will be deleted along with bot responses. Disable to keep user commands visible.")]
     public bool DeleteUserCommandMessages { get; set; } = true;

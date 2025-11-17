@@ -64,10 +64,10 @@ public class TradeSettings : IBotStateSettings, ICountSettings
         public bool StoreTradeCodes { get; set; } = true;
 
         [Category(TradeConfig), Description("Time to wait for a trade partner in seconds."), DisplayName("Trade Partner Wait Time (seconds)")]
-        public int TradeWaitTime { get; set; } = 30;
+        public int TradeWaitTime { get; set; } = 55;
 
         [Category(TradeConfig), Description("Max amount of time in seconds pressing A to wait for a trade to process."), DisplayName("Maximum Trade Confirmation Time (seconds)")]
-        public int MaxTradeConfirmTime { get; set; } = 25;
+        public int MaxTradeConfirmTime { get; set; } = 45;
 
         [Category(TradeConfig), Description("Select default species for \"ItemTrade\", if configured."), DisplayName("Default Species for Item Trades")]
         public Species ItemTradeSpecies { get; set; } = Species.None;
@@ -85,13 +85,13 @@ public class TradeSettings : IBotStateSettings, ICountSettings
         public bool EnableSpamCheck { get; set; } = true;
 
         [Category(TradeConfig), Description("Maximum pokemons of single trade. Batch mode will be closed if this configuration is less than 1"), DisplayName("Maximum Pokémon per Trade")]
-        public int MaxPkmsPerTrade { get; set; } = 1;
+        public int MaxPkmsPerTrade { get; set; } = 6;
 
         [Category(TradeConfig), Description("Dump Trade: Dumping routine will stop after a maximum number of dumps from a single user."), DisplayName("Maximum Dumps per Trade")]
-        public int MaxDumpsPerTrade { get; set; } = 20;
+        public int MaxDumpsPerTrade { get; set; } = 25;
 
         [Category(TradeConfig), Description("Dump Trade: Dumping routine will stop after spending x seconds in trade."), DisplayName("Maximum Dump Trade Time (seconds)")]
-        public int MaxDumpTradeTime { get; set; } = 45;
+        public int MaxDumpTradeTime { get; set; } = 60;
 
         [Category(TradeConfig), Description("Dump Trade: If enabled, Dumping routine will output legality check information to the user."), DisplayName("Dump Trade Legality Check")]
         public bool DumpTradeLegalityCheck { get; set; } = true;

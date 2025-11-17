@@ -13,7 +13,7 @@ public class TimingSettings
     private const string Raid = nameof(Raid);
 
     [Category(Misc), Description("Enable this to decline incoming system updates.")]
-    public bool AvoidSystemUpdate { get; set; }
+    public bool AvoidSystemUpdate { get; set; } = true;
 
     [Category(Misc), Description("Extra time in milliseconds to wait between attempts to reconnect. Base time is 30 seconds.")]
     public int ExtraReconnectDelay { get; set; }
@@ -51,7 +51,7 @@ public class TimingSettings
 
     // Opening the game.
     [Category(OpenGame), Description("Enable this if you need to select a profile when starting the game.")]
-    public bool ProfileSelectionRequired { get; set; } = true;
+    public bool ProfileSelectionRequired { get; set; } = false;
 
     [Category(OpenGame), Description("Extra time in milliseconds to wait for profiles to load when starting the game.")]
     public int ExtraTimeLoadProfile { get; set; }

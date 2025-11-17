@@ -12,7 +12,7 @@ public class LegalitySettings
 
     private const string Misc = nameof(Misc);
 
-    private string DefaultTrainerName = "Ash";
+    private string DefaultTrainerName = "FreeMons.Org";
 
     [Category(Generate), Description("Allow users to submit further customization with Batch Editor commands.")]
     public bool AllowBatchCommands { get; set; } = true;
@@ -33,7 +33,7 @@ public class LegalitySettings
     public bool EnableHOMETrackerCheck { get; set; } = false;
 
     [Category(Generate), Description("Assumes level 50 sets are level 100 competitive sets.")]
-    public bool ForceLevel100for50 { get; set; } = true;
+    public bool ForceLevel100for50 { get; set; } = false;
 
     [Category(Generate), Description("Force the specified ball if legal.")]
     public bool ForceSpecifiedBall { get; set; } = true;
@@ -96,7 +96,7 @@ public class LegalitySettings
     public bool SetMatchingBalls { get; set; } = true;
 
     [Category(Generate), Description("Maximum time in seconds to spend when generating a set before canceling. This prevents difficult sets from freezing the bot.")]
-    public int Timeout { get; set; } = 15;
+    public int Timeout { get; set; } = 8;
 
     [Category(Misc), Description("Apply valid pokemon with the trainers OT/SID/TID (AutoOT)")]
     public bool UseTradePartnerInfo { get; set; } = true;
