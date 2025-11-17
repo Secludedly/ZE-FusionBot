@@ -15,11 +15,20 @@ namespace SysBot.Pokemon.Discord
     {
         private static TradeQueueInfo<T> Info => SysCord<T>.Runner.Hub.Queues.Info;
         private static readonly Random rng = new(); // Global RNG for consistent randomness
-        private static readonly HashSet<ushort> BannedForms = new() // Excludes specific forms that are not legal
+        private static readonly HashSet<ushort> BannedForms = new() // Pokemon with alternate forms that may cause legality issues
         {
+            643, // Reshiram
+            644, // Zekrom
+            646, // Kyurem
+            716, // Xerneas
+            718, // Zygarde
+            791, // Solgaleo
+            792, // Lunala
             800, // Necrozma
+            801, // Magearna
             888, // Zacian
             889, // Zamazenta
+            898, // Calyrex
         };
 
         // Commands for trading random Pokémon with completely random attributes and stats
@@ -274,6 +283,7 @@ namespace SysBot.Pokemon.Discord
                 Type t when t == typeof(PB8) => GameVersion.BDSP,
                 Type t when t == typeof(PA8) => GameVersion.PLA,
                 Type t when t == typeof(PK9) => GameVersion.SV,
+                Type t when t == typeof(PA9) => GameVersion.ZA,
                 _ => throw new ArgumentException("Unsupported game version.")
             };
         }
@@ -297,6 +307,7 @@ namespace SysBot.Pokemon.Discord
             GameVersion.BDSP => PersonalTable.BDSP,
             GameVersion.PLA => PersonalTable.LA,
             GameVersion.SV => PersonalTable.SV,
+            GameVersion.ZA => PersonalTable.ZA,
             _ => throw new ArgumentException("Unsupported personal table type.")
         };
 
