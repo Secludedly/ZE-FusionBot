@@ -103,12 +103,10 @@ public abstract class PokeRoutineExecutor9PLZA : PokeRoutineExecutor<PA9>
         return info;
     }
 
-    public async Task<ulong> GetTradePartnerNID(IReadOnlyList<long> jumps, CancellationToken token)
+    public async Task<ulong> GetTradePartnerNID(CancellationToken token)
     {
-        var nidAddr = await ResolvePointer(jumps, token, derefAll: false).ConfigureAwait(false);
-        var bytes = await SwitchConnection.ReadBytesAbsoluteAsync(nidAddr, 8, token).ConfigureAwait(false);
-        var nid = BitConverter.ToUInt64(bytes, 0);
-        return nid;
+        var data = await SwitchConnection.PointerPeek(8, Offsets.TradePartnerBackupNIDPointer, token).ConfigureAwait(false);
+        return BitConverter.ToUInt64(data, 0);
     }
 
     public async Task<SAV9ZA> IdentifyTrainer(CancellationToken token)
@@ -335,6 +333,10 @@ public abstract class PokeRoutineExecutor9PLZA : PokeRoutineExecutor<PA9>
 
     protected virtual async Task EnterLinkCode(int code, PokeTradeHubConfig config, CancellationToken token)
     {
+        // If code is 0, skip entering a code (blank code for random matchmaking)
+        if (code == 0)
+            return;
+
         if (config.UseKeyboard)
         {
             char[] codeChars = $"{code:00000000}".ToCharArray();

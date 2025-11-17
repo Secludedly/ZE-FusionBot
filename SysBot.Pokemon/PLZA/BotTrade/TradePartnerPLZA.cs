@@ -4,9 +4,9 @@ using System.Buffers.Binary;
 
 namespace SysBot.Pokemon;
 
-// TradePartnerPLZA - wrapper for trade partner data during trade session
 public sealed class TradePartnerPLZA(TradePartnerStatusPLZA info)
 {
+    public const int MaxByteLengthStringObject = 26;
     public int Game { get; } = info.Game;
     public int Gender { get; } = info.Gender;
     public int Language { get; } = info.Language;
@@ -26,7 +26,7 @@ public sealed class TradeMyStatusPLZA
 
     public uint DisplayTID => BinaryPrimitives.ReadUInt32LittleEndian(Data.AsSpan(0)) % 1_000_000;
 
-    public int Game => Data[0x04]; // Read from memory instead of hardcoding
+    public int Game => Data[0x04];
 
     public int Gender => Data[0x05];
 
@@ -35,8 +35,7 @@ public sealed class TradeMyStatusPLZA
     public string OT => StringConverter8.GetString(Data.AsSpan(0x10, 0x1A));
 }
 
-// Trade partner status structure during trade session (48 bytes)
-// This has DIFFERENT offsets than MyStatus9a when reading from Trader1MyStatusPointer:
+// Trade partner status structure (48 bytes)
 // 0x00: ID32 (TID+SID), 0x04: Gender, 0x05: Language, 0x08: OT Name
 public sealed class TradePartnerStatusPLZA
 {

@@ -3,12 +3,7 @@ using System.Collections.Generic;
 namespace SysBot.Pokemon;
 
 /// <summary>
-/// Memory offsets for Pokémon Legends: Z-A (v1.0.1)
-///
-/// Two pointer patterns:
-/// - Pokemon data: All jumps are dereferenced
-/// - Struct fields: Last jump is a field offset, not dereferenced
-/// Pointer Research by hexbyt3 - https://github.com/hexbyt3/PLZAResearch
+/// Memory offsets for Pokémon Legends: Z-A (v1.0.2)
 /// </summary>
 public class PokeDataOffsetsPLZA
 {
@@ -30,10 +25,8 @@ public class PokeDataOffsetsPLZA
     // Returns the 4-byte integer link code currently entered (0x0 if empty)
     public IReadOnlyList<long> LinkCodeTradePointer { get; } = [0x3CC8C20, 0x24];
 
-    // ✅ UNVERIFIED - Trade partner NID (Nintendo ID)
-    // Returns 8-byte ulong Nintendo ID of connected trade partner
-    // Works correctly on first trade and all subsequent trades
-    public IReadOnlyList<long> LinkTradePartnerNIDPointer { get; } = [0x3EFE058, 0x120, 0x38, 0x10, 0x38];
+    // Backup NID pointer used when partner disconnects quickly
+    public IReadOnlyList<long> TradePartnerBackupNIDPointer { get; } = [0x5F0F2B0, 0x108];
 
     // ✅ VERIFIED - Player trainer status/info
     // Contains player name, IDs, and trainer data
@@ -49,10 +42,13 @@ public class PokeDataOffsetsPLZA
     // Used to actively detect when trade animations complete
     public IReadOnlyList<long> GameStatePointer { get; } = [0x5F59608, 0x58];
 
-    // ✅ VERIFIED - Trade partner information
-    // Contains trainer info for trade partner in multi-trade
-    // Seems inconsistent at times, may need a more resilient pointer
-    public IReadOnlyList<long> Trader1MyStatusPointer { get; } = [0x3EFE058, 0x1D8, 0x180, 0x80, 0x74];
+    // Trade partner data base pointer
+    public IReadOnlyList<long> LinkTradePartnerDataPointer { get; } = [0x3EFE058, 0x1D8, 0x30, 0xA0, 0x0];
+
+    // Field offsets from LinkTradePartnerDataPointer
+    public const uint TradePartnerNIDShift = 0x30;
+    public const uint TradePartnerTIDShift = 0x74;
+    public const uint TradePartnerOTShift = 0x7C;
 
     // ✅ VERIFIED - Trade box screen status indicator
     // Returns: 0x01 = In trade box screen with partner
@@ -60,8 +56,16 @@ public class PokeDataOffsetsPLZA
     // Used to detect when we've entered the trade box and partner data is loaded
     public IReadOnlyList<long> TradeBoxStatusPointer { get; } = [0x41FE140, 0x108];
 
-    // Not Needed - Trade partner offered Pokemon data
+    // Trade partner offered Pokemon data
     // Points to the Pokemon data that the trade partner is offering
     // Used for Clone and Dump commands to read the offered Pokemon
-    public IReadOnlyList<long> LinkTradePartnerPokemonPointer { get; } = [0x5F0E2B0, 0x128, 0x30];
+    public IReadOnlyList<long> LinkTradePartnerPokemonPointer { get; } = [0x5F0F2B0, 0x128, 0x30, 0x0];
+
+    // Trade partner status indicator
+    // Returns: 0x2 = Hovering over Pokemon, 0x3 = Offering Pokemon
+    // Used to detect when partner changes their offered Pokemon
+    public IReadOnlyList<long> TradePartnerStatusPointer { get; } = [0x5F0F2B0, 0x134];
+
+    // Fallback shift when trade partner data isn't at primary location
+    public const uint FallBackTradePartnerDataShift = 0x598;
 }

@@ -1,4 +1,5 @@
 using PKHeX.Core;
+using PKHeX.Core.Searching;
 using SysBot.Base;
 using SysBot.Base.Util;
 using System;
@@ -33,9 +34,9 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
     private string OT = string.Empty;
     private bool _hasMadeFirstTrade = false;
     private bool StartFromOverworld = true;
-    private ulong? _cachedBoxOffset; // Cache to reduce repeated pointer dereferencing
-    private ulong TradePartnerOfferedOffset; // Offset to trade partner's offered Pokemon data
-    private bool _wasConnectedToPartner = false; // Track if we were connected to a partner before restart
+    private ulong? _cachedBoxOffset;
+    private ulong TradePartnerStatusOffset;
+    private bool _wasConnectedToPartner = false;
 
     public event EventHandler<Exception>? ConnectionError;
 
@@ -493,6 +494,14 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
                 warningSent = true;
             }
 
+            // Check if we're still in trade box (partner disconnected if TradeBoxStatusPointer = 0x00)
+            if (!await CheckIfInTradeBox(token).ConfigureAwait(false))
+            {
+                Log("No longer in trade box - partner declined and exited during offering stage.");
+                detail.SendNotification(this, "Trade partner declined or disconnected.");
+                return PokeTradeResult.NoTrainerFound;
+            }
+
             // If it didn't change after 4 seconds, try to press A once up until "maxAttempts"
             if (sw.Elapsed.TotalSeconds >= 4 && attempts < maxAttempts)
             {
@@ -532,6 +541,15 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
                     Log("Trade started! Waiting for completion...");
                     return PokeTradeResult.Success;
                 }
+
+                // Check if we're still in trade box (partner disconnected if TradeBoxStatusPointer = 0x00)
+                if (!await CheckIfInTradeBox(token).ConfigureAwait(false))
+                {
+                    Log("No longer in trade box - partner disconnected after confirmation but before animation.");
+                    detail.SendNotification(this, "Trade partner disconnected.");
+                    return PokeTradeResult.NoTrainerFound;
+                }
+
                 await Task.Delay(1_000, token).ConfigureAwait(false);
             }
 
@@ -661,84 +679,57 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
             return;
         }
 
-        // Check if partner is still connected or has disconnected
-        var nidCheck = await GetTradePartnerNID(Offsets.LinkTradePartnerNIDPointer, token).ConfigureAwait(false);
+        Log("Exiting trade to overworld...");
+        int timeoutSeconds = 30;
+        int elapsed = 0;
 
-        if (nidCheck == 0)
+        while (elapsed < timeoutSeconds)
         {
-            // Partner already left, just press B to return to overworld
-            int timeoutSeconds = 30;
-            int elapsedExit = 0;
-
-            while (elapsedExit < timeoutSeconds)
+            // Check if we've reached overworld
+            if (await CheckIfOnOverworld(token).ConfigureAwait(false))
             {
-                // Check if we've reached overworld
-                if (await CheckIfOnOverworld(token).ConfigureAwait(false))
-                {
-                    Log("Returned to overworld.");
-                    StartFromOverworld = true;
-                    _wasConnectedToPartner = false; // Reset flag when successfully back to overworld
-                    return;
-                }
-
-                // Continue pressing B to exit menus
-                await Click(B, 1_000, token).ConfigureAwait(false);
-                elapsedExit++;
+                Log("Returned to overworld.");
+                StartFromOverworld = true;
+                _wasConnectedToPartner = false; // Reset flag when successfully back to overworld
+                return;
             }
 
-            // Failed to return to overworld - restart the game
-            Log("Failed to return to overworld after 30 seconds. Restarting game...");
-            await RestartGamePLZA(token).ConfigureAwait(false);
-            StartFromOverworld = true;
-            return;
-        }
-        else
-        {
-            int disconnectTimeout = 30; // Extended timeout for full exit sequence
-            int disconnectElapsed = 0;
-            bool partnerDisconnectedDuringExit = false;
-
-            while (disconnectElapsed < disconnectTimeout)
+            // B-A-B pattern: Press B, then A, then B again
+            // This handles both "in box" state (A confirms exit) and normal menu states (B backs out)
+            await Click(B, 1_000, token).ConfigureAwait(false);
+            if (await CheckIfOnOverworld(token).ConfigureAwait(false))
             {
-                // Check if we've reached overworld
-                if (await CheckIfOnOverworld(token).ConfigureAwait(false))
-                {
-                    Log("Returned to overworld.");
-                    StartFromOverworld = true;
-                    _wasConnectedToPartner = false; // Reset flag when successfully back to overworld
-                    return;
-                }
-
-                // Check if partner disconnected during exit - if so, switch to B-only
-                if (!partnerDisconnectedDuringExit)
-                {
-                    var currentNID = await GetTradePartnerNID(Offsets.LinkTradePartnerNIDPointer, token).ConfigureAwait(false);
-                    if (currentNID == 0)
-                    {
-                        partnerDisconnectedDuringExit = true;
-                    }
-                }
-
-                if (partnerDisconnectedDuringExit)
-                {
-                    // Partner left, just press B to navigate menus
-                    await Click(B, 1_000, token).ConfigureAwait(false);
-                }
-                else
-                {
-                    // Partner still connected, press B+A to disconnect
-                    await Click(B, 1_000, token).ConfigureAwait(false);
-                    await Click(A, 1_000, token).ConfigureAwait(false);
-                }
-
-                disconnectElapsed++;
+                Log("Returned to overworld.");
+                StartFromOverworld = true;
+                _wasConnectedToPartner = false;
+                return;
             }
 
-            // Failed to exit properly - restart the game
-            Log("Failed to exit trade after 30 seconds. Restarting game...");
-            await RestartGamePLZA(token).ConfigureAwait(false);
-            StartFromOverworld = true;
+            await Click(A, 1_000, token).ConfigureAwait(false);
+            if (await CheckIfOnOverworld(token).ConfigureAwait(false))
+            {
+                Log("Returned to overworld.");
+                StartFromOverworld = true;
+                _wasConnectedToPartner = false;
+                return;
+            }
+
+            await Click(B, 1_000, token).ConfigureAwait(false);
+            if (await CheckIfOnOverworld(token).ConfigureAwait(false))
+            {
+                Log("Returned to overworld.");
+                StartFromOverworld = true;
+                _wasConnectedToPartner = false;
+                return;
+            }
+
+            elapsed += 3; // 3 seconds per B-A-B cycle
         }
+
+        // Failed to return to overworld - restart the game
+        Log("Failed to return to overworld after 30 seconds. Restarting game...");
+        await RestartGamePLZA(token).ConfigureAwait(false);
+        StartFromOverworld = true;
     }
 
     #endregion
@@ -747,8 +738,46 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
 
     private async Task<TradePartnerStatusPLZA> GetTradePartnerFullInfo(CancellationToken token)
     {
-        // Read trade partner status data (uses different offsets than bot's own MyStatus)
-        var trader_info = await GetTradePartnerStatus(Offsets.Trader1MyStatusPointer, token).ConfigureAwait(false);
+        var baseAddr = await SwitchConnection.PointerAll(Offsets.LinkTradePartnerDataPointer, token).ConfigureAwait(false);
+        var nidAddr = baseAddr + TradePartnerNIDShift;
+        var tidAddr = baseAddr + TradePartnerTIDShift;
+
+        // Read chunk starting from NID location - includes NID, TID at +0x44, and OT at +0x4C
+        var chunk = await SwitchConnection.ReadBytesAbsoluteAsync(nidAddr, 0x69, token).ConfigureAwait(false);
+        var nid = BitConverter.ToUInt64(chunk.AsSpan(0, 8));
+        var dataIsLoaded = chunk[0x68] != 0;
+
+        var trader_info = new TradePartnerStatusPLZA();
+
+        if (dataIsLoaded)
+        {
+            var tid = chunk.AsSpan(0x44, 4).ToArray();
+            var ot = chunk.AsSpan(0x4C, TradePartnerPLZA.MaxByteLengthStringObject).ToArray();
+            tid.CopyTo(trader_info.Data, 0x00);
+            ot.CopyTo(trader_info.Data, 0x08);
+
+            // Read gender and language from TID location offset
+            var genderLang = await SwitchConnection.ReadBytesAbsoluteAsync(tidAddr, 0x08, token).ConfigureAwait(false);
+            trader_info.Data[0x04] = genderLang[0x04]; // Gender at TID base + 0x04
+            trader_info.Data[0x05] = genderLang[0x05]; // Language at TID base + 0x05
+        }
+        else
+        {
+            // Data not at primary location, use fallback
+            var fallbackTidAddr = tidAddr + FallBackTradePartnerDataShift;
+            var fallbackChunk = await SwitchConnection.ReadBytesAbsoluteAsync(fallbackTidAddr, 34, token).ConfigureAwait(false);
+
+            var tid = fallbackChunk.AsSpan(0, 4).ToArray();
+            var ot = fallbackChunk.AsSpan(0x08, TradePartnerPLZA.MaxByteLengthStringObject).ToArray();
+            tid.CopyTo(trader_info.Data, 0x00);
+            ot.CopyTo(trader_info.Data, 0x08);
+
+            // Read gender and language from fallback TID location
+            var genderLang = await SwitchConnection.ReadBytesAbsoluteAsync(fallbackTidAddr, 0x08, token).ConfigureAwait(false);
+            trader_info.Data[0x04] = genderLang[0x04]; // Gender at fallback TID + 0x04
+            trader_info.Data[0x05] = genderLang[0x05]; // Language at fallback TID + 0x05
+        }
+
         return trader_info;
     }
 
@@ -863,7 +892,17 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
     private async Task<bool> CheckIfInTradeBox(CancellationToken token)
     {
         var offset = await SwitchConnection.PointerAll(Offsets.TradeBoxStatusPointer, token).ConfigureAwait(false);
-        return await IsInTradeBox(offset, token).ConfigureAwait(false);
+        var inBox = await IsInTradeBox(offset, token).ConfigureAwait(false);
+
+        if (inBox)
+        {
+            // Set the offset for trade partner status monitoring
+            var (valid, statusOffset) = await ValidatePointerAll(Offsets.TradePartnerStatusPointer, token).ConfigureAwait(false);
+            if (valid)
+                TradePartnerStatusOffset = statusOffset;
+        }
+
+        return inBox;
     }
 
     #endregion
@@ -1061,15 +1100,12 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
                 // Wait for trade UI and partner data to load
                 await Task.Delay(2_000, token).ConfigureAwait(false);
 
-                // Get the trade partner's offered Pokemon address
-                TradePartnerOfferedOffset = await ResolvePointer(Offsets.LinkTradePartnerPokemonPointer, token).ConfigureAwait(false);
-
                 // Now that data has loaded, read partner info
                 var tradePartnerFullInfo = await GetTradePartnerFullInfo(token).ConfigureAwait(false);
                 cachedTradePartnerInfo = tradePartnerFullInfo; // Cache for subsequent trades
                 var tradePartner = new TradePartnerPLZA(tradePartnerFullInfo);
 
-                var trainerNID = await GetTradePartnerNID(Offsets.LinkTradePartnerNIDPointer, token).ConfigureAwait(false);
+                var trainerNID = await GetTradePartnerNID(token).ConfigureAwait(false);
 
                 Log($"[TradePartner] OT: {tradePartner.TrainerName}, TID: {tradePartner.TID7}, SID: {tradePartner.SID7}, Gender: {tradePartnerFullInfo.Gender}, Language: {tradePartnerFullInfo.Language}, NID: {trainerNID}");
 
@@ -1281,7 +1317,7 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
             UpdateCountsAndExport(poke, received, toSend);
 
             // Get the trainer NID and name for logging
-            var logTrainerNID = currentTradeIndex == 0 ? await GetTradePartnerNID(Offsets.LinkTradePartnerNIDPointer, token).ConfigureAwait(false) : 0;
+            var logTrainerNID = currentTradeIndex == 0 ? await GetTradePartnerNID(token).ConfigureAwait(false) : 0;
             var logPartner = cachedTradePartnerInfo != null ? new TradePartnerPLZA(cachedTradePartnerInfo) : null;
             LogSuccessfulTrades(poke, logTrainerNID, logPartner?.TrainerName ?? "Unknown");
 
@@ -1566,17 +1602,11 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
         // Wait for trade UI and partner data to load
         await Task.Delay(5_000, token).ConfigureAwait(false);
 
-        // Get the trade partner's offered Pokemon address
-        TradePartnerOfferedOffset = await ResolvePointer(Offsets.LinkTradePartnerPokemonPointer, token).ConfigureAwait(false);
-
-        // Read baseline EC before any user interaction (for Clone/Dump detection)
-        var partnerOfferedBaseline = await SwitchConnection.ReadBytesAbsoluteAsync(TradePartnerOfferedOffset, 8, token).ConfigureAwait(false);
-
         // Now that data has loaded, read partner info
         var tradePartnerFullInfo = await GetTradePartnerFullInfo(token).ConfigureAwait(false);
         var tradePartner = new TradePartnerPLZA(tradePartnerFullInfo);
 
-        var trainerNID = await GetTradePartnerNID(Offsets.LinkTradePartnerNIDPointer, token).ConfigureAwait(false);
+        var trainerNID = await GetTradePartnerNID(token).ConfigureAwait(false);
 
         Log($"[TradePartner] OT: {tradePartner.TrainerName}, TID: {tradePartner.TID7}, SID: {tradePartner.SID7}, Gender: {tradePartnerFullInfo.Gender}, Language: {tradePartnerFullInfo.Language}, NID: {trainerNID}");
 
@@ -1610,28 +1640,27 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
             return partnerCheck;
         }
 
-        // Clone and Dump commands are currently disabled for PLZA due to bugs
-        if (poke.Type == PokeTradeType.Clone)
+        // Read the offered Pokemon for Clone/Dump trades
+        PA9? offered = null;
+        if (poke.Type == PokeTradeType.Clone || poke.Type == PokeTradeType.Dump)
         {
-            poke.SendNotification(this, "Clone trades are currently disabled for Legends Z-A. Please try again later.");
-            await ExitTradeToOverworld(false, token).ConfigureAwait(false);
-            return PokeTradeResult.TrainerRequestBad;
+            offered = await ReadUntilPresentPointer(Offsets.LinkTradePartnerPokemonPointer, 3_000, 0_500, BoxFormatSlotSize, token).ConfigureAwait(false);
+            if (offered == null || offered.Species == 0)
+            {
+                poke.SendNotification(this, "Failed to read offered Pokémon. Exiting trade.");
+                await ExitTradeToOverworld(true, token).ConfigureAwait(false);
+                return PokeTradeResult.TrainerRequestBad;
+            }
         }
 
-        if (poke.Type == PokeTradeType.Dump)
-        {
-            poke.SendNotification(this, "Dump trades are currently disabled for Legends Z-A. Please try again later.");
-            await ExitTradeToOverworld(false, token).ConfigureAwait(false);
-            return PokeTradeResult.TrainerRequestBad;
-        }
-
-        /*
-        // NOTE: Clone functionality may need to be removed in future updates if it becomes an issue with legality checks
         if (poke.Type == PokeTradeType.Clone)
         {
-            var (result, clone) = await ProcessCloneTradeAsync(poke, partnerOfferedBaseline, sav, token).ConfigureAwait(false);
+            var (result, clone) = await ProcessCloneTradeAsync(poke, sav, offered!, token).ConfigureAwait(false);
             if (result != PokeTradeResult.Success)
+            {
+                await ExitTradeToOverworld(false, token).ConfigureAwait(false);
                 return result;
+            }
 
             // Trade them back their cloned Pokemon
             toSend = clone!;
@@ -1643,7 +1672,6 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
             await ExitTradeToOverworld(false, token).ConfigureAwait(false);
             return result;
         }
-        */
 
         if (Hub.Config.Legality.UseTradePartnerInfo && !poke.IgnoreAutoOT)
         {
@@ -1915,7 +1943,7 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
         bool connected = false;
         while (waitAttempts < 30 && !connected)
         {
-            var nid = await GetTradePartnerNID(Offsets.LinkTradePartnerNIDPointer, token).ConfigureAwait(false);
+            var nid = await GetTradePartnerNID(token).ConfigureAwait(false);
             if (nid != 0)
             {
                 Log("Random partner connected via NID. Disconnecting to complete soft ban prevention...");
@@ -1951,7 +1979,7 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
         while (disconnectAttempts < 10 && !partnerDisconnected)
         {
             await Task.Delay(500, token).ConfigureAwait(false);
-            var currentNid = await GetTradePartnerNID(Offsets.LinkTradePartnerNIDPointer, token).ConfigureAwait(false);
+            var currentNid = await GetTradePartnerNID(token).ConfigureAwait(false);
             if (currentNid == 0)
             {
                 Log("Partner disconnected (NID = 0). Exiting to overworld...");
@@ -2034,38 +2062,31 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
         }
     }
 
-    #region Disabled Features (Clone & Dump)
-    // These features are currently disabled due to bugs
-    // Uncomment and fix when ready to re-enable
+    #region Clone & Dump Features
 
-    /*
-    private async Task<(PokeTradeResult Result, PA9? ClonedPokemon)> ProcessCloneTradeAsync(PokeTradeDetail<PA9> poke, byte[] partnerOfferedBaseline, SAV9ZA sav, CancellationToken token)
+    private async Task<bool> CheckCloneChangedOffer(CancellationToken token)
     {
-        poke.SendNotification(this, "Please offer the Pokémon you want me to clone!");
-
-        // Wait for the data to CHANGE from baseline (meaning user showed us a Pokemon)
-        var dataChanged = await ReadUntilChanged(TradePartnerOfferedOffset, partnerOfferedBaseline, 25_000, 1_000, false, true, token).ConfigureAwait(false);
-        if (!dataChanged)
+        // Watch their status to indicate they canceled, then offered a new Pokémon.
+        var hovering = await ReadUntilChanged(TradePartnerStatusOffset, [0x2], 25_000, 1_000, true, true, token).ConfigureAwait(false);
+        if (!hovering)
         {
-            poke.SendNotification(this, "No Pokémon detected. Exiting trade.");
-            await ExitTradeToOverworld(true, token).ConfigureAwait(false);
-            return (PokeTradeResult.TrainerRequestBad, null);
+            Log("Trade partner did not change their initial offer.");
+            return false;
         }
 
-        // Now read the actual offered Pokemon
-        var offered = await ReadUntilPresent(TradePartnerOfferedOffset, 3_000, 0_500, BoxFormatSlotSize, token).ConfigureAwait(false);
-        if (offered == null || offered.Species == 0)
+        var offering = await ReadUntilChanged(TradePartnerStatusOffset, [0x3], 25_000, 1_000, true, true, token).ConfigureAwait(false);
+        if (!offering)
         {
-            poke.SendNotification(this, "Failed to read offered Pokémon. Exiting trade.");
-            await ExitTradeToOverworld(true, token).ConfigureAwait(false);
-            return (PokeTradeResult.TrainerRequestBad, null);
+            return false;
         }
+        return true;
+    }
 
-        // Show them what we received if they have ReturnPKMs enabled
+    private async Task<(PokeTradeResult Result, PA9? ClonedPokemon)> ProcessCloneTradeAsync(PokeTradeDetail<PA9> poke, SAV9ZA sav, PA9 offered, CancellationToken token)
+    {
         if (Hub.Config.Discord.ReturnPKMs)
-            poke.SendNotification(this, offered, $"Here's what you showed me - {GameInfo.GetStrings("en").Species[offered.Species]}");
+            poke.SendNotification(this, offered, "Here's what you showed me!");
 
-        // Make sure the Pokemon is legal before we clone it
         var la = new LegalityAnalysis(offered);
         if (!la.Valid)
         {
@@ -2078,52 +2099,38 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
             poke.SendNotification(this, "This Pokémon is not legal per PKHeX's legality checks. I am forbidden from cloning this. Exiting trade.");
             poke.SendNotification(this, report);
 
-            await ExitTradeToOverworld(true, token).ConfigureAwait(false);
             return (PokeTradeResult.IllegalTrade, null);
         }
 
-        // Create a copy of their Pokemon
         var clone = offered.Clone();
         if (Hub.Config.Legality.ResetHOMETracker)
             clone.Tracker = 0;
 
-        // Put the cloned Pokemon in our trade box
-        Log($"Cloning {GameInfo.GetStrings("en").Species[clone.Species]}...");
+        poke.SendNotification(this, $"**Cloned your {GameInfo.GetStrings("en").Species[clone.Species]}!**\nNow press B to cancel your offer and trade me a Pokémon you don't want.");
+        Log($"Cloned a {(Species)clone.Species}. Waiting for user to change their Pokémon...");
+
+        if (!await CheckCloneChangedOffer(token).ConfigureAwait(false))
+        {
+            // They get one more chance.
+            poke.SendNotification(this, "**HEY CHANGE IT NOW OR I AM LEAVING!!!**");
+            if (!await CheckCloneChangedOffer(token).ConfigureAwait(false))
+            {
+                Log("Trade partner did not change their Pokémon.");
+                return (PokeTradeResult.TrainerTooSlow, null);
+            }
+        }
+
+        // If we got to here, we can read their offered Pokémon.
+        var pk2 = await ReadUntilPresentPointer(Offsets.LinkTradePartnerPokemonPointer, 5_000, 1_000, BoxFormatSlotSize, token).ConfigureAwait(false);
+        if (pk2 is null || SearchUtil.HashByDetails(pk2) == SearchUtil.HashByDetails(offered))
+        {
+            Log("Trade partner did not change their Pokémon.");
+            return (PokeTradeResult.TrainerTooSlow, null);
+        }
+
         var boxOffset = await GetBoxStartOffset(token).ConfigureAwait(false);
         await SetBoxPokemonAbsolute(boxOffset, clone, token, sav).ConfigureAwait(false);
 
-        poke.SendNotification(this, $"**Cloned your {GameInfo.GetStrings("en").Species[clone.Species]}!** Now press B to cancel your offer and trade me a Pokémon you don't want.");
-        Log($"Cloned a {GameInfo.GetStrings("en").Species[clone.Species]}. Waiting for user to change their Pokémon...");
-
-        // Wait for user to change their Pokemon (compare to the original offered Pokemon's EC)
-        var offeredEC = await SwitchConnection.ReadBytesAbsoluteAsync(TradePartnerOfferedOffset, 8, token).ConfigureAwait(false);
-        var partnerChanged = await ReadUntilChanged(TradePartnerOfferedOffset, offeredEC, 15_000, 0_200, false, true, token).ConfigureAwait(false);
-        if (!partnerChanged)
-        {
-            poke.SendNotification(this, "**HEY CHANGE IT NOW OR I AM LEAVING!!!**");
-            // Give them one more chance
-            partnerChanged = await ReadUntilChanged(TradePartnerOfferedOffset, offeredEC, 15_000, 0_200, false, true, token).ConfigureAwait(false);
-        }
-
-        // Check if still in trade box
-        var (valid, offset) = await ValidatePointerAll(Offsets.TradeBoxStatusPointer, token).ConfigureAwait(false);
-        if (!valid || !await IsInTradeBox(offset, token).ConfigureAwait(false))
-        {
-            Log("User exited trade. Canceling...");
-            await ExitTradeToOverworld(false, token).ConfigureAwait(false);
-            return (PokeTradeResult.TrainerTooSlow, null);
-        }
-
-        // Read their new offered Pokemon
-        var pk2 = await ReadUntilPresent(TradePartnerOfferedOffset, 25_000, 1_000, BoxFormatSlotSize, token).ConfigureAwait(false);
-        if (!partnerChanged || pk2 is null || SearchUtil.HashByDetails(pk2) == SearchUtil.HashByDetails(offered))
-        {
-            Log("Trade partner did not change their Pokémon.");
-            await ExitTradeToOverworld(false, token).ConfigureAwait(false);
-            return (PokeTradeResult.TrainerTooSlow, null);
-        }
-
-        // Return the cloned Pokemon to be traded
         return (PokeTradeResult.Success, clone);
     }
 
@@ -2158,8 +2165,16 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
                 break;
             }
 
+            // Check if partner is actually offering (0x3) vs just hovering (0x2)
+            var status = await SwitchConnection.ReadBytesAbsoluteAsync(TradePartnerStatusOffset, 1, token).ConfigureAwait(false);
+            if (status[0] != 0x3)
+            {
+                await Task.Delay(0_050, token).ConfigureAwait(false);
+                continue;
+            }
+
             // Wait for the user to show us a Pokemon - needs to be different from the previous one
-            var pk = await ReadUntilPresent(TradePartnerOfferedOffset, 3_000, 0_050, BoxFormatSlotSize, token).ConfigureAwait(false);
+            var pk = await ReadUntilPresentPointer(Offsets.LinkTradePartnerPokemonPointer, 3_000, 0_050, BoxFormatSlotSize, token).ConfigureAwait(false);
             if (pk == null || pk.Species == 0 || !pk.ChecksumValid)
             {
                 await Task.Delay(0_050, token).ConfigureAwait(false);
@@ -2173,6 +2188,11 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
                 await Task.Delay(0_500, token).ConfigureAwait(false);
                 continue;
             }
+
+            // Heal and refresh checksum to ensure valid data
+            pk.Heal();
+            pk.RefreshChecksum();
+
 
             // Save the new Pokemon for comparison next round
             pkprev = pk;
@@ -2224,7 +2244,6 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
         detail.Notifier.TradeFinished(this, detail, detail.TradeData); // blank PA9
         return PokeTradeResult.Success;
     }
-    */
 
     #endregion
 
