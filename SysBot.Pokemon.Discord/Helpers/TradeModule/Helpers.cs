@@ -404,6 +404,17 @@ public static class Helpers<T> where T : PKM, new()
             return;
         }
 
+        // Block non-tradable items using PKHeX's ItemRestrictions
+        if (pk is not null && TradeExtensions<T>.IsItemBlocked(pk))
+        {
+            var itemName = pk.HeldItem > 0 ? GameInfo.GetStrings("en").Item[pk.HeldItem] : "(none)";
+            var reply = await context.Channel.SendMessageAsync($"Trade blocked: The held item '{itemName}' cannot be traded.").ConfigureAwait(false);
+            await Task.Delay(6000).ConfigureAwait(false);
+            await reply.DeleteAsync().ConfigureAwait(false);
+            return;
+        }
+
+
         var la = new LegalityAnalysis(pk!);
 
         if (!la.Valid)
