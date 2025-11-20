@@ -388,10 +388,21 @@ public static class Helpers<T> where T : PKM, new()
         return (filter, page);
     }
 
-    public static async Task AddTradeToQueueAsync(SocketCommandContext context, int code, string trainerName, T? pk, RequestSignificance sig,
-        SocketUser usr, bool isBatchTrade = false, int batchTradeNumber = 1, int totalBatchTrades = 1,
-        bool isHiddenTrade = false, bool isMysteryEgg = false, List<Pictocodes>? lgcode = null,
-        PokeTradeType tradeType = PokeTradeType.Specific, bool ignoreAutoOT = false, bool setEdited = false,
+    public static async Task AddTradeToQueueAsync(
+        SocketCommandContext context,
+        int code,
+        string trainerName,
+        T? pk,
+        RequestSignificance sig,
+        SocketUser usr,
+        bool isBatchTrade = false,
+        int batchTradeNumber = 1,
+        int totalBatchTrades = 1,
+        bool isHiddenTrade = false,
+        bool isMysteryEgg = false,
+        List<Pictocodes>? lgcode = null,
+        PokeTradeType tradeType = PokeTradeType.Specific,
+        bool ignoreAutoOT = false, bool setEdited = false,
         bool isNonNative = false)
     {
         lgcode ??= GenerateRandomPictocodes(3);
