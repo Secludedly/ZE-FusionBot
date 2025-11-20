@@ -960,9 +960,22 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
                 poke.SendNotification(this, $"Please offer your Pokémon for trade 1/{totalBatchTrades}.");
             }
 
+            // Get the offset of the Pokémon the trainer is offering
+            var offsetOffered = await GetBoxStartOffset(token).ConfigureAwait(false);
+
+            // Read the Pokémon from that offset
+            var offered = await ReadPokemon(offsetOffered, BoxFormatSlotSize, token).ConfigureAwait(false);
+
             var offsetBeforeBatch = await GetBoxStartOffset(token).ConfigureAwait(false);
             var pokemonBeforeBatchTrade = await ReadPokemon(offsetBeforeBatch, BoxFormatSlotSize, token).ConfigureAwait(false);
             var checksumBeforeBatchTrade = pokemonBeforeBatchTrade.Checksum;
+
+            if (Hub.Config.Trade.TradeConfiguration.DisallowTradeEvolve && TradeEvolutions.WillTradeEvolve(offered.Species, offered.Form, offered.HeldItem, toSend.Species))
+            {
+                Log("Trade cancelled because trainer offered a Pokémon that would evolve upon trade.");
+                await ExitTradeToOverworld(false, token).ConfigureAwait(false);
+                return PokeTradeResult.TradeEvolveNotAllowed;
+            }
 
             Log($"Confirming trade {currentTradeIndex + 1}/{totalBatchTrades}.");
             var tradeResult = await ConfirmAndStartTrading(poke, checksumBeforeBatchTrade, token).ConfigureAwait(false);
@@ -1441,6 +1454,17 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
             await Click(A, 1_000, token).ConfigureAwait(false);
             await ExitTradeToOverworld(false, token).ConfigureAwait(false);
             return partnerCheck;
+        }
+        // Get the offset of the Pokémon the trainer is offering
+        var offsetOffered = await GetBoxStartOffset(token).ConfigureAwait(false);
+
+        // Read the Pokémon from that offset
+        var badoffer = await ReadPokemon(offsetOffered, BoxFormatSlotSize, token).ConfigureAwait(false);
+        if (Hub.Config.Trade.TradeConfiguration.DisallowTradeEvolve && TradeEvolutions.WillTradeEvolve(badoffer.Species, badoffer.Form, badoffer.HeldItem, toSend.Species))
+        {
+            Log("Trade cancelled because trainer offered a Pokémon that would evolve upon trade.");
+            await ExitTradeToOverworld(false, token).ConfigureAwait(false);
+            return PokeTradeResult.TradeEvolveNotAllowed;
         }
 
         // Read the offered Pokemon for Clone/Dump trades

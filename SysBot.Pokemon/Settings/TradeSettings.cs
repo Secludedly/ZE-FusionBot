@@ -96,6 +96,9 @@ public class TradeSettings : IBotStateSettings, ICountSettings
         [Category(TradeConfig), Description("Dump Trade: If enabled, Dumping routine will output legality check information to the user."), DisplayName("Dump Trade Legality Check")]
         public bool DumpTradeLegalityCheck { get; set; } = true;
 
+        [Category(TradeConfig), Description("When enabled, the bot will automatically cancel a trade if offered a Pokémon that will evolve."), DisplayName("Disallow Trade Evolve Offers")]
+        public bool DisallowTradeEvolve { get; set; } = true;
+
         [Category(TradeConfig), Description("LGPE Setting.")]
         public int TradeAnimationMaxDelaySeconds = 25;
 
