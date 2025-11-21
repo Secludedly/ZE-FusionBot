@@ -12,6 +12,12 @@ public abstract class TradeExtensions<T> where T : PKM, new()
     // Global regex used by BOTH checks
     public const string DomainPattern = @"\b[a-zA-Z0-9\-]{2,}\.(com|org|net|gg|xyz|io|tv|co|me|us|uk|ca|de|fr|jp|au|eu|ch|it|nl|ru|br|in)\b";
 
+    private static readonly string[] AllowedDomains =
+{
+    "freemons.org",
+    "genpkm.com"
+};
+
     public static readonly string[] MarkTitle =
     [
         " The Peckish",
@@ -181,22 +187,50 @@ public abstract class TradeExtensions<T> where T : PKM, new()
         if (pk == null)
             return false;
 
-        bool ot = Regex.IsMatch(pk.OriginalTrainerName, DomainPattern, RegexOptions.IgnoreCase);
-        bool nick = Regex.IsMatch(pk.Nickname, DomainPattern, RegexOptions.IgnoreCase);
+        // Combine OT and Nickname into a single string
+        string textToCheck = $"{pk.OriginalTrainerName} {pk.Nickname}".ToLowerInvariant();
 
-        ad = ot ? pk.OriginalTrainerName : nick ? pk.Nickname : "";
-        return ot || nick;
+        foreach (var domain in AllowedDomains)
+        {
+            if (textToCheck.Contains(domain))
+            {
+                ad = domain;
+                return false; // It’s allowed, so not an ad
+            }
+        }
+
+        // If we reach here, something looks like an ad
+        if (Regex.IsMatch(textToCheck, DomainPattern, RegexOptions.IgnoreCase))
+        {
+            ad = Regex.Match(textToCheck, DomainPattern, RegexOptions.IgnoreCase).Value;
+            return true; // Block this
+        }
+
+        return false;
     }
 
     public static bool ContainsAdText(string input, out string match)
     {
         match = "";
+        var lower = input.ToLowerInvariant();
+
+        // Allow only FreeMons.Org or GenPKM.com
+        foreach (var domain in AllowedDomains)
+        {
+            if (lower.Contains(domain))
+            {
+                return false; // allowed
+            }
+        }
+
+        // Catch any other domain
         var m = Regex.Match(input, DomainPattern, RegexOptions.IgnoreCase);
         if (m.Success)
         {
             match = m.Value;
-            return true;
+            return true; // blocked
         }
+
         return false;
     }
 
