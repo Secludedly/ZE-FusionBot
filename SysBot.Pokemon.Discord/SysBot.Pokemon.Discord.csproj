@@ -13,6 +13,7 @@
     <PackageReference Include="Discord.Net" Version="3.17.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.4" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.4" />
+    <PackageReference Include="SharpCompress" Version="0.41.0" />
     <PackageReference Include="System.Drawing.Common" Version="9.0.4" />
     <ProjectReference Include="..\SysBot.Base\SysBot.Base.csproj" />
     <ProjectReference Include="..\SysBot.Pokemon\SysBot.Pokemon.csproj" />
