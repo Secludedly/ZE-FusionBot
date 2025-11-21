@@ -3,6 +3,11 @@ using Discord.Commands;
 using Discord.WebSocket;
 using PKHeX.Core;
 using PKHeX.Core.AutoMod;
+using SharpCompress.Archives;
+using SharpCompress.Archives.Rar;
+using SharpCompress.Archives.SevenZip;
+using SharpCompress.Archives.Zip;
+using SharpCompress.Common;
 using SysBot.Base;
 using SysBot.Pokemon.Discord;
 using SysBot.Pokemon.Discord.Helpers;
@@ -17,6 +22,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using static SysBot.Pokemon.TradeSettings.TradeSettingsCategory;
 using System.Collections.Concurrent;
+using System.Reflection;
 
 namespace SysBot.Pokemon.Discord;
 
@@ -469,7 +475,7 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
 
     [Command("textTrade")]
     [Alias("tt", "text")]
-    [Summary("Upload a .txt or .csv file of Showdown sets, then select which Pokémon to trade.")]
+    [Summary("Upload a txt/csv/rtf/docx/pdf file of Showdown sets, then select which Pokémon to trade.")]
     [RequireQueueRole(nameof(DiscordManager.RolesTrade))]
     public async Task TextTradeAsync([Remainder] string args = "")
     {
@@ -622,8 +628,8 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
 
             // Footer msg
             embed.AddField(
-                "Multiple Pokémon",
-                $"Use `{Prefix}tt 1 2 3 etc.`, to trade **no more than {hardLimit} Pokémon**",
+                "Reminder",
+                $"**Only 1 Pokémon trade at a time.**",
                 false
             );
             embed.WithFooter("✨ = Shiny | 🚩 = Fishy | ⚪ = No Held Item | 🧾 = Has OT/TID/SID | 🥚 = Egg\n⏳ Make a selection within 60s or the TextTrade is canceled automatically.");
@@ -653,13 +659,13 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
 
         if (selections.Count == 0)
         {
-            await ReplyAsync($"Invalid selection. Use `{Prefix}tt 1` or `{Prefix}tt 1 2` (max 6 Pokémon).");
+            await ReplyAsync($"Invalid selection. Use `{Prefix}tt 1`.");
             return;
         }
 
         if (selections.Count > 6)
         {
-            await ReplyAsync("You can only trade up to 6 Pokémon at a time.");
+            await ReplyAsync("You can only trade 1 Pokémon at a time.");
             return;
         }
 
@@ -1017,157 +1023,219 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
 
     [Command("batchtradezip")]
     [Alias("btz", "batchzip", "ziptrade")]
-    [Summary("Upload a .zip containing .pk* files to trade multiple Pokémon at once.")]
+    [Summary("Upload a .zip/.rar/.7z containing PKM files to trade multiple Pokémon at once.")]
     [RequireQueueRole(nameof(DiscordManager.RolesTrade))]
     public async Task BatchTradeZipAsync()
     {
-        var user = Context.User;
-        ulong userId = user.Id;
+        var tradeConfig = SysCord<T>.Runner.Config.Trade.TradeConfiguration;
+
+        // Check if batch trades are allowed
+        if (!tradeConfig.AllowBatchTrades)
+        {
+            var app = await Context.Client.GetApplicationInfoAsync().ConfigureAwait(false);
+            await Helpers<T>.ReplyAndDeleteAsync(Context,
+                $"Batch trades are currently disabled by the bot administrator, @{app.Owner}.", 6);
+            return;
+        }
+
+        var userID = Context.User.Id;
+        if (!await Helpers<T>.EnsureUserNotInQueueAsync(userID))
+        {
+            await Helpers<T>.ReplyAndDeleteAsync(Context,
+                "You already have an existing trade in the queue that cannot be cleared. Please wait until it is processed.", 5);
+            return;
+        }
 
         if (Context.Message.Attachments.Count == 0)
         {
-            await ReplyAsync($"{user.Mention}, attach a `.zip` file containing `.pk*` Pokémon files.");
+            await Helpers<T>.ReplyAndDeleteAsync(Context,
+                $"{Context.User.Mention} Attach a `.zip`, `.rar`, or `.7z` containing PKM files.", 6);
             return;
         }
 
-        var zip = Context.Message.Attachments.First();
+        var attachment = Context.Message.Attachments.First();
+        var ext = Path.GetExtension(attachment.Filename).ToLowerInvariant();
 
-        if (!zip.Filename.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+        if (ext is not ".zip" and not ".rar" and not ".7z")
         {
-            await ReplyAsync($"{user.Mention}, only `.zip` files are accepted.");
+            await Helpers<T>.ReplyAndDeleteAsync(Context,
+                $"{Context.User.Mention} Only **.zip**, **.rar**, and **.7z** archives are accepted.", 6);
             return;
         }
 
-        // Prevent duplicate queueing
-        if (_usersInQueue.ContainsKey(userId))
+        // Download raw file
+        byte[] archiveBytes;
+        try
         {
-            await ReplyAsync($"{user.Mention}, you already have trades processing. Wait your damn turn.");
+            using var http = new HttpClient();
+            archiveBytes = await http.GetByteArrayAsync(attachment.Url).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            await Helpers<T>.ReplyAndDeleteAsync(Context,
+                $"{Context.User.Mention} Failed to download the file: {ex.Message}", 8);
             return;
         }
 
-        _usersInQueue[userId] = true;
+        var processingMessage = await Context.Channel.SendMessageAsync(
+            $"{Context.User.Mention} Processing your archive… Extracting files...");
 
-        if (Context.Message is IUserMessage zmsg)
-            _ = DeleteMessagesAfterDelayAsync(zmsg, null, 5);
-
-        // Download ZIP data
-        byte[] zipBytes;
-        using (var http = new HttpClient())
-            zipBytes = await http.GetByteArrayAsync(zip.Url);
-
-        // Parse inside Task.Run like PokeBot to avoid blocking Discord thread
         _ = Task.Run(async () =>
         {
+            string tempDir = Path.Combine(Path.GetTempPath(), $"FusionBot_BTZ_{Guid.NewGuid()}");
+
             try
             {
-                List<PKM> pkms = new();
+                Directory.CreateDirectory(tempDir);
 
-                using (var ms = new MemoryStream(zipBytes))
-                using (var archive = new ZipArchive(ms, ZipArchiveMode.Read))
+                // Write temp file
+                var localArchivePath = Path.Combine(tempDir, attachment.Filename);
+                await File.WriteAllBytesAsync(localArchivePath, archiveBytes);
+
+                // Extract using your ArchiveService (ZIP/RAR/7Z supported)
+                ArchiveService.ExtractToDirectory(localArchivePath, tempDir);
+
+                // Collect PKM files in order
+                var pkmFiles = Directory.GetFiles(tempDir, "*.*", SearchOption.AllDirectories)
+                    .Where(f =>
+                        f.EndsWith(".pb8", StringComparison.OrdinalIgnoreCase) ||
+                        f.EndsWith(".pk8", StringComparison.OrdinalIgnoreCase) ||
+                        f.EndsWith(".pk9", StringComparison.OrdinalIgnoreCase) ||
+                        f.EndsWith(".pa8", StringComparison.OrdinalIgnoreCase) ||
+                        f.EndsWith(".pa9", StringComparison.OrdinalIgnoreCase))
+                    .OrderBy(f => f)
+                    .ToList();
+
+                var batchPokemonList = new List<T>();
+                var errors = new List<BatchTradeError>();
+                int fileIndex = 0;
+
+                foreach (var file in pkmFiles)
                 {
-                    foreach (var entry in archive.Entries)
-                    {
-                        if (entry.Length == 0)
-                            continue;
+                    fileIndex++;
+                    var fileName = Path.GetFileName(file);
 
-                        if (!entry.Name.EndsWith(".pk", StringComparison.OrdinalIgnoreCase) &&
-                            !entry.Name.EndsWith(".pk7", StringComparison.OrdinalIgnoreCase) &&
-                            !entry.Name.EndsWith(".pk8", StringComparison.OrdinalIgnoreCase) &&
-                            !entry.Name.EndsWith(".pa9", StringComparison.OrdinalIgnoreCase) &&
-                            !entry.Name.EndsWith(".pk9", StringComparison.OrdinalIgnoreCase))
-                            continue; // skip trash
-
-                        using var es = entry.Open();
-                        using var msEntry = new MemoryStream();
-                        await es.CopyToAsync(msEntry);
-                        var data = msEntry.ToArray();
-
-                        // Convert raw bytes into PKM (PokeBot-style)
-                        var pkm = EntityFormat.GetFromBytes(data);
-
-                        if (pkm == null || pkm.Species <= 0)
-                            continue; // junk file
-
-                        // Integrates Max Pokémon per Trade limits
-                        pkms.Add(pkm);
-                        int configLimit = SysCord<T>.Runner.Config.Trade.TradeConfiguration.MaxPkmsPerTrade;
-
-                        // Enforced absolute hard cap (never allow more than 6)
-                        int hardLimit = Math.Min(configLimit, 6);
-
-                        // Enforce lower bounds sanity
-                        if (hardLimit < 1)
-                            hardLimit = 1;
-
-                        // Check the PKM count against limits
-                        if (pkms.Count > hardLimit)
-                        {
-                            await ReplyAsync($"{user.Mention}, your ZIP contains **{pkms.Count} Pokémon**, but the limit is **{hardLimit}**.");
-                            return;
-                        }
-                    }
-                }
-
-                if (pkms.Count == 0)
-                {
-                    await ReplyAsync($"{user.Mention}, that ZIP had no valid PKM files. The hell you upload?");
-                    return;
-                }
-
-                // Generate batch trade code
-                int batchTradeCode = Info.GetRandomTradeCode(userId);
-
-                // Send to user like PokeBot
-                await EmbedHelper.SendTradeCodeEmbedAsync(user, batchTradeCode);
-
-                int tradeNumber = 1;
-                int total = pkms.Count;
-
-                foreach (var pkm in pkms)
-                {
+                    byte[] data;
                     try
                     {
-                        // All ZIP trades should honor default held item
-                        if (pkm.HeldItem == 0 && !pkm.IsEgg)
-                            pkm.HeldItem = (int)SysCord<T>.Runner.Config.Trade.TradeConfiguration.DefaultHeldItem;
-
-                        // Language handling (ZIP doesn’t include language info)
-                        byte lang = (byte)Info.Hub.Config.Legality.GenerateLanguage;
-
-                        await Helpers<T>.AddTradeToQueueAsync(
-                            Context,
-                            batchTradeCode,
-                            user.Username,
-                            (T)pkm,
-                            user.GetFavor(),
-                            user,
-                            isBatchTrade: true,
-                            batchTradeNumber: tradeNumber,
-                            totalBatchTrades: total,
-                            isHiddenTrade: false,
-                            isMysteryEgg: false,
-                            tradeType: PokeTradeType.Batch,
-                            ignoreAutoOT: false,
-                            setEdited: false,
-                            isNonNative: false
-                        ).ConfigureAwait(false);
-
-                        tradeNumber++;
-                        await Task.Delay(750);
+                        data = await File.ReadAllBytesAsync(file);
                     }
                     catch (Exception ex)
                     {
-                        LogUtil.LogSafe(ex, nameof(BatchTradeZipAsync));
+                        errors.Add(new BatchTradeError
+                        {
+                            TradeNumber = fileIndex,
+                            SpeciesName = "Unknown",
+                            ErrorMessage = $"Failed reading file: {ex.Message}",
+                            ShowdownSet = fileName
+                        });
+                        continue;
+                    }
+
+                    var raw = EntityFormat.GetFromBytes(data);
+                    if (raw == null || raw.Species <= 0)
+                    {
+                        errors.Add(new BatchTradeError
+                        {
+                            TradeNumber = fileIndex,
+                            SpeciesName = "Unknown",
+                            ErrorMessage = "Invalid or unreadable PKM file.",
+                            ShowdownSet = fileName
+                        });
+                        continue;
+                    }
+
+                    try
+                    {
+                        var la = new LegalityAnalysis(raw);
+                        if (la.Valid)
+                        {
+                            if (raw is T tpk)
+                            {
+                                batchPokemonList.Add(tpk);
+                            }
+                            else
+                            {
+                                var converted = EntityConverter.ConvertToType(raw, typeof(T), out _);
+                                if (converted is T asT)
+                                    batchPokemonList.Add(asT);
+                                else
+                                {
+                                    errors.Add(new BatchTradeError
+                                    {
+                                        TradeNumber = fileIndex,
+                                        SpeciesName = GameInfo.Strings.Species[raw.Species],
+                                        ErrorMessage = "Failed to convert PKM to required game type.",
+                                        ShowdownSet = fileName
+                                    });
+                                }
+                            }
+                        }
+                        else
+                        {
+                            errors.Add(new BatchTradeError
+                            {
+                                TradeNumber = fileIndex,
+                                SpeciesName = GameInfo.Strings.Species[raw.Species],
+                                ErrorMessage = la.Report(),
+                                LegalizationHint = la.Info?.EncounterMatch?.ToString() ?? "No additional details available",
+                                ShowdownSet = fileName
+                            });
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        errors.Add(new BatchTradeError
+                        {
+                            TradeNumber = fileIndex,
+                            SpeciesName = raw.Species > 0 ? GameInfo.Strings.Species[raw.Species] : "Unknown",
+                            ErrorMessage = $"Legality analysis error: {ex.Message}",
+                            ShowdownSet = fileName
+                        });
                     }
                 }
 
-                await ReplyAsync($"{user.Mention}, your ZIP trade batch (**{total} Pokémon**) has been queued.");
+                // Enforce max trades
+                int maxAllowed = tradeConfig.MaxPkmsPerTrade > 0 ? tradeConfig.MaxPkmsPerTrade : 4;
+                if (batchPokemonList.Count > maxAllowed)
+                {
+                    await Context.Channel.SendMessageAsync(
+                        $"{Context.User.Mention} You included {batchPokemonList.Count} valid Pokémon but the configured batch limit is {maxAllowed}. Reduce the number and try again.");
+                    return;
+                }
+
+                // Errors → show embed just like batchTrade
+                if (errors.Count > 0)
+                {
+                    await BatchHelpers<T>.SendBatchErrorEmbedAsync(Context, errors, pkmFiles.Count);
+                    return;
+                }
+
+                if (batchPokemonList.Count == 0)
+                {
+                    await Context.Channel.SendMessageAsync(
+                        $"{Context.User.Mention} Your archive contained no valid, legal Pokémon to process.");
+                    return;
+                }
+
+                // Good to go!
+                var tradeCode = Info.GetRandomTradeCode(userID);
+                await BatchHelpers<T>.ProcessBatchContainer(Context, batchPokemonList, tradeCode, batchPokemonList.Count);
+            }
+            catch (Exception ex)
+            {
+                Base.LogUtil.LogError($"BatchTradeZip (SharpCompress) error: {ex.Message}", nameof(BatchTradeZipAsync));
+                await Context.Channel.SendMessageAsync($"{Context.User.Mention} An error occurred while processing your archive. Check logs.");
             }
             finally
             {
-                _usersInQueue.TryRemove(userId, out _);
+                try { Directory.Delete(tempDir, true); } catch { }
+                try { await processingMessage.DeleteAsync(); } catch { }
             }
         });
+
+        if (Context.Message is IUserMessage msg)
+            _ = Helpers<T>.DeleteMessagesAfterDelayAsync(msg, null, 6);
     }
 
 
