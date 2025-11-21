@@ -37,7 +37,7 @@ namespace SysBot.Tests
             var pkm = sav.GetLegal(template, out var result);
             Trace.WriteLine(result.ToString());
 
-            if (pkm.Nickname.ToLower() == "egg" && Breeding.CanHatchAsEgg(pkm.Species)) AbstractTrade<PK9>.EggTrade(pkm, template);
+            if (pkm.Nickname.ToLower() == "egg" && Breeding.CanHatchAsEgg(pkm.Species))
 
             pkm.CanBeTraded().Should().BeTrue();
             (pkm is PK9).Should().BeTrue();

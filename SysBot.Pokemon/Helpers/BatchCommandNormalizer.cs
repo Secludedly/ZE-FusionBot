@@ -120,7 +120,8 @@ namespace SysBot.Pokemon.Discord.Helpers
             { "Pikachu", 42 }, { "LetsGoPikachu", 42 }, { "LGP", 42 }, { "Eevee", 43 }, { "LetsGoEevee", 43 }, { "LGE", 43 },
             { "GO", 34 }, { "Pokemon GO", 34 }, { "SW", 44 }, { "Sword", 44 }, { "SH", 45 }, { "Shield", 45 },
             { "PLA", 47 }, { "Legends Arceus", 47 }, { "BD", 48 }, { "Brilliant Diamond", 48 },
-            { "SP", 49 }, { "Shining Pearl", 49 }, { "Scarlet", 50 }, { "SL", 50 }, { "Violet", 51 }, { "VL", 51 }
+            { "SP", 49 }, { "Shining Pearl", 49 }, { "Scarlet", 50 }, { "SL", 50 }, { "Violet", 51 }, { "VL", 51 }, { "PLZA", 52 },
+            { "LZA", 52 }, { "ZA", 52 }
         };
 
         // Characteristic to IV spread mapping
