@@ -535,36 +535,21 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
 
             foreach (var block in rawBlocks)
             {
-                var firstLine = block.Split('\n')[0].Trim();
-                string candidate;
+                // Extract only the real species name using robust logic
+                string firstLine = block.Split('\n')[0].Trim();
+                string speciesCandidate = ExtractSpeciesName(firstLine);
 
-                // Check for nickname format: Nickname(Species)
-                var nicknameMatch = Regex.Match(firstLine, @"\((?<species>[^\)]+)\)");
-                if (nicknameMatch.Success)
-                {
-                    candidate = nicknameMatch.Groups["species"].Value.Trim();
-                }
-                else
-                {
-                    // No nickname, take the part before @
-                    candidate = firstLine.Contains("@")
-                        ? firstLine.Split('@')[0].Trim()
-                        : firstLine;
-                }
-
-                // Remove gender markers like (M) or (F)
-                candidate = Regex.Replace(candidate, @"\s*\(M\)|\s*\(F\)", "", RegexOptions.IgnoreCase).Trim();
-
-                // Special handling: Egg formats
-                if (candidate.Contains("Egg", StringComparison.OrdinalIgnoreCase))
+                // Egg bypass
+                if (speciesCandidate.Contains("Egg", StringComparison.OrdinalIgnoreCase))
                 {
                     blocks.Add(block);
                     continue;
                 }
 
-                // Only accept if it's an actual Pokémon species
-                if (validSpecies.Contains(candidate))
+                // Validate species
+                if (validSpecies.Contains(speciesCandidate))
                     blocks.Add(block);
+
             }
 
             if (blocks.Count == 0)
@@ -1354,6 +1339,40 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
         await Task.Delay(delaySec * 1000);
         try { await botMsg.DeleteAsync(); } catch { }
         try { await userMsg.DeleteAsync(); } catch { }
+    }
+
+    private static string ExtractSpeciesName(string firstLine)
+    {
+        if (string.IsNullOrWhiteSpace(firstLine))
+            return string.Empty;
+
+        string line = firstLine.Split('@')[0].Trim();
+
+        line = line.Replace(" (M)", "", StringComparison.OrdinalIgnoreCase)
+                   .Replace(" (F)", "", StringComparison.OrdinalIgnoreCase)
+                   .Replace("(M)", "", StringComparison.OrdinalIgnoreCase)
+                   .Replace("(F)", "", StringComparison.OrdinalIgnoreCase);
+
+        // Egg patterns: Egg (Species)
+        var egg = Regex.Match(line, @"Egg\s*\((?<species>[^)]+)\)", RegexOptions.IgnoreCase);
+        if (egg.Success)
+            return egg.Groups["species"].Value.Trim();
+
+        if (line.StartsWith("Egg", StringComparison.OrdinalIgnoreCase))
+            return "Egg";
+
+        // Nickname (Species)
+        var paren = Regex.Match(line, @"\((?<species>[^)]+)\)");
+        if (paren.Success)
+            return paren.Groups["species"].Value.Trim();
+
+        // Pure species or nickname species
+        var tokens = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (tokens.Length == 1)
+            return tokens[0];
+
+        // Usually last token before @
+        return tokens[^1];
     }
 
     #endregion
