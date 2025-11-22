@@ -7,6 +7,7 @@
     </a>
 </h1>
 
+> ⚠️ **Font Notice:** If the program's fonts are not displaying properly for you, download them [here](https://github.com/Secludedly/ZE-FusionBot/tree/main/SysBot.Pokemon.WinForms/Fonts) and install them on your machine.
 
 <p align="center">
   <i>A community-driven and inspired SysBot.NET project with the most beautiful GUI that unites code from everyone, supporting LGPE, SWSH, BDSP, PLA, SV, and PLZA!</i>
