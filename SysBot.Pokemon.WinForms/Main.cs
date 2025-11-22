@@ -767,17 +767,11 @@ namespace SysBot.Pokemon.WinForms
         private void BtnClose_Click(object sender, EventArgs e)
         {
             Application.Exit(); // Exit program on Close button click
-            Application.SetHighDpiMode(HighDpiMode.SystemAware);
-            Application.EnableVisualStyles();
-            Application.SetCompatibleTextRenderingDefault(false);
         }
 
         // Maximize and Restore button
         private void BtnMaximize_Click(object sender, EventArgs e)
         {
-            Application.SetHighDpiMode(HighDpiMode.SystemAware);
-            Application.EnableVisualStyles();
-            Application.SetCompatibleTextRenderingDefault(false);
 
             if (WindowState == FormWindowState.Normal)   // If the window is in normal state, then...
                 WindowState = FormWindowState.Maximized; // ...Maximize the window
@@ -788,10 +782,6 @@ namespace SysBot.Pokemon.WinForms
         // Minimize button
         private void BtnMinimize_Click(object sender, EventArgs e)
         {
-            Application.SetHighDpiMode(HighDpiMode.SystemAware);
-            Application.EnableVisualStyles();
-            Application.SetCompatibleTextRenderingDefault(false);
-
             WindowState = FormWindowState.Minimized; // Minimize the window on Minimize button click
         }
 
