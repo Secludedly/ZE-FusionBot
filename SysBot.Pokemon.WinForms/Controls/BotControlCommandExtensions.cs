@@ -27,6 +27,7 @@ public static class BotControlCommandExtensions
         var sent = false;
         var runners = new Func<Task>[]
         {
+            () => TrySendScreenState<PA9>(ip, turnOn),
             () => TrySendScreenState<PK9>(ip, turnOn),
             () => TrySendScreenState<PK8>(ip, turnOn),
             () => TrySendScreenState<PA8>(ip, turnOn),
