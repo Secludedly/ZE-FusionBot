@@ -15,6 +15,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Runtime.InteropServices;
+using System.Drawing.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -67,6 +68,16 @@ namespace SysBot.Pokemon.WinForms
 
         // HubForm loading
         private HubForm _hubForm;
+
+        private void EnsureFontAwesomeButtonsRender()
+        {
+            // Force the FontAwesome font to be applied and glyphs to render
+            foreach (var btn in new[] { btnClose, btnMaximize, btnMinimize })
+            {
+                btn.Font = new Font("FontAwesome", btn.Font.Size); // Make sure FontAwesome is applied
+                btn.Invalidate();                                  // Force redraw
+            }
+        }
 
         // Main Constructor
         public Main()
@@ -143,6 +154,9 @@ namespace SysBot.Pokemon.WinForms
             this.DoubleBuffered = true;                                        // Enable double buffering to reduce flickering
             this.SetStyle(ControlStyles.ResizeRedraw, true);                   // Redraw on resize
             this.MaximizedBounds = Screen.FromHandle(this.Handle).WorkingArea; // Set the maximized bounds to the working area of the screen
+            this.AutoScaleMode = AutoScaleMode.Dpi;                            // Set auto scale mode to DPI
+            this.AutoScaleDimensions = new SizeF(96F, 96F);                    // Set auto scale dimensions to 96 DPI
+
 
             // Handlers for the Close/Maximize/Minimize buttons
             btnClose.Click += BtnClose_Click;       // Close button
@@ -558,7 +572,7 @@ namespace SysBot.Pokemon.WinForms
             leftSideImage = new PictureBox
             {
                 Size = new Size(200, 35),             // Put actual image dimensions here, or add custom to resize
-                Location = new Point(99, 685),        // Fixed position for the image using XY
+                Location = new Point(180, 685),        // Fixed position for the image using XY
                 SizeMode = PictureBoxSizeMode.Normal, // Makes sure the image is not stretched or resized
                 BackColor = Color.Transparent,        // Makes sure the image has no background
                 BorderStyle = BorderStyle.None        // Makes sure there's no vague borders and shit
@@ -572,16 +586,25 @@ namespace SysBot.Pokemon.WinForms
         // Position the left side image in the panelLeftSide
         private void PositionLeftSideImage()
         {
-            if (leftSideImage == null || panelLeftSide == null) // If the left side image or panel is null, do nothing
+            if (leftSideImage == null || panelLeftSide == null)
                 return;
 
-            // Center horizontally
-            int x = (panelLeftSide.Width - leftSideImage.Width) / 2; // Calculate the X position to center the image in the panel
+            // Get the actual usable width inside the panel
+            int usableWidth = panelLeftSide.ClientSize.Width
+                              - panelLeftSide.Padding.Left
+                              - panelLeftSide.Padding.Right;
 
-            // Fixed vertical offset
-            int y = 360;
+            // Perfect horizontal centering
+            int horizontalCenter = panelLeftSide.Padding.Left
+                                   + (usableWidth - leftSideImage.Width) / 2;
 
-            leftSideImage.Location = new Point(x, y);
+            // Vertical: below your theme selector
+            int verticalOffsetBelowTheme = CB_Themes.Bottom + 20;
+
+            leftSideImage.Location = new Point(horizontalCenter, verticalOffsetBelowTheme);
+            leftSideImage.SizeMode = PictureBoxSizeMode.Zoom;
+            leftSideImage.Anchor = AnchorStyles.Top;
+
         }
 
         private void LoadLogoImage(string logoPath)
@@ -744,11 +767,18 @@ namespace SysBot.Pokemon.WinForms
         private void BtnClose_Click(object sender, EventArgs e)
         {
             Application.Exit(); // Exit program on Close button click
+            Application.SetHighDpiMode(HighDpiMode.SystemAware);
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
         }
 
         // Maximize and Restore button
         private void BtnMaximize_Click(object sender, EventArgs e)
         {
+            Application.SetHighDpiMode(HighDpiMode.SystemAware);
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+
             if (WindowState == FormWindowState.Normal)   // If the window is in normal state, then...
                 WindowState = FormWindowState.Maximized; // ...Maximize the window
             else
@@ -758,6 +788,10 @@ namespace SysBot.Pokemon.WinForms
         // Minimize button
         private void BtnMinimize_Click(object sender, EventArgs e)
         {
+            Application.SetHighDpiMode(HighDpiMode.SystemAware);
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+
             WindowState = FormWindowState.Minimized; // Minimize the window on Minimize button click
         }
 

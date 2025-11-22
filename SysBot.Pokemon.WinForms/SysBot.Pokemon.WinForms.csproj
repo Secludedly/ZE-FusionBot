@@ -2,7 +2,7 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net9.0-windows</TargetFramework>
-    <RuntimeIdentifier>win-x86</RuntimeIdentifier>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <UseWindowsForms>true</UseWindowsForms>
     <AssemblyName>ZE_FusionBot</AssemblyName>
     <SelfContained>false</SelfContained>
@@ -22,6 +22,7 @@
     <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
     <PublishTrimmed>false</PublishTrimmed>
     <Authors>Kaphotics, hexbyt3, Secludedly</Authors>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
   <ItemGroup>
     <None Remove="Fonts\bahnschrift.ttf" />

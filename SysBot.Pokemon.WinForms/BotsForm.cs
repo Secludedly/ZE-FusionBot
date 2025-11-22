@@ -55,6 +55,8 @@ namespace SysBot.Pokemon.WinForms
 
         public BotsForm()
         {
+            AutoScaleMode = AutoScaleMode.Dpi;
+            AutoScaleDimensions = new SizeF(96, 96); 
             InitializeControls();
             _isInitializing = true;
             LoadGameModeFromConfig();
@@ -112,7 +114,7 @@ namespace SysBot.Pokemon.WinForms
             _toolTips.ReshowDelay = 1000;        // Delay between tooltips
             _toolTips.ShowAlways = true;        // Show even if the form isn’t active
 
-            _B_Reload = new FancyButton { Text = "RELOAD", Location = new Point(625, 40), Size = new Size(100, 40) };
+            _B_Reload = new FancyButton { Text = "RELOAD", Location = new Point(450, 7), Size = new Size(100, 40) };
             _B_Reload.GlowColor = Color.DarkOrange;
             _toolTips.SetToolTip(_B_Reload, "Reload the application cleanly.");
             _toolTips.AutoPopDelay = 2500;      // How long it stays visible
@@ -148,7 +150,7 @@ namespace SysBot.Pokemon.WinForms
             _CB_Routine.SelectedValue = (int)PokeRoutineType.FlexTrade;
             StyleComboBox(_CB_Routine);
 
-            _CB_GameMode = new ComboBox { Location = new Point(625, 5), Size = new Size(100, 40), DropDownStyle = ComboBoxStyle.DropDownList, BackColor = Color.FromArgb(20, 19, 57), ForeColor = whiteText };
+            _CB_GameMode = new ComboBox { Location = new Point(485, 57), Size = new Size(86, 40), DropDownStyle = ComboBoxStyle.DropDownList, BackColor = Color.FromArgb(20, 19, 57), ForeColor = whiteText };
             _CB_GameMode.Items.AddRange(new object[] { "SWSH", "BDSP", "PLA", "SV", "LGPE", "PLZA" });
             _CB_GameMode.SelectedIndex = -1;
             _CB_GameMode.DrawItem += (s, e) =>
@@ -186,7 +188,7 @@ namespace SysBot.Pokemon.WinForms
             });
 
             Text = "Bots Controller";
-            Size = new Size(757, 53);
+            Size = new Size(942, 53);
         }
 
         private void CB_GameMode_SelectedIndexChanged(object sender, EventArgs e)

@@ -140,9 +140,9 @@ namespace SysBot.Pokemon.WinForms
             CB_Themes.BackColor = Color.FromArgb(20, 19, 57);
             CB_Themes.ForeColor = Color.White;
             CB_Themes.FormattingEnabled = true;
-            CB_Themes.Location = new Point(38, 322);
+            CB_Themes.Location = new Point(47, 322);
             CB_Themes.Name = "CB_Themes";
-            CB_Themes.Size = new Size(144, 28);
+            CB_Themes.Size = new Size(127, 28);
             CB_Themes.TabIndex = 5;
             // 
             // btnBots
@@ -316,11 +316,11 @@ namespace SysBot.Pokemon.WinForms
             // lblTitleChildForm
             // 
             lblTitleChildForm.AutoSize = true;
-            lblTitleChildForm.Font = new Font("Gnuolane Rg", 22.1999989F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            lblTitleChildForm.Font = new Font("Gnuolane Rg", 24F, FontStyle.Regular, GraphicsUnit.Point, 0);
             lblTitleChildForm.ForeColor = Color.White;
-            lblTitleChildForm.Location = new Point(54, 9);
+            lblTitleChildForm.Location = new Point(54, 12);
             lblTitleChildForm.Name = "lblTitleChildForm";
-            lblTitleChildForm.Size = new Size(144, 44);
+            lblTitleChildForm.Size = new Size(154, 48);
             lblTitleChildForm.TabIndex = 0;
             lblTitleChildForm.Text = "LOADING ...";
             // 
