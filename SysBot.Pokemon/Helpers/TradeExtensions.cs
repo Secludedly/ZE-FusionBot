@@ -1,5 +1,6 @@
 using PKHeX.Core;
 using PKHeX.Core.AutoMod;
+using SysBot.Base;
 using System;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -552,6 +553,25 @@ public abstract class TradeExtensions<T> where T : PKM, new()
         if (held <= 0)
             return false;
 
+        // --- PA9/Z-A: Replace Mega Stones with Gold Bottle Cap ---
+        if (pkm.Context == EntityContext.Gen9a && MegaStoneHelper.IsMegaStone((ushort)held))
+        {
+            const ushort goldBottleCap = 796; // PA9 ID
+            var oldItem = held;
+
+            pkm.HeldItem = goldBottleCap;
+
+            var speciesName = GameInfo.Strings.Species[pkm.Species];
+            var oldItemName = GameInfo.Strings.Item[oldItem];
+            var newItemName = GameInfo.Strings.Item[goldBottleCap];
+
+            LogUtil.LogInfo(nameof(TradeExtensions<T>),
+                $"Replaced Mega Stone '{oldItemName}' with '{newItemName}' for {speciesName}");
+
+            return false; // not blocked anymore
+        }
+
+        // Regular PKHeX check for all other items
         return !ItemRestrictions.IsHeldItemAllowed(held, pkm.Context);
     }
 }
