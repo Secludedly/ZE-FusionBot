@@ -16,12 +16,6 @@ public class CloneModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
     [RequireQueueRole(nameof(DiscordManager.RolesClone))]
     public async Task CloneAsync(int code)
     {
-        // PA9 (Legends Z-A) clone trades are currently disabled
-        if (typeof(T) == typeof(PA9))
-        {
-            await ReplyAsync("Clone trades are currently disabled for Legends Z-A due to bugs. Please try again later.").ConfigureAwait(false);
-            return;
-        }
 
         // Check if the user is already in the queue
         var userID = Context.User.Id;
@@ -57,12 +51,6 @@ public class CloneModule<T> : ModuleBase<SocketCommandContext> where T : PKM, ne
     [RequireQueueRole(nameof(DiscordManager.RolesClone))]
     public async Task CloneAsync([Summary("Trade Code")][Remainder] string code)
     {
-        // PA9 (Legends Z-A) clone trades are currently disabled
-        if (typeof(T) == typeof(PA9))
-        {
-            await ReplyAsync("Clone trades are currently disabled for Legends Z-A due to bugs. Please try again later.").ConfigureAwait(false);
-            return;
-        }
 
         // Check if the user is already in the queue
         var userID = Context.User.Id;
