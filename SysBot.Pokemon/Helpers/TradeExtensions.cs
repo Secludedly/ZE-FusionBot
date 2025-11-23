@@ -543,8 +543,7 @@ public abstract class TradeExtensions<T> where T : PKM, new()
     /// <summary>
     /// Checks if a Pokemon's held item is blocked from trading.
     /// Uses PKHeX's ItemRestrictions to validate held items for the Pokemon's game context.
-    /// This blocks key items, unreleased items, and items not available in the Pokemon's game.
-    /// Also relies on MegaStoneHelper.cs to identify Mega Stones for replacement in PLZA.
+    /// This blocks key items, unreleased items, items not available in the Pokemon's game, and items that cannot be traded.
     /// </summary>
     /// <param name="pkm">The Pokemon to check</param>
     /// <returns>True if the held item is blocked from trading, false otherwise</returns>
@@ -554,26 +553,15 @@ public abstract class TradeExtensions<T> where T : PKM, new()
         if (held <= 0)
             return false;
 
-        // --- PA9/Z-A: Replace Mega Stones with Gold Bottle Cap ---
-        if (pkm.Context == EntityContext.Gen9a && MegaStoneHelper.IsMegaStone((ushort)held))
-        {
-            const ushort goldBottleCap = 796; // PA9 ID
-            var oldItem = held;
+        // Check if item is not allowed to be held in this game context
+        if (!ItemRestrictions.IsHeldItemAllowed(held, pkm.Context))
+            return true;
 
-            pkm.HeldItem = goldBottleCap;
+        // Check if item cannot be traded
+        if (TradeRestrictions.IsUntradableHeld(pkm.Context, held))
+            return true;
 
-            var speciesName = GameInfo.Strings.Species[pkm.Species];
-            var oldItemName = GameInfo.Strings.Item[oldItem];
-            var newItemName = GameInfo.Strings.Item[goldBottleCap];
-
-            LogUtil.LogInfo(nameof(TradeExtensions<T>),
-                $"Replaced Mega Stone '{oldItemName}' with '{newItemName}' for {speciesName}");
-
-            return false; // not blocked anymore
-        }
-
-        // Regular PKHeX check for all other items
-        return !ItemRestrictions.IsHeldItemAllowed(held, pkm.Context);
+        return false;
     }
 }
 
