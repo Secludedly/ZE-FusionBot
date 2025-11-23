@@ -130,6 +130,7 @@ namespace SysBot.Pokemon.WinForms
             InitializeComponent();     // Initialize all the form components before program
             Instance = this;
             InitializeLeftSideImage(); // Initialize the left side BG image in panelLeftSide
+            InitializeUpperImage();    // Initialize the upper image in panelTitleBar
 
             // Wait for the form crap to load before initializing
             this.Load += async (s, e) => await InitializeAsync();
@@ -144,6 +145,7 @@ namespace SysBot.Pokemon.WinForms
             leftBorderBtn = new Panel { Size = new Size(7, 60) }; // Left border for active button
             panelLeftSide.Controls.Add(leftBorderBtn);            // Add left border to the panel
             panelTitleBar.MouseDown += panelTitleBar_MouseDown;   // Allow dragging the window from the title bar
+            HookDrag(panelTitleBar);
 
 
             // Title‑bar controls
@@ -230,6 +232,7 @@ namespace SysBot.Pokemon.WinForms
             LoadControls();
             Text = $"{(string.IsNullOrEmpty(Config.Hub.BotName) ? "ZE FusionBot |" : Config.Hub.BotName)} {TradeBot.Version} | Mode: {Config.Mode}";
             UpdateBackgroundImage(Config.Mode);        // Call the method to update image in leftSidePanel
+            UpdateUpperImage(Config.Mode);        // Call the method to update image in panelTitleBar
             LoadThemeOptions();
 
             CB_Themes.SelectedIndexChanged += CB_Themes_SelectedIndexChanged;
@@ -607,6 +610,41 @@ namespace SysBot.Pokemon.WinForms
 
         }
 
+        // Initialize the method for the upper panel image in the upperPanelImage
+        private PictureBox upperPanelImage;
+
+        private void InitializeUpperImage()
+        {
+            upperPanelImage = new PictureBox
+            {
+                Size = new Size(325, 72),
+                Location = new Point(560, 0),
+                SizeMode = PictureBoxSizeMode.Normal,
+                BackColor = Color.Transparent,
+                BorderStyle = BorderStyle.None
+            };
+
+            panelTitleBar.Controls.Add(upperPanelImage);
+            panelTitleBar.Resize += (s, e) => PositionUpperImage();
+            PositionUpperImage();
+        }
+
+        // Position the upper image in the upperPanelImage
+        private void PositionUpperImage()
+        {
+            if (upperPanelImage == null || panelTitleBar == null)
+                return;
+
+            int usableWidth = panelTitleBar.ClientSize.Width
+                              - panelTitleBar.Padding.Left
+                              - panelTitleBar.Padding.Right;
+
+            int centerX = panelTitleBar.Padding.Left
+                          + (usableWidth - upperPanelImage.Width) / 1;
+
+            upperPanelImage.Location = new Point(centerX, 0);
+        }
+
         private void LoadLogoImage(string logoPath)
         {
             if (string.IsNullOrWhiteSpace(logoPath))
@@ -666,6 +704,44 @@ namespace SysBot.Pokemon.WinForms
             }
         }
 
+        // Update the upper image based on the current game mode
+        private void UpdateUpperImage(ProgramMode mode)
+        {
+            if (upperPanelImage == null) return;
+
+            switch (mode)
+            {
+                case ProgramMode.PLZA:
+                    upperPanelImage.Image = Resources.plza_mode_upper;
+                    break;
+
+                case ProgramMode.SV:
+                    upperPanelImage.Image = Resources.sv_mode_upper;
+                    break;
+
+                case ProgramMode.SWSH:
+                    upperPanelImage.Image = Resources.swsh_mode_upper;
+                    break;
+
+                case ProgramMode.BDSP:
+                    upperPanelImage.Image = Resources.bdsp_mode_upper;
+                    break;
+
+                case ProgramMode.LA:
+                    upperPanelImage.Image = Resources.pla_mode_upper;
+                    break;
+
+                case ProgramMode.LGPE:
+                    upperPanelImage.Image = Resources.lgpe_mode_upper;
+                    break;
+
+                default:
+                    upperPanelImage.Image = null;
+                    break;
+            }
+        }
+
+
         private void HookBotProgress(PokeBotState cfg, PokeRoutineExecutorBase bot)
         {
             BotController? botControl = _botsForm.BotPanel.Controls
@@ -722,6 +798,25 @@ namespace SysBot.Pokemon.WinForms
             _botsForm.IPBox.Visible = _botsForm.ProtocolBox.SelectedIndex == 0; // Show the IPBox only if the selected protocol is WiFi
         }
 
+        private void InitializeTitleBarDrag()
+        {
+            // Original panel mouse down
+            panelTitleBar.MouseDown += panelTitleBar_MouseDown;
+
+            // Forward mouse events from all children to panel
+            foreach (Control ctrl in panelTitleBar.Controls)
+            {
+                ctrl.MouseDown += panelTitleBar_MouseDown;
+            }
+        }
+
+        private void HookDrag(Control parent)
+        {
+            parent.MouseDown += panelTitleBar_MouseDown;
+            foreach (Control child in parent.Controls)
+                HookDrag(child);
+        }
+
         // Drag the window from the titlebar
         [DllImport("user32.DLL", EntryPoint = "ReleaseCapture")] // Release the mouse capture
         private extern static void ReleaseCapture();             // Release the mouse capture to allow dragging the window
@@ -729,6 +824,8 @@ namespace SysBot.Pokemon.WinForms
         private extern static void SendMessage(System.IntPtr hWnd, int wMsg, int wParam, int lParam); // Send a message to the window to allow dragging
         private void panelTitleBar_MouseDown(object sender, MouseEventArgs e)                         // Allow dragging the window from the title bar
         {
+            if (sender == btnClose || sender == btnMaximize || sender == btnMinimize)
+                return;
             ReleaseCapture();                           // Release the mouse capture
             SendMessage(this.Handle, 0x112, 0xf012, 0); // Send a message to the window to allow dragging
         }
@@ -874,7 +971,7 @@ namespace SysBot.Pokemon.WinForms
             {
                 currentScale = Math.Clamp(currentScale + step, 1.0f, 1.1f);                         // Clamp the scale between 1.0 and 1.1
                 button.Tag = currentScale;                                                          // Store the current scale in the button's Tag property
-                button.Font = new Font(button.Font.FontFamily, 10.2F * currentScale, FontStyle.Regular); // Adjust font size based on scale
+                button.Font = new Font(button.Font.FontFamily, 12F * currentScale, FontStyle.Bold); // Adjust font size based on scale
                 await Task.Delay(10);                                                               // Delay for 10 milliseconds for smoother animation
             }
         }

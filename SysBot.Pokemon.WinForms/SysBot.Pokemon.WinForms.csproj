@@ -52,15 +52,21 @@
     <None Remove="Fonts\UbuntuMono-R.ttf" />
     <None Remove="Fonts\UbuntuMono-RI.ttf" />
     <None Remove="Resources\bdsp_mode_image.png" />
+    <None Remove="Resources\bdsp_mode_upper.png" />
     <None Remove="Resources\BotControlPanel.css" />
     <None Remove="Resources\BotControlPanel.html" />
     <None Remove="Resources\BotControlPanel.js" />
     <None Remove="Resources\LeftJoyCon.png" />
     <None Remove="Resources\lgpe_mode_image.png" />
+    <None Remove="Resources\lgpe_mode_upper.png" />
     <None Remove="Resources\pla_mode_image.png" />
+    <None Remove="Resources\pla_mode_upper.png" />
+    <None Remove="Resources\plza_mode_upper.png" />
     <None Remove="Resources\RightJoyCon.png" />
     <None Remove="Resources\sv_mode_image.png" />
+    <None Remove="Resources\sv_mode_upper.png" />
     <None Remove="Resources\swsh_mode_image.png" />
+    <None Remove="Resources\swsh_mode_upper.png" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Fonts\bahnschrift.ttf" />
@@ -106,7 +112,16 @@
     <EmbeddedResource Include="Resources\lgpe_mode_image.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </EmbeddedResource>
+    <EmbeddedResource Include="Resources\lgpe_mode_upper.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
     <EmbeddedResource Include="Resources\pla_mode_image.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Resources\pla_mode_upper.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Resources\plza_mode_upper.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </EmbeddedResource>
     <EmbeddedResource Include="Resources\RightJoyCon.png">
@@ -118,6 +133,9 @@
     <EmbeddedResource Include="Resources\swsh_mode_image.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </EmbeddedResource>
+    <EmbeddedResource Include="Resources\swsh_mode_upper.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="FontAwesome.Sharp" Version="6.6.0" />
@@ -125,6 +143,16 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Fonts\Enter-The-Grid.ttf" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\bdsp_mode_upper.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\sv_mode_upper.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\SysBot.Base\SysBot.Base.csproj" />

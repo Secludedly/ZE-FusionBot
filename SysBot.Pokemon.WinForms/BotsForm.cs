@@ -74,7 +74,7 @@ namespace SysBot.Pokemon.WinForms
             };
 
             // Buttons
-            _B_Start = new FancyButton { Text = "START", Location = new Point(10, 7), Size = new Size(100, 40) };
+            _B_Start = new FancyButton { Text = "START", Location = new Point(11, 7), Size = new Size(100, 40) };
             _B_Start.GlowColor = Color.LimeGreen;
             _toolTips.SetToolTip(_B_Start, "Start all bots together that are listed.");
             _toolTips.AutoPopDelay = 2500;      // How long it stays visible
@@ -82,7 +82,7 @@ namespace SysBot.Pokemon.WinForms
             _toolTips.ReshowDelay = 1000;        // Delay between tooltips
             _toolTips.ShowAlways = true;        // Show even if the form isn’t active
 
-            _B_Stop = new FancyButton { Text = "STOP", Location = new Point(120, 7), Size = new Size(100, 40) };
+            _B_Stop = new FancyButton { Text = "STOP", Location = new Point(126, 7), Size = new Size(100, 40) };
             _B_Stop.GlowColor = Color.Red;
             _toolTips.SetToolTip(_B_Stop, "Stop all running bots together that are listed.");
             _toolTips.AutoPopDelay = 2500;      // How long it stays visible
@@ -90,7 +90,7 @@ namespace SysBot.Pokemon.WinForms
             _toolTips.ReshowDelay = 1000;        // Delay between tooltips
             _toolTips.ShowAlways = true;        // Show even if the form isn’t active
 
-            _B_RebootStop = new FancyButton { Text = "REBOOT", Location = new Point(230, 7), Size = new Size(100, 40) };
+            _B_RebootStop = new FancyButton { Text = "REBOOT", Location = new Point(241, 7), Size = new Size(100, 40) };
             _B_RebootStop.GlowColor = Color.Magenta;
             _toolTips.SetToolTip(_B_RebootStop, "Reboot game and stop all bots listed.");
             _toolTips.AutoPopDelay = 2500;      // How long it stays visible
@@ -98,7 +98,7 @@ namespace SysBot.Pokemon.WinForms
             _toolTips.ReshowDelay = 1000;        // Delay between tooltips
             _toolTips.ShowAlways = true;        // Show even if the form isn’t active
 
-            _updater = new FancyButton { Text = "UPDATE", Location = new Point(340, 7), Size = new Size(100, 40) };
+            _updater = new FancyButton { Text = "UPDATE", Location = new Point(356, 7), Size = new Size(100, 40) };
             _toolTips.SetToolTip(_updater, "Check for program updates.");
             _toolTips.AutoPopDelay = 2500;      // How long it stays visible
             _toolTips.InitialDelay = 2000;       // Delay before it shows up
@@ -114,7 +114,7 @@ namespace SysBot.Pokemon.WinForms
             _toolTips.ReshowDelay = 1000;        // Delay between tooltips
             _toolTips.ShowAlways = true;        // Show even if the form isn’t active
 
-            _B_Reload = new FancyButton { Text = "RELOAD", Location = new Point(450, 7), Size = new Size(100, 40) };
+            _B_Reload = new FancyButton { Text = "RELOAD", Location = new Point(471, 7), Size = new Size(100, 40) };
             _B_Reload.GlowColor = Color.DarkOrange;
             _toolTips.SetToolTip(_B_Reload, "Reload the application cleanly.");
             _toolTips.AutoPopDelay = 2500;      // How long it stays visible
@@ -188,7 +188,7 @@ namespace SysBot.Pokemon.WinForms
             });
 
             Text = "Bots Controller";
-            Size = new Size(942, 53);
+            Size = new Size(708, 53);
         }
 
         private void CB_GameMode_SelectedIndexChanged(object sender, EventArgs e)
