@@ -38,34 +38,80 @@ public static class ReusableActions
 
     public static string GetFormattedShowdownText(PKM pkm, bool simple = false)
     {
-        var newShowdown = new List<string>();
-        var showdown = ShowdownParsing.GetShowdownText(pkm);
-        foreach (var line in showdown.Split('\n'))
-            newShowdown.Add(line);
+        // Start from PKHeX's showdown output
+        var lines = ShowdownParsing.GetShowdownText(pkm)
+            .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+            .ToList();
 
-        if (pkm.IsEgg)
-            newShowdown.Add("\nPokémon is an egg");
-
-        if (pkm.Ball > (int)Ball.None)
+        // --- Ensure IVs exist in the output (create if missing) ---
+        bool hasIVLine = lines.Any(l => l.StartsWith("IVs:"));
+        if (!hasIVLine && pkm.IVs is int[] ivs && ivs.Length == 6)
         {
-            int natureIndex = newShowdown.FindIndex(z => z.Contains("Nature"));
-            if (natureIndex >= 0)
-                newShowdown.Insert(natureIndex, $"Ball: {(Ball)pkm.Ball} Ball");
+            lines.Add($"IVs: {ivs[0]}/{ivs[1]}/{ivs[2]}/{ivs[3]}/{ivs[4]}/{ivs[5]}");
         }
 
+        // --- Alpha: insert under Ability if applicable ---
+        if (pkm is IAlpha alpha && alpha.IsAlpha)
+        {
+            int abilityIndex = lines.FindIndex(z => z.StartsWith("Ability:"));
+            if (abilityIndex >= 0)
+                lines.Insert(abilityIndex + 1, "Alpha: Yes");
+            else
+                lines.Add("Alpha: Yes");
+        }
+
+        // --- Shiny formatting (Square/Star only for SWSH) ---
         if (pkm.IsShiny)
         {
-            int index = newShowdown.FindIndex(x => x.Contains("Shiny: Yes"));
-            if (index >= 0)
-                newShowdown[index] = (pkm.ShinyXor == 0 || pkm.FatefulEncounter) ? "Shiny: Square\r" : "Shiny: Star\r";
+            int shinyIndex = lines.FindIndex(x => x.StartsWith("Shiny:"));
+
+            // If SWSH → use Square/Star
+            if (pkm.Version == GameVersion.SW || pkm.Version == GameVersion.SH)
+            {
+                string shinyText = (pkm.ShinyXor == 0 || pkm.FatefulEncounter)
+                    ? "Shiny: Square"
+                    : "Shiny: Star";
+
+                if (shinyIndex >= 0)
+                    lines[shinyIndex] = shinyText;
+                else
+                    lines.Add(shinyText);
+            }
+            else
+            {
+                // Every other game → simply "Shiny: Yes"
+                if (shinyIndex >= 0)
+                    lines[shinyIndex] = "Shiny: Yes";
+                else
+                    lines.Add("Shiny: Yes");
+            }
         }
 
-        int insertIndex = newShowdown.FindIndex(z => z.Contains("Nature")) + 1;
-        if (insertIndex <= 0) insertIndex = 1;
+        // --- Egg line (if egg) ---
+        if (pkm.IsEgg)
+        {
+            // Keep a single egg notice; add at end
+            if (!lines.Any(l => l.Contains("Pokémon is an egg")))
+                lines.Add("Pokémon is an egg");
+        }
 
+        // --- Ball insertion (before Nature if present) ---
+        if (pkm.Ball > (int)Ball.None)
+        {
+            int natureIndex = lines.FindIndex(z => z.Contains("Nature"));
+            var ballLine = $"Ball: {(Ball)pkm.Ball} Ball";
+            if (natureIndex >= 0)
+                lines.Insert(natureIndex, ballLine);
+            else if (!lines.Contains(ballLine))
+                lines.Add(ballLine);
+        }
+
+        // --- Full-mode extra info ---
         if (!simple)
         {
-            // Full mode extra info
+            int insertIndex = lines.FindIndex(z => z.Contains("Nature")) + 1;
+            if (insertIndex <= 0) insertIndex = 1;
+
             var extraInfo = new List<string>
         {
             $"OT: {pkm.OriginalTrainerName}",
@@ -78,37 +124,45 @@ public static class ReusableActions
             $".MetLevel={pkm.MetLevel}",
             $".Version={(GameVersion)pkm.Version}",
             $".OriginalTrainerFriendship={pkm.OriginalTrainerFriendship}",
-            $".HandlingTrainerFriendship={pkm.HandlingTrainerFriendship}",
+            $".HandlingTrainerFriendship={pkm.HandlingTrainerFriendship}"
         };
 
-            // Add Height/Weight if available
+            // Height/Weight if available
             if (pkm is IScaledSize scaled)
             {
                 extraInfo.Add($".HeightScalar={scaled.HeightScalar}");
                 extraInfo.Add($".WeightScalar={scaled.WeightScalar}");
             }
 
-            // Add Scale info for concrete modes
+            // Scale info
             if (pkm is PK9 pk9)
                 extraInfo.Add($".Scale={pk9.Scale}");
             else if (pkm is PA9 pa9)
                 extraInfo.Add($".Scale={pa9.Scale}");
 
-            newShowdown.InsertRange(insertIndex, extraInfo);
+            lines.InsertRange(insertIndex, extraInfo);
 
-            // Force IVs under EVs
-            int evIndex = newShowdown.FindIndex(x => x.StartsWith("EVs:"));
-            int ivIndex = newShowdown.FindIndex(x => x.StartsWith("IVs:"));
+            // Move IVs to below EVs if both exist
+            int evIndex = lines.FindIndex(x => x.StartsWith("EVs:"));
+            int ivIndex = lines.FindIndex(x => x.StartsWith("IVs:"));
             if (evIndex >= 0 && ivIndex >= 0 && ivIndex != evIndex + 1)
             {
-                var ivLine = newShowdown[ivIndex];
-                newShowdown.RemoveAt(ivIndex);
-                newShowdown.Insert(evIndex + 1, ivLine);
+                var ivLine = lines[ivIndex];
+                lines.RemoveAt(ivIndex);
+                // If removing shifted indices, ensure insert location remains valid
+                evIndex = lines.FindIndex(x => x.StartsWith("EVs:"));
+                if (evIndex >= 0)
+                    lines.Insert(evIndex + 1, ivLine);
+                else
+                    lines.Add(ivLine);
             }
         }
 
-        return Format.Code(string.Join("\n", newShowdown).TrimEnd());
+        // Final formatted code block
+        return Format.Code(string.Join("\n", lines).TrimEnd());
     }
+
+
 
     public static IReadOnlyList<string> GetListFromString(string str)
     {
