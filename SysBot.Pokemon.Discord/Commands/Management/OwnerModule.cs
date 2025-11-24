@@ -540,7 +540,7 @@ public class OwnerModule<T> : SudoModule<T> where T : PKM, new()
     public async Task SysDVRInstructionsAsync()
     {
         var embed0 = new EmbedBuilder()
-            .WithTitle("//////SYSDVR SETUP INSTRUCTIONS//////");
+            .WithTitle("//////--SYSDVR SETUP INSTRUCTIONS--//////");
 
         embed0.WithImageUrl("https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/homereadybreak.png");
         var message0 = await ReplyAsync(embed: embed0.Build());
