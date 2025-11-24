@@ -47,7 +47,7 @@ public static class ReusableActions
         bool hasIVLine = lines.Any(l => l.StartsWith("IVs:"));
         if (!hasIVLine && pkm.IVs is int[] ivs && ivs.Length == 6)
         {
-            lines.Add($"IVs: {ivs[0]}/{ivs[1]}/{ivs[2]}/{ivs[3]}/{ivs[4]}/{ivs[5]}");
+            lines.Add($"IVs: {ivs[0]} HP / {ivs[1]} Atk / {ivs[2]} Def / {ivs[3]} SpA / {ivs[4]} SpD / {ivs[5]} Spe");
         }
 
         // --- Alpha: insert under Ability if applicable ---
@@ -161,8 +161,6 @@ public static class ReusableActions
         // Final formatted code block
         return Format.Code(string.Join("\n", lines).TrimEnd());
     }
-
-
 
     public static IReadOnlyList<string> GetListFromString(string str)
     {
