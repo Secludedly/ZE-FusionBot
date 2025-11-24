@@ -18,6 +18,10 @@ public class FolderSettings : IDumper
     [Category(Files), Description("Destination folder: where all received PKM files are dumped to.")]
     public string DumpFolder { get; set; } = string.Empty;
 
+    [Category(Files), Description("Directory where your Switch Remote For PC is located.")]
+    public string SwitchRemoteForPC { get; set; } = string.Empty;
+
+
     public void CreateDefaults(string path)
     {
         var dump = Path.Combine(path, "dump");
