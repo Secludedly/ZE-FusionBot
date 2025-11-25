@@ -66,22 +66,22 @@
 ## 🖼️ GUI Previews
 
 <p align="center">
-    <img src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/README_GeneralOverlook.gif" style="max-width: 100%; height: auto;">
+    <img src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/README_GeneralOverlook2.gif" style="max-width: 100%; height: auto;">
 </p>
 <p align="center">
-    <img src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/README_Environment.gif" style="max-width: 100%; height: auto;">
+    <img src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/README_Environment2.gif" style="max-width: 100%; height: auto;">
 </p>
 <p align="center">
-    <img src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/README_Reload.gif" style="max-width: 100%; height: auto;">
+    <img src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/README_Reload2.gif" style="max-width: 100%; height: auto;">
 </p>
 <p align="center">
-    <img src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/README_Themes.gif" style="max-width: 100%; height: auto;">
+    <img src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/README_Themes2.gif" style="max-width: 100%; height: auto;">
 </p>
 <p align="center">
-    <img src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/README_Starting.gif" style="max-width: 100%; height: auto;">
+    <img src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/README_Starting2.gif" style="max-width: 100%; height: auto;">
 </p>
 <p align="center">
-    <img src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/README_Update.gif" style="max-width: 100%; height: auto;">
+    <img src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/README_Update2.gif" style="max-width: 100%; height: auto;">
 </p>
 
 ---
