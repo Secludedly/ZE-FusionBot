@@ -1,3 +1,4 @@
+using Discord;
 using PKHeX.Core;
 using SysBot.Base;
 using System;
@@ -211,6 +212,9 @@ public class TradeSettings : IBotStateSettings, ICountSettings
 
         [Category(EmbedSettings), Description("The emoji information for displaying the alpha mark."), DisplayName("Alpha Mark Emoji")]
         public EmojiInfo AlphaMarkEmoji { get; set; } = new EmojiInfo();
+
+        [Category(EmbedSettings), Description("The emoji information for displaying Plus Moves to applicable Moves in the Discord embed."), DisplayName("Plus Move Emoji")]
+        public EmojiInfo UsePlusMoveEmoji { get; set; } = new EmojiInfo();
 
         [Category(EmbedSettings), Description("The emoji information for displaying the mightiest mark."), DisplayName("Mightiest Mark Emoji")]
         public EmojiInfo MightiestMarkEmoji { get; set; } = new EmojiInfo();
