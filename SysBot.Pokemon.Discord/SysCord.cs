@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using SysBot.Pokemon.Discord.Helpers;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using static Discord.GatewayIntents;
@@ -26,7 +27,7 @@ public static class SysCordSettings
     public static DiscordSettings Settings => Manager.Config;
 }
 
-public sealed class SysCord<T> where T : PKM, new()
+public sealed partial class SysCord<T> where T : PKM, new()
 {
     public readonly PokeTradeHub<T> Hub;
     private readonly ProgramConfig _config;
@@ -613,26 +614,68 @@ public sealed class SysCord<T> where T : PKM, new()
             }
 
             var correctPrefix = SysCordSettings.Settings.CommandPrefix;
+            bool allowAnyPrefix = SysCordSettings.HubConfig.Discord.AllowAnyPrefix;
             var content = msg.Content;
             var argPos = 0;
 
-            if (msg.HasMentionPrefix(_client.CurrentUser, ref argPos) || msg.HasStringPrefix(correctPrefix, ref argPos))
+            // Whitelist of characters allowed when 'any prefix' is enabled
+            char[] allowedPrefixes = new[] { '$', '!', '.', '=', '%', '~', '-', '+', ',' };
+
+            bool hasValidPrefix = false;
+            string usedPrefix = null;
+
+            // Mention prefix is always valid
+            if (msg.HasMentionPrefix(_client.CurrentUser, ref argPos))
+            {
+                hasValidPrefix = true;
+                usedPrefix = $"<@{_client.CurrentUser.Id}>";
+            }
+            // Check if the first character is in allowedPrefixes
+            else if (allowAnyPrefix && content.Length > 0)
+            {
+                if (allowedPrefixes.Contains(content[0]))
+                {
+                    usedPrefix = content[0].ToString();
+                    argPos = 1;
+                    hasValidPrefix = true;
+                }
+                else
+                {
+                    // Invalid prefix while any-prefix is enabled
+                    string allowed = string.Join(" ", allowedPrefixes);
+                    await SafeSendMessageAsync(msg.Channel,
+                        $"Incorrect prefix! You can choose between **{allowed}**")
+                        .ConfigureAwait(false);
+                    return;
+                }
+            }
+            // Normal strict prefix check
+            else if (msg.HasStringPrefix(correctPrefix, ref argPos))
+            {
+                hasValidPrefix = true;
+                usedPrefix = correctPrefix;
+            }
+
+            if (hasValidPrefix)
             {
                 var context = new SocketCommandContext(_client, msg);
                 var handled = await TryHandleCommandAsync(msg, context, argPos);
                 if (handled)
                     return;
             }
-            else if (content.Length > 1 && content[0] != correctPrefix[0])
+            // Wrong prefix correction if hub is strict
+            else if (!allowAnyPrefix && content.Length > 1)
             {
-                var potentialPrefix = content[0].ToString();
-                var command = content.Split(' ')[0][1..];
+                var command = content.Substring(1).Split(' ')[0]; // remove prefix
                 if (_validCommands.Contains(command))
                 {
-                    await SafeSendMessageAsync(msg.Channel, $"Incorrect prefix! The correct command is **{correctPrefix}{command}**").ConfigureAwait(false);
+                    await SafeSendMessageAsync(msg.Channel,
+                        $"Incorrect prefix! The correct command is **{correctPrefix}{command}**")
+                        .ConfigureAwait(false);
                     return;
                 }
             }
+
 
             if (msg.Attachments.Count > 0)
             {
