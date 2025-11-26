@@ -618,11 +618,25 @@ public sealed partial class SysCord<T> where T : PKM, new()
             var content = msg.Content;
             var argPos = 0;
 
-            // Whitelist of characters allowed when 'any prefix' is enabled
             char[] allowedPrefixes = new[] { '$', '!', '.', '=', '%', '~', '-', '+', ',' };
 
             bool hasValidPrefix = false;
             string usedPrefix = null;
+
+            // First: ignore anything that isn't even trying to be a command
+            bool looksLikeCommand =
+                msg.HasMentionPrefix(_client.CurrentUser, ref argPos) ||
+                (content.Length > 0 && allowedPrefixes.Contains(content[0])) ||
+                content.StartsWith(correctPrefix);
+
+            if (!looksLikeCommand)
+            {
+                // Just a person talking — ignore
+                return;
+            }
+
+            // Reset for mention prefix check
+            argPos = 0;
 
             // Mention prefix is always valid
             if (msg.HasMentionPrefix(_client.CurrentUser, ref argPos))
@@ -630,30 +644,52 @@ public sealed partial class SysCord<T> where T : PKM, new()
                 hasValidPrefix = true;
                 usedPrefix = $"<@{_client.CurrentUser.Id}>";
             }
-            // Check if the first character is in allowedPrefixes
-            else if (allowAnyPrefix && content.Length > 0)
+            // AllowAnyPrefix: accept ANY allowed symbol and NEVER complain
+            else if (allowAnyPrefix)
             {
-                if (allowedPrefixes.Contains(content[0]))
+                if (content.Length > 0 && allowedPrefixes.Contains(content[0]))
                 {
+                    hasValidPrefix = true;
                     usedPrefix = content[0].ToString();
                     argPos = 1;
+                }
+                else if (content.StartsWith(correctPrefix))
+                {
                     hasValidPrefix = true;
+                    usedPrefix = correctPrefix;
+                    argPos = correctPrefix.Length;
                 }
                 else
                 {
-                    // Invalid prefix while any-prefix is enabled
-                    string allowed = string.Join(" ", allowedPrefixes);
-                    await SafeSendMessageAsync(msg.Channel,
-                        $"Incorrect prefix! You can choose between **{allowed}**")
-                        .ConfigureAwait(false);
+                    // AllowAnyPrefix = true → DO NOT SEND ANY ERROR EVER
                     return;
                 }
             }
-            // Normal strict prefix check
-            else if (msg.HasStringPrefix(correctPrefix, ref argPos))
+            // Strict prefix mode
+            else
             {
-                hasValidPrefix = true;
-                usedPrefix = correctPrefix;
+                // Only strict prefix allowed — if used, valid
+                if (content.StartsWith(correctPrefix))
+                {
+                    hasValidPrefix = true;
+                    usedPrefix = correctPrefix;
+                    argPos = correctPrefix.Length;
+                }
+                else
+                {
+                    // Now — the ONLY time to send the error.
+                    // User attempted a command via wrong prefix AND strict mode is enabled.
+
+                    string cmdGuess = content.Substring(1).Split(' ')[0];
+                    if (_validCommands.Contains(cmdGuess))
+                    {
+                        await SafeSendMessageAsync(msg.Channel,
+                            $"Incorrect prefix! The correct command is **{correctPrefix}{cmdGuess}**")
+                            .ConfigureAwait(false);
+                    }
+
+                    return;
+                }
             }
 
             if (hasValidPrefix)
@@ -662,18 +698,6 @@ public sealed partial class SysCord<T> where T : PKM, new()
                 var handled = await TryHandleCommandAsync(msg, context, argPos);
                 if (handled)
                     return;
-            }
-            // Wrong prefix correction if hub is strict
-            else if (!allowAnyPrefix && content.Length > 1)
-            {
-                var command = content.Substring(1).Split(' ')[0]; // remove prefix
-                if (_validCommands.Contains(command))
-                {
-                    await SafeSendMessageAsync(msg.Channel,
-                        $"Incorrect prefix! The correct command is **{correctPrefix}{command}**")
-                        .ConfigureAwait(false);
-                    return;
-                }
             }
 
 

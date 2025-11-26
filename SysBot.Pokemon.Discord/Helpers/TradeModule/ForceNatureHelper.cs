@@ -5,13 +5,10 @@ using System.Security.Cryptography;
 
 public static class ForceNatureHelper
 {
-    public static void ForceNatureZA(PKM pkm, Nature desiredNature, bool isShiny = false, int maxAttempts = 1_000_000)
+    public static void ForceNature(PKM pkm, Nature desiredNature, bool isShiny = false, int maxAttempts = 1_000_000)
     {
         if (pkm == null)
             throw new ArgumentNullException(nameof(pkm));
-
-        if (pkm.Version != GameVersion.ZA)
-            throw new InvalidOperationException("ForceNatureZA can only be used on Z-A Pokémon.");
 
         // Nothing to do if Nature is random and no shiny requested
         if (desiredNature == Nature.Random && !isShiny)

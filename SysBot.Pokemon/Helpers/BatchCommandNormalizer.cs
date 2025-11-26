@@ -41,7 +41,8 @@ namespace SysBot.Pokemon.Discord.Helpers
             { "Set IVs", "SetIVs" },
             { "OT Friendship", "OriginalTrainerFriendship" },
             { "HT Friendship", "HandlingTrainerFriendship" },
-            { "Characteristic", "Characteristic" }
+            { "Characteristic", "Characteristic" },
+            { "Stat Nature", "StatNature" }
         };
 
         private static readonly HashSet<string> EqualCommandKeys = new(StringComparer.OrdinalIgnoreCase)
@@ -74,7 +75,8 @@ namespace SysBot.Pokemon.Discord.Helpers
                 { "Characteristic", ProcessCharacteristic },
                 { "HT", ProcessHyperTrain },
                 { "MetLevel", ProcessMetLevel },
-                { "Markings", ProcessMarkings }
+                { "Markings", ProcessMarkings },
+                { "StatNature", ProcessStatNature }
             };
 
         //////////////////////////////////// NEW COMMAND DICTIONARIES //////////////////////////////////////
@@ -120,8 +122,8 @@ namespace SysBot.Pokemon.Discord.Helpers
             { "Pikachu", 42 }, { "LetsGoPikachu", 42 }, { "LGP", 42 }, { "Eevee", 43 }, { "LetsGoEevee", 43 }, { "LGE", 43 },
             { "GO", 34 }, { "Pokemon GO", 34 }, { "SW", 44 }, { "Sword", 44 }, { "SH", 45 }, { "Shield", 45 },
             { "PLA", 47 }, { "Legends Arceus", 47 }, { "BD", 48 }, { "Brilliant Diamond", 48 },
-            { "SP", 49 }, { "Shining Pearl", 49 }, { "Scarlet", 50 }, { "SL", 50 }, { "Violet", 51 }, { "VL", 51 }, { "PLZA", 52 },
-            { "LZA", 52 }, { "ZA", 52 }
+            { "SP", 49 }, { "Shining Pearl", 49 }, { "Scarlet", 50 }, { "SL", 50 }, { "Violet", 51 }, { "VL", 51 },
+            { "PLZA", 52 }, { "LZA", 52 }, { "ZA", 52 }
         };
 
         // Characteristic to IV spread mapping
@@ -202,6 +204,13 @@ namespace SysBot.Pokemon.Discord.Helpers
     { "Ribbon", 6 }
     };
 
+        private static readonly HashSet<string> ValidNatures = new(StringComparer.OrdinalIgnoreCase)
+{
+    "Hardy", "Lonely", "Brave", "Adamant", "Naughty", "Bold", "Docile", "Relaxed",
+    "Impish", "Lax", "Timid", "Hasty", "Serious", "Jolly", "Naive", "Modest",
+    "Mild", "Quiet", "Bashful", "Rash", "Calm", "Gentle", "Sassy", "Careful",
+    "Quirky", "Random"
+};
 
         //////////////////////////////////// MAIN ENTRY //////////////////////////////////////
 
@@ -341,6 +350,25 @@ namespace SysBot.Pokemon.Discord.Helpers
                 ? $".HyperTrainFlags={b}"
                 : string.Empty;
 
+        // .StatNature= → Stat Nature:
+        // Value is a Nature enum name or "Random"
+        // W.I.P.
+        private static string ProcessStatNature(string val)
+        {
+            if (string.IsNullOrWhiteSpace(val))
+                return string.Empty;
+
+            var trimmed = val.Trim();
+
+            // Match case-insensitively against valid natures
+            var matchedNature = ValidNatures.FirstOrDefault(n => n.Equals(trimmed, StringComparison.OrdinalIgnoreCase));
+            if (matchedNature == null)
+                return string.Empty;
+
+            // Return exact batch command Showdown expects
+            return $".StatNature={matchedNature}";
+        }
+
         // .Moves= → Moves:
         // Only accepted options are "Random" for randomized moves
         private static string ProcessMoves(string val) =>
@@ -454,9 +482,9 @@ namespace SysBot.Pokemon.Discord.Helpers
             return string.Join('\n', htLines);
         }
 
-        // Creates an ".EVs=" batch command that can be written as "EVs:" that accepts "Random" or "Suggest" as special values
-        // "EVs: Random" value randomizes EVs across all stats
-        // "EVs: Suggest" generates a suggested EV spread like 252/252/4
+        // Creates a ".SetEVs=" batch command that can be written as "Set EVs:" that accepts "Random" or "Suggest" as special values
+        // "Set EVs: Random" value randomizes EVs across all stats
+        // "Set EVs: Suggest" generates a suggested EV spread like 252/252/4
         private static readonly string[] EvStats = { "HP", "ATK", "DEF", "SPA", "SPD", "SPE" };
         private static string ProcessEVs(string val)
         {
@@ -513,10 +541,10 @@ namespace SysBot.Pokemon.Discord.Helpers
             return FormatEVs(evs);
         }
 
-        // Creates an ".IVs=" batch command that can be written as "IVs:" that accepts "Random" or "1IV", "2IV", "3IV", "4IV", "5IV", "6IV"
-        // "IVs: Random" randomizes IVs across all stats
-        // "IVs: 1IV" sets one random stat to 31 IVs, the rest are random
-        // "IVs: 6IV" sets all stats to 31 IVs
+        // Creates a ".SetIVs=" batch command that can be written as "Set IVs:" that accepts "Random" or "1IV", "2IV", "3IV", "4IV", "5IV", "6IV"
+        // "Set IVs: Random" randomizes IVs across all stats
+        // "Set IVs: 1IV" sets one random stat to 31 IVs, the rest are random
+        // "Set IVs: 6IV" sets all stats to 31 IVs
         private static readonly string[] IvStats = { "HP", "ATK", "DEF", "SPA", "SPD", "SPE" };
         private static string ProcessIVs(string val)
         {
