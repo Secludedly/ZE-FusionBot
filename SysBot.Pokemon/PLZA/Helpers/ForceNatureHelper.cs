@@ -1,14 +1,17 @@
 using PKHeX.Core;
-using SysBot.Pokemon.Discord.Helpers; // <-- make sure your ZAShinyLockHelper namespace is included
+using SysBot.Pokemon.Discord.Helpers;
 using System;
 using System.Security.Cryptography;
 
-public static class ZANatureHelper
+public static class ForceNatureHelper
 {
     public static void ForceNatureZA(PKM pkm, Nature desiredNature, bool isShiny = false, int maxAttempts = 1_000_000)
     {
         if (pkm == null)
             throw new ArgumentNullException(nameof(pkm));
+
+        if (pkm.Version != GameVersion.ZA)
+            throw new InvalidOperationException("ForceNatureZA can only be used on Z-A Pokémon.");
 
         // Nothing to do if Nature is random and no shiny requested
         if (desiredNature == Nature.Random && !isShiny)
@@ -35,9 +38,6 @@ public static class ZANatureHelper
         int targetNature = (int)desiredNature;
         uint id32 = pkm.ID32;
 
-        // Detect shiny-locked species using your helper
-        bool isShinyLocked = pkm.IsShinyLocked();
-
         for (int attempts = 0; attempts < maxAttempts; attempts++)
         {
             RandomNumberGenerator.Fill(buf);
@@ -46,7 +46,7 @@ public static class ZANatureHelper
             int natureCheck = (int)(newPid % 25u);
 
             // If shiny is requested and not shiny-locked, enforce shiny PID
-            bool shinyCheck = !isShiny || isShinyLocked || ((ushort)((id32 ^ newPid) ^ ((id32 ^ newPid) >> 16)) < 8);
+            bool shinyCheck = !isShiny || ((ushort)((id32 ^ newPid) ^ ((id32 ^ newPid) >> 16)) < 8);
 
             if (natureCheck == targetNature && shinyCheck)
                 break;

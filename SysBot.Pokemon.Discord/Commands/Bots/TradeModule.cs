@@ -1269,9 +1269,9 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
                 }
 
                 // ***** FORCE NATURE (ZA) *****
-                // Ensure you have a ZANatureHelper implementation placed in SysBot.Pokemon.Helpers namespace.
+                // Ensure you have a ForceNatureHelper implementation placed in SysBot.Pokemon.Helpers namespace.
                 // This will reroll PID until PID%25 == requested nature and keep IV/EVs consistent.
-                ZANatureHelper.ForceNatureZA(pkm, set.Nature, set.Shiny);
+                ForceNatureHelper.ForceNatureZA(pkm, set.Nature, set.Shiny);
 
                 // Convert to the bot's runtime type (T)
                 var pk = EntityConverter.ConvertToType(pkm, typeof(T), out _) as T;
