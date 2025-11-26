@@ -978,7 +978,7 @@ public partial class BotServer(Main mainForm, int port = 8080, int tcpPort = 808
                     
                     if (!string.IsNullOrEmpty(response) && response.StartsWith('{'))
                     {
-                        // This is a PokeBot instance - find the process ID
+                        // This is a ZE_FusionBot instance - find the process ID
                         int processId = FindProcessIdForPort(capturedPort);
                         
                         var instance = new BotInstance
@@ -1005,7 +1005,7 @@ public partial class BotServer(Main mainForm, int port = 8080, int tcpPort = 808
                         discoveredPorts.Add(capturedPort);
                     }
                 }
-                catch { /* Port not open or not a PokeBot instance */ }
+                catch { /* Port not open or not a ZE_FusionBot instance */ }
                 finally
                 {
                     semaphore.Release();
@@ -1016,7 +1016,7 @@ public partial class BotServer(Main mainForm, int port = 8080, int tcpPort = 808
         // Wait for all port scans to complete with overall timeout
         await Task.WhenAll(tasks).ConfigureAwait(false);
 
-        // Method 2: Check local PokeBot processes (fallback for instances not in standard port range)
+        // Method 2: Check local ZE_FusionBot processes (fallback for instances not in standard port range)
         try
         {
             var processes = Process.GetProcessesByName("ZE_FusionBot")
@@ -1029,6 +1029,12 @@ public partial class BotServer(Main mainForm, int port = 8080, int tcpPort = 808
                     var exePath = process.MainModule?.FileName;
                     if (string.IsNullOrEmpty(exePath))
                         continue;
+
+                    var botName = "ZE_FusionBot"; // default
+                    if (!string.IsNullOrEmpty(exePath))
+                    {
+                        botName = Path.GetFileNameWithoutExtension(exePath);
+                    }
 
                     var portFile = Path.Combine(Path.GetDirectoryName(exePath)!, $"ZE_FusionBot_{process.Id}.port");
                     if (!File.Exists(portFile))
@@ -1051,7 +1057,7 @@ public partial class BotServer(Main mainForm, int port = 8080, int tcpPort = 808
                     var instance = new BotInstance
                     {
                         ProcessId = process.Id,
-                        Name = "ZE_FusionBot",
+                        Name = botName,
                         Port = port,
                         WebPort = 8080,
                         Version = "Unknown",
@@ -1417,7 +1423,7 @@ public partial class BotServer(Main mainForm, int port = 8080, int tcpPort = 808
             {
                 var sendAllMethod = _mainForm.GetType().GetMethod(methodName,
                     BindingFlags.NonPublic | BindingFlags.Instance);
-                sendAllMethod?.Invoke(_mainForm, [command]);
+                sendAllMethod?.Invoke(_mainForm, new object[] { command });
             }
         }));
     }
@@ -1426,15 +1432,15 @@ public partial class BotServer(Main mainForm, int port = 8080, int tcpPort = 808
     {
         return webCommand.ToLower() switch
         {
-            "start" => BotControlCommand.Start,
-            "stop" => BotControlCommand.Stop,
-            "idle" => BotControlCommand.Idle,
-            "resume" => BotControlCommand.Resume,
-            "restart" => BotControlCommand.Restart,
-            "reboot" => BotControlCommand.RebootAndStop,
-            "screenon" => BotControlCommand.ScreenOnAll,
-            "screenoff" => BotControlCommand.ScreenOffAll,
-            _ => BotControlCommand.None
+            "start" => WebApi.BotControlCommand.Start,
+            "stop" => WebApi.BotControlCommand.Stop,
+            "idle" => WebApi.BotControlCommand.Idle,
+            "resume" => WebApi.BotControlCommand.Resume,
+            "restart" => WebApi.BotControlCommand.Restart,
+            "reboot" => WebApi.BotControlCommand.RebootAndStop,
+            "screenon" => WebApi.BotControlCommand.ScreenOnAll,
+            "screenoff" => WebApi.BotControlCommand.ScreenOffAll,
+            _ => WebApi.BotControlCommand.None
         };
     }
 
@@ -1495,22 +1501,78 @@ public partial class BotServer(Main mainForm, int port = 8080, int tcpPort = 808
 
     private List<BotController> GetBotControllers()
     {
-        var flpBotsField = _mainForm.GetType().GetField("FLP_Bots",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-
-        if (flpBotsField?.GetValue(_mainForm) is FlowLayoutPanel flpBots)
+        try
         {
-            return [.. flpBots.Controls.OfType<BotController>()];
-        }
+            var results = new List<BotController>();
 
-        return [];
+            var type = _mainForm.GetType();
+            var flags = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public;
+
+            // 1) Try direct field named FLP_Bots (legacy)
+            var flpField = type.GetField("FLP_Bots", flags);
+            if (flpField?.GetValue(_mainForm) is FlowLayoutPanel flp1)
+                results.AddRange(flp1.Controls.OfType<BotController>());
+
+            // 2) Scan all fields/properties on Main for FlowLayoutPanel
+            foreach (var f in type.GetFields(flags))
+            {
+                if (typeof(FlowLayoutPanel).IsAssignableFrom(f.FieldType) && f.GetValue(_mainForm) is FlowLayoutPanel flp)
+                    results.AddRange(flp.Controls.OfType<BotController>());
+            }
+
+            foreach (var p in type.GetProperties(flags))
+            {
+                if (typeof(FlowLayoutPanel).IsAssignableFrom(p.PropertyType))
+                {
+                    try
+                    {
+                        if (p.GetValue(_mainForm) is FlowLayoutPanel flpProp)
+                            results.AddRange(flpProp.Controls.OfType<BotController>());
+                    }
+                    catch { /* ignore property getters with side effects */ }
+                }
+            }
+
+            // 3) Try the common pattern: a private field/property _botsForm that contains BotPanel
+            var botsFormField = type.GetField("_botsForm", flags) ?? (MemberInfo?)type.GetProperty("_botsForm", flags);
+            if (botsFormField != null)
+            {
+                object? botsFormObj = null;
+                if (botsFormField is FieldInfo fi) botsFormObj = fi.GetValue(_mainForm);
+                else if (botsFormField is PropertyInfo pi) botsFormObj = pi.GetValue(_mainForm);
+                if (botsFormObj != null)
+                {
+                    var botPanelProp = botsFormObj.GetType().GetProperty("BotPanel", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                    if (botPanelProp?.GetValue(botsFormObj) is FlowLayoutPanel botPanel)
+                        results.AddRange(botPanel.Controls.OfType<BotController>());
+                }
+            }
+
+            // Final: dedupe and return
+            return results.Distinct().ToList();
+        }
+        catch (Exception ex)
+        {
+            LogUtil.LogError($"GetBotControllers failed: {ex.Message}", "WebServer");
+            return new List<BotController>();
+        }
     }
 
     private ProgramConfig? GetConfig()
     {
-        var configProp = _mainForm.GetType().GetProperty("Config",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        return configProp?.GetValue(_mainForm) as ProgramConfig;
+        var type = _mainForm.GetType();
+
+        // Try a static property first (Main.Config is public static in your Main)
+        var staticProp = type.GetProperty("Config", BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy);
+        if (staticProp != null)
+            return staticProp.GetValue(null) as ProgramConfig;
+
+        // Fallback: try instance property
+        var instProp = type.GetProperty("Config", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        if (instProp != null)
+            return instProp.GetValue(_mainForm) as ProgramConfig;
+
+        return null;
     }
 
     private static string GetBotName(PokeBotState state, ProgramConfig? _)

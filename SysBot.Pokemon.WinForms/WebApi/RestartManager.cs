@@ -501,7 +501,7 @@ public static class RestartManager
         {
             var sendAllMethod = _mainForm.GetType().GetMethod("SendAll",
                 System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            sendAllMethod?.Invoke(_mainForm, [command]);
+            sendAllMethod?.Invoke(_mainForm, new object[] { command });
         }));
     }
 

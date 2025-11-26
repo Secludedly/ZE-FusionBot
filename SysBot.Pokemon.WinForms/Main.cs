@@ -1,3 +1,4 @@
+using ControllerCommand = SysBot.Pokemon.WinForms.BotController.BotControlCommand;
 using FontAwesome.Sharp;
 using PKHeX.Core;
 using SysBot.Base;
@@ -20,6 +21,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using static SysBot.Pokemon.WinForms.BotController;
+using WebApiCommand = SysBot.Pokemon.WinForms.WebApi.BotControlCommand;
 
 namespace SysBot.Pokemon.WinForms
 {
@@ -253,7 +255,6 @@ namespace SysBot.Pokemon.WinForms
 
             this.ActiveControl = null;
             LogUtil.LogInfo("System", "Bot initialization complete");
-
             // Start web server async to avoid UI blocking
             _ = Task.Run(() =>
             {
@@ -321,7 +322,7 @@ namespace SysBot.Pokemon.WinForms
             _botsForm.ProtocolBox.DataSource = protocols;                              // Bind the ProtocolBox to the list of protocols (Dropdown list)
             _botsForm.ProtocolBox.SelectedValue = (int)SwitchProtocol.WiFi;            // Set the default to WiFi in ProtocolBox
             SaveCurrentConfig();                                                       // Save the current config for BotsForm data
-            this.StopWebServer();
+            
             try
             {
                 string? exePath = Application.ExecutablePath;
@@ -346,7 +347,7 @@ namespace SysBot.Pokemon.WinForms
 
             LogUtil.LogInfo("Starting all bots...", "Form");   // Log the start action
             RunningEnvironment.InitializeStart();              // Initialize the bot runner
-            SendAll(BotControlCommand.Start);                  // Send the Start command to all bots present in the controller
+            SendAll(WebApi.BotControlCommand.Start);                  // Send the Start command to all bots present in the controller
             _logsForm.LogsBox.Select();                        // Select the logs box in the LogsForm to write to
 
             if (Bots.Count == 0)
@@ -365,9 +366,9 @@ namespace SysBot.Pokemon.WinForms
                 SaveCurrentConfig();                                       // Save the current config before rebooting
                 LogUtil.LogInfo("Restarting all the consoles...", "Form"); // Log the restart bots action
                 RunningEnvironment.InitializeStart();                      // Start up the bot runner again
-                SendAll(BotControlCommand.RebootAndStop);                  // Send the RebootAndStop command to all bots
+                SendAll(WebApi.BotControlCommand.RebootAndStop);                  // Send the RebootAndStop command to all bots
                 await Task.Delay(5_000).ConfigureAwait(false);             // Add a 5 second delay before restarting the bots
-                SendAll(BotControlCommand.Start);                          // Start the bot after the delay
+                SendAll(WebApi.BotControlCommand.Start);                          // Start the bot after the delay
                 _logsForm.LogsBox.Select();                                // Select the logs box in the LogsForm to write to
 
                 if (Bots.Count == 0)
@@ -376,18 +377,36 @@ namespace SysBot.Pokemon.WinForms
         }
 
         // Sends command to all bots when them buttons be pushed
-        private void SendAll(BotControlCommand cmd)
+        private void SendAll(WebApiCommand cmd)
         {
-            RunningEnvironment.InitializeStart(); // Only once, not 50 times, Sec. You idiot.
+            RunningEnvironment.InitializeStart();
 
-            foreach (var c in _botsForm.BotPanel.Controls.OfType<BotController>()) // Iterate through each BotController in the BotPanel
+            foreach (var c in _botsForm.BotPanel.Controls.OfType<BotController>())
             {
-                c.SendCommand(cmd); // When you push a button, it sends to all bots
-                c.ReloadStatus();      // Read bot controller, update it, call it daddy
+                var translated = TranslateCommand(cmd);
+                c.SendCommand(translated);
+                c.ReloadStatus();
 
-                if (cmd == BotControlCommand.Stop)
+                if (translated == BotController.BotControlCommand.Stop)
                     c.ResetProgress();
             }
+        }
+        private BotController.BotControlCommand TranslateCommand(WebApiCommand webCmd)
+        {
+            return webCmd switch
+            {
+                WebApiCommand.Start => BotController.BotControlCommand.Start,
+                WebApiCommand.Stop => BotController.BotControlCommand.Stop,
+                WebApiCommand.Idle => BotController.BotControlCommand.Idle,
+                WebApiCommand.Resume => BotController.BotControlCommand.Resume,
+                WebApiCommand.Restart => BotController.BotControlCommand.Restart,
+                WebApiCommand.RebootAndStop => BotController.BotControlCommand.RebootAndStop,
+
+                WebApiCommand.ScreenOnAll => BotController.BotControlCommand.ScreenOn,
+                WebApiCommand.ScreenOffAll => BotController.BotControlCommand.ScreenOff,
+
+                _ => BotController.BotControlCommand.None
+            };
         }
 
         // Stop or Idle/Resume all bots
@@ -401,19 +420,19 @@ namespace SysBot.Pokemon.WinForms
                 return;
             }
 
-            var cmd = BotControlCommand.Stop; // Default command to stop all bots
+            var cmd = WebApi.BotControlCommand.Stop; // Default command to stop all bots
 
             if ((ModifierKeys & Keys.Control) != 0 || (ModifierKeys & Keys.Shift) != 0) // If Control or Shift key is pressed (Honestly didn't know this ever existed. Cool shit)
             {
                 if (env.IsRunning)
                 {
                     WinFormsUtil.Alert("Commanding all bots to Idle.", "Press Stop (without a modifier key) to hard-stop and unlock control, or press Stop with the modifier key again to resume.");
-                    cmd = BotControlCommand.Idle;
+                    cmd = WebApi.BotControlCommand.Idle;
                 }
                 else
                 {
                     WinFormsUtil.Alert("Commanding all bots to resume their original task.", "Press Stop (without a modifier key) to hard-stop and unlock control.");
-                    cmd = BotControlCommand.Resume;
+                    cmd = WebApi.BotControlCommand.Resume;
                 }
             }
             else
@@ -740,7 +759,6 @@ namespace SysBot.Pokemon.WinForms
                     break;
             }
         }
-
 
         private void HookBotProgress(PokeBotState cfg, PokeRoutineExecutorBase bot)
         {

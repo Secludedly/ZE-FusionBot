@@ -691,5 +691,4 @@ public partial class BotController : UserControl
         ScreenOn,
         ScreenOff
     }
-
 }

@@ -139,6 +139,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="FontAwesome.Sharp" Version="6.6.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Core" Version="2.3.0" />
     <PackageReference Include="System.Resources.Extensions" Version="9.0.4" />
   </ItemGroup>
   <ItemGroup>
