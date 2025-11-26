@@ -38,81 +38,76 @@ public static class ReusableActions
 
     public static string GetFormattedShowdownText(PKM pkm, bool simple = false)
     {
-        // Start from PKHeX's showdown output
+        // Start with PKHeX's default showdown text
         var lines = ShowdownParsing.GetShowdownText(pkm)
             .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
             .ToList();
 
-        // --- Ensure IVs exist in the output (create if missing) ---
-        bool hasIVLine = lines.Any(l => l.StartsWith("IVs:"));
-        if (!hasIVLine && pkm.IVs is int[] ivs && ivs.Length == 6)
+        // --- Ensure IVs line exists (temporarily added at end, reordered later) ---
+        bool hasIVs = lines.Any(l => l.StartsWith("IVs:"));
+        if (!hasIVs && pkm.IVs is int[] ivs && ivs.Length == 6)
         {
-            lines.Add($"IVs: {ivs[0]} HP / {ivs[1]} Atk / {ivs[2]} Def / {ivs[3]} SpA / {ivs[4]} SpD / {ivs[5]} Spe");
+            lines.Add(
+                $"IVs: {ivs[0]} HP / {ivs[1]} Atk / {ivs[2]} Def / {ivs[3]} SpA / {ivs[4]} SpD / {ivs[5]} Spe"
+            );
         }
 
-        // --- Alpha: insert under Ability if applicable ---
+        // --- Alpha formatting ---
         if (pkm is IAlpha alpha && alpha.IsAlpha)
         {
-            int abilityIndex = lines.FindIndex(z => z.StartsWith("Ability:"));
+            int abilityIndex = lines.FindIndex(l => l.StartsWith("Ability:"));
             if (abilityIndex >= 0)
                 lines.Insert(abilityIndex + 1, "Alpha: Yes");
             else
                 lines.Add("Alpha: Yes");
         }
 
-        // --- Shiny formatting (Square/Star only for SWSH) ---
+        // --- Shiny formatting ---
         if (pkm.IsShiny)
         {
-            int shinyIndex = lines.FindIndex(x => x.StartsWith("Shiny:"));
+            int shinyIndex = lines.FindIndex(l => l.StartsWith("Shiny:"));
 
-            // If SWSH → use Square/Star
-            if (pkm.Version == GameVersion.SW || pkm.Version == GameVersion.SH)
+            if (pkm.Version is GameVersion.SW or GameVersion.SH)
             {
-                string shinyText = (pkm.ShinyXor == 0 || pkm.FatefulEncounter)
+                string shiny = (pkm.ShinyXor == 0 || pkm.FatefulEncounter)
                     ? "Shiny: Square"
                     : "Shiny: Star";
 
-                if (shinyIndex >= 0)
-                    lines[shinyIndex] = shinyText;
-                else
-                    lines.Add(shinyText);
+                if (shinyIndex >= 0) lines[shinyIndex] = shiny;
+                else lines.Add(shiny);
             }
             else
             {
-                // Every other game → simply "Shiny: Yes"
-                if (shinyIndex >= 0)
-                    lines[shinyIndex] = "Shiny: Yes";
-                else
-                    lines.Add("Shiny: Yes");
+                if (shinyIndex >= 0) lines[shinyIndex] = "Shiny: Yes";
+                else lines.Add("Shiny: Yes");
             }
         }
 
-        // --- Egg line (if egg) ---
-        if (pkm.IsEgg)
+        // --- Egg line ---
+        if (pkm.IsEgg && !lines.Any(l => l.Contains("Pokémon is an egg")))
         {
-            // Keep a single egg notice; add at end
-            if (!lines.Any(l => l.Contains("Pokémon is an egg")))
-                lines.Add("Pokémon is an egg");
+            lines.Add("Pokémon is an egg");
         }
 
-        // --- Ball insertion (before Nature if present) ---
+        // --- Ball line (insert before Nature) ---
         if (pkm.Ball > (int)Ball.None)
         {
-            int natureIndex = lines.FindIndex(z => z.Contains("Nature"));
             var ballLine = $"Ball: {(Ball)pkm.Ball} Ball";
+            int natureIndex = lines.FindIndex(l => l.Contains("Nature"));
+
             if (natureIndex >= 0)
                 lines.Insert(natureIndex, ballLine);
             else if (!lines.Contains(ballLine))
                 lines.Add(ballLine);
         }
 
-        // --- Full-mode extra info ---
+        // --- Extra info block (only in full mode) ---
         if (!simple)
         {
-            int insertIndex = lines.FindIndex(z => z.Contains("Nature")) + 1;
+            int insertIndex = lines.FindIndex(l => l.Contains("Nature")) + 1;
             if (insertIndex <= 0) insertIndex = 1;
 
-            var extraInfo = new List<string>
+            var extra = new List<string>
         {
             $"OT: {pkm.OriginalTrainerName}",
             $"TID: {pkm.DisplayTID}",
@@ -127,39 +122,75 @@ public static class ReusableActions
             $".HandlingTrainerFriendship={pkm.HandlingTrainerFriendship}"
         };
 
-            // Height/Weight if available
+            // Height / Weight
             if (pkm is IScaledSize scaled)
             {
-                extraInfo.Add($".HeightScalar={scaled.HeightScalar}");
-                extraInfo.Add($".WeightScalar={scaled.WeightScalar}");
+                extra.Add($".HeightScalar={scaled.HeightScalar}");
+                extra.Add($".WeightScalar={scaled.WeightScalar}");
             }
 
-            // Scale info
+            // Scale (SV, PLA)
             if (pkm is PK9 pk9)
-                extraInfo.Add($".Scale={pk9.Scale}");
+                extra.Add($".Scale={pk9.Scale}");
             else if (pkm is PA9 pa9)
-                extraInfo.Add($".Scale={pa9.Scale}");
+                extra.Add($".Scale={pa9.Scale}");
 
-            lines.InsertRange(insertIndex, extraInfo);
+            lines.InsertRange(insertIndex, extra);
+        }
 
-            // Move IVs to below EVs if both exist
-            int evIndex = lines.FindIndex(x => x.StartsWith("EVs:"));
-            int ivIndex = lines.FindIndex(x => x.StartsWith("IVs:"));
-            if (evIndex >= 0 && ivIndex >= 0 && ivIndex != evIndex + 1)
+        // =====================================================================
+        // >>> CLEAN, CORRECT, NON-SHITTY IV PLACEMENT LOGIC <<<
+        // =====================================================================
+        {
+            int ivIndex = lines.FindIndex(l => l.StartsWith("IVs:"));
+            int evIndex = lines.FindIndex(l => l.StartsWith("EVs:"));
+            int ballIndex = lines.FindIndex(l => l.StartsWith("Ball:"));
+            int natureIndex = lines.FindIndex(l => l.Contains("Nature"));
+
+            // Extract existing IV line if present
+            string ivLine = null;
+            if (ivIndex >= 0)
             {
-                var ivLine = lines[ivIndex];
+                ivLine = lines[ivIndex];
                 lines.RemoveAt(ivIndex);
-                // If removing shifted indices, ensure insert location remains valid
-                evIndex = lines.FindIndex(x => x.StartsWith("EVs:"));
+            }
+
+            // Create IV line safely if missing — FIXED NAME SO IT NEVER CONFLICTS
+            if (ivLine == null && pkm.IVs is int[] pkmIVs && pkmIVs.Length == 6)
+            {
+                ivLine = $"IVs: {pkmIVs[0]} HP / {pkmIVs[1]} Atk / {pkmIVs[2]} Def / " +
+                         $"{pkmIVs[3]} SpA / {pkmIVs[4]} SpD / {pkmIVs[5]} Spe";
+            }
+
+            if (ivLine != null)
+            {
                 if (evIndex >= 0)
+                {
+                    // EVs exist → IVs go directly after EVs
                     lines.Insert(evIndex + 1, ivLine);
+                }
+                else if (ballIndex >= 0)
+                {
+                    // No EVs → IVs go ABOVE the Ball line
+                    lines.Insert(ballIndex, ivLine);
+                }
+                else if (natureIndex >= 0)
+                {
+                    // No Ball → put IVs above Nature
+                    lines.Insert(natureIndex, ivLine);
+                }
                 else
-                    lines.Add(ivLine);
+                {
+                    // Total fallback
+                    lines.Insert(1, ivLine);
+                }
             }
         }
 
-        // Final formatted code block
-        return Format.Code(string.Join("\n", lines).TrimEnd());
+        // Remove any empty lines
+        lines = lines.Where(l => !string.IsNullOrWhiteSpace(l)).ToList();
+
+        return $"```\n{string.Join("\n", lines)}\n```";
     }
 
     public static IReadOnlyList<string> GetListFromString(string str)
