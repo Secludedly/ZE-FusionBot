@@ -11,6 +11,7 @@ using SharpCompress.Common;
 using SysBot.Base;
 using SysBot.Pokemon.Discord;
 using SysBot.Pokemon.Discord.Helpers;
+using SysBot.Pokemon.Discord.Helpers.TradeModule;
 using SysBot.Pokemon.Helpers;
 using System;
 using System.Collections.Generic;

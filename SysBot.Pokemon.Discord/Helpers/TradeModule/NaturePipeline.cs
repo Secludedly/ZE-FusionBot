@@ -1,44 +1,51 @@
 using PKHeX.Core;
 
-public static class NaturePipeline
+namespace SysBot.Pokemon.Discord.Helpers.TradeModule
 {
-    public static void ProcessNatures(PKM pkm, Nature? setNature, Nature? statNature, bool shinyRequested)
+    public static class NaturePipeline
     {
-        bool hasSetNature = setNature.HasValue && setNature.Value != Nature.Random;
-        bool hasStatNature = statNature.HasValue && statNature.Value != Nature.Random;
-
-        // CASE 1 — StatNature ONLY, no natural Nature from set
-        if (!hasSetNature && hasStatNature)
+        public static void ProcessNatures(PKM pkm, Nature? setNature, Nature? statNature, bool shinyRequested)
         {
-            // Let AutoLegality handle Nature selection (random but legal)
-            // Do NOT force nature at all.
-            pkm.StatNature = statNature.Value;
-            pkm.RefreshChecksum();
-            return;
+            bool hasSetNature = setNature.HasValue && setNature.Value != Nature.Random;
+            bool hasStatNature = statNature.HasValue && statNature.Value != Nature.Random;
+
+            // CASE 1 — Stat Nature only
+
+            {
+                if (statNature.HasValue) // Ensure statNature is not null
+                {
+                    pkm.StatNature = statNature.Value;
+                }
+                pkm.RefreshChecksum();
+                return;
+            }
+
+            // CASE 2 — Both SetNature and StatNature
+            if (hasSetNature && hasStatNature)
+            {
+                if (setNature.HasValue) // Ensure setNature is not null
+                {
+                    ForceNatureHelper.ForceNature(pkm, setNature.Value, shinyRequested);
+                }
+                if (statNature.HasValue) // Ensure statNature is not null
+                {
+                    pkm.StatNature = statNature.Value;
+                }
+                pkm.RefreshChecksum();
+                return;
+            }
+
+            // CASE 3 — SetNature only
+            if (hasSetNature && !hasStatNature)
+            {
+                if (setNature.HasValue) // Ensure setNature is not null
+                {
+                    ForceNatureHelper.ForceNature(pkm, setNature.Value, shinyRequested);
+                }
+                return;
+            }
+
+            // CASE 4 — Neither → ALM handles it
         }
-
-        // CASE 2 — Both SetNature and StatNature provided
-        if (hasSetNature && hasStatNature)
-        {
-            // First force the actual Nature like normal
-            ForceNatureHelper.ForceNature(pkm, setNature.Value, shinyRequested);
-
-            // Now override ONLY the StatNature
-            pkm.StatNature = statNature.Value;
-            pkm.RefreshChecksum();
-            return;
-        }
-
-        // CASE 3 — Only SetNature provided, no StatNature
-        if (hasSetNature && !hasStatNature)
-        {
-            // Standard behavior
-            ForceNatureHelper.ForceNature(pkm, setNature.Value, shinyRequested);
-            return;
-        }
-
-        // CASE 4 — No Nature, no StatNature → do nothing
-        // Let AutoLegality handle everything
-        return;
     }
 }
