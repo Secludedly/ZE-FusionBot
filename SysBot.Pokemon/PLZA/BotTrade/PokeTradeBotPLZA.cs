@@ -199,17 +199,6 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
                 return TradePartnerWaitResult.KickedToMenu;
             }
 
-            // Additional safety check every 10 seconds: verify link code is still valid
-            if (elapsed % 10_000 < 500)
-            {
-                var currentCode = await GetCurrentLinkCode(token).ConfigureAwait(false);
-                if (currentCode == 0)
-                {
-                    Log("Connection error. Restarting...");
-                    return TradePartnerWaitResult.KickedToMenu;
-                }
-            }
-
             // Check if we've entered the trade box - this confirms a partner is connected
             if (await IsOnMenu(MenuState.InBox, token).ConfigureAwait(false))
             {
@@ -713,8 +702,8 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
 
     private async Task<bool> CheckIfConnectedOnline(CancellationToken token)
     {
-        var offset = await SwitchConnection.PointerAll(Offsets.IsConnectedPointer, token).ConfigureAwait(false);
-        return await IsConnectedOnline(offset, token).ConfigureAwait(false);
+        // Use the direct main memory offset for faster and more reliable connection checks
+        return await IsConnected(token).ConfigureAwait(false);
     }
 
     private async Task<byte> GetGameState(CancellationToken token)
@@ -722,13 +711,6 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
         var offset = await SwitchConnection.PointerAll(Offsets.GameStatePointer, token).ConfigureAwait(false);
         var data = await SwitchConnection.ReadBytesAbsoluteAsync(offset, 1, token).ConfigureAwait(false);
         return data[0];
-    }
-
-    private async Task<int> GetCurrentLinkCode(CancellationToken token)
-    {
-        var offset = await SwitchConnection.PointerAll(Offsets.LinkCodeTradePointer, token).ConfigureAwait(false);
-        var data = await SwitchConnection.ReadBytesAbsoluteAsync(offset, 4, token).ConfigureAwait(false);
-        return BitConverter.ToInt32(data, 0);
     }
 
     #endregion
@@ -1342,38 +1324,46 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
         {
             Hub.Config.Stream.StartEnterCode(this);
         }
-        // Read current code to determine if we need to clear
-        var currentCode = await GetCurrentLinkCode(token).ConfigureAwait(false);
 
-        // If there's a non-zero code, clear it
-        if (currentCode != 0)
+        // PLZA saves the previous Link Code after the first trade.
+        // If the pointer isn't valid, we haven't traded yet.
+        var (valid, _) = await ValidatePointerAll(Offsets.LinkTradeCodePointer, token).ConfigureAwait(false);
+        if (!valid)
         {
-            var formattedCode = $"{currentCode:00000000}";
-            var digitCount = formattedCode.Length;
-            await Task.Delay(1_000, token).ConfigureAwait(false);
-
-            for (int i = 0; i < digitCount; i++)
-                await Click(B, 0, token).ConfigureAwait(false);
-
-            await Task.Delay(1_000, token).ConfigureAwait(false);
+            // No previous trade, freely enter our code
+            if (code != 0)
+            {
+                Log($"Entering Link Trade code: {code:0000 0000}...");
+                await EnterLinkCode(code, Hub.Config, token).ConfigureAwait(false);
+            }
         }
-
-        // If code is 0, skip entering a code (blank code for random matchmaking)
-        if (code != 0)
+        else
         {
-            // Enter the new code
-            await EnterLinkCode(code, Hub.Config, token).ConfigureAwait(false);
+            var prevCode = await GetStoredLinkTradeCode(token).ConfigureAwait(false);
+            if (prevCode != code)
+            {
+                // Only clear if the new code is different
+                var codeLength = await GetStoredLinkTradeCodeLength(token).ConfigureAwait(false);
+                if (codeLength > 0)
+                {
+                    for (int i = 0; i < codeLength; i++)
+                        await Click(B, 0, token).ConfigureAwait(false);
+                    await Task.Delay(0_500, token).ConfigureAwait(false);
+                }
+
+                if (code != 0)
+                {
+                    Log($"Entering Link Trade code: {code:0000 0000}...");
+                    await EnterLinkCode(code, Hub.Config, token).ConfigureAwait(false);
+                }
+            }
+            else
+            {
+                Log($"Using previous Link Trade code: {code:0000 0000}.");
+            }
         }
 
         await Click(PLUS, 2_000, token).ConfigureAwait(false);
-
-        // Verify the code was entered correctly (memory updates immediately after PLUS)
-        var verifyCode = await GetCurrentLinkCode(token).ConfigureAwait(false);
-
-        if (verifyCode != code)
-        {
-            return LinkCodeEntryResult.VerificationFailedMismatch;
-        }
 
         return LinkCodeEntryResult.Success;
     }
