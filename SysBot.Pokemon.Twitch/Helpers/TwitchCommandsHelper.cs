@@ -47,9 +47,13 @@ namespace SysBot.Pokemon.Twitch
                 string result;
                 if (isEgg)
                 {
-                    // Use ALM's GenerateEgg method for eggs
-                    pkm = sav.GenerateEgg(template, out var eggResult);
+                    // Wrap the ShowdownSet in a proper RegenTemplate
+                    var regenTemplate = new RegenTemplate(set);
+
+                    // Generate egg using ALM
+                    pkm = sav.GenerateEgg(regenTemplate, out var eggResult);
                     result = eggResult.ToString();
+
                     if (eggResult != LegalizationResult.Regenerated)
                     {
                         msg = $"Skipping trade, @{username}: Failed to generate egg.";
@@ -58,7 +62,7 @@ namespace SysBot.Pokemon.Twitch
                 }
                 else
                 {
-                    // Use normal generation for non-eggs
+                    // Normal generation for non-eggs
                     pkm = sav.GetLegal(template, out result);
                 }
 

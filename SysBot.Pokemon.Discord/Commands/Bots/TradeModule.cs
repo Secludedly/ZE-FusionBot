@@ -11,7 +11,6 @@ using SharpCompress.Common;
 using SysBot.Base;
 using SysBot.Pokemon.Discord;
 using SysBot.Pokemon.Discord.Helpers;
-using SysBot.Pokemon.Discord.Helpers.TradeModule;
 using SysBot.Pokemon.Helpers;
 using System;
 using System.Collections.Generic;
@@ -214,9 +213,10 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
 
         content = BatchCommandNormalizer.NormalizeBatchCommands(content);
         content = ReusableActions.StripCodeBlock(content);
-        var set = new ShowdownSet(content);
+        var set = new ShowdownSet(content); // <-- ShowdownSet
 
-        var template = AutoLegalityWrapper.GetTemplate(set);
+        // You can still get template if you want other ALM things, but not for GenerateEgg
+        // var template = AutoLegalityWrapper.GetTemplate(set);
 
         _ = Task.Run(async () =>
         {
@@ -224,8 +224,11 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
             {
                 var sav = AutoLegalityWrapper.GetTrainerInfo<T>();
 
-                // Generate the egg using ALM's GenerateEgg method
-                var pkm = sav.GenerateEgg(template, out var result);
+                // Wrap the ShowdownSet in a RegenTemplate for GenerateEgg
+                var regenTemplate = new RegenTemplate(set);
+
+                // Generate the egg using ALM's GenerateEgg
+                var pkm = sav.GenerateEgg(regenTemplate, out var result);
 
                 if (result != LegalizationResult.Regenerated)
                 {
@@ -236,6 +239,7 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
                     return;
                 }
 
+                // Convert to bot runtime type
                 pkm = EntityConverter.ConvertToType(pkm, typeof(T), out _) ?? pkm;
                 if (pkm is not T pk)
                 {
@@ -1321,7 +1325,7 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
                 // ***** FORCE NATURE W/ STAT NATURE OPTION *****
                 // Ensure you have a ForceNatureHelper implementation placed in SysBot.Pokemon.Helpers namespace.
                 // This will reroll PID until PID%25 == requested nature and keep IV/EVs consistent.
-                NaturePipeline.ProcessNatures(pkm, setNature: parsedSetNature, statNature: parsedStatNature, shinyRequested: isShinyRequested);
+                ForceNatureHelper.ForceNature(pkm, set.Nature, set.Shiny);
 
                 // Convert to the bot's runtime type (T)
                 var pk = EntityConverter.ConvertToType(pkm, typeof(T), out _) as T;
@@ -1342,7 +1346,6 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
                         $"Point and laugh at them for being a bitch ass failure!", 15);
                     return;
                 }
-
 
                 // Final safety refresh
                 pk.RefreshChecksum();

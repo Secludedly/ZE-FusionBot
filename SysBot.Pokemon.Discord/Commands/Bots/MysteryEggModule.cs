@@ -253,22 +253,27 @@ namespace SysBot.Pokemon.Discord
             {
                 foreach (var species in shuffled)
                 {
+                    // Step 1: create a ShowdownSet for this species
                     var set = CreateEggShowdownSet(species, context);
-                    var template = AutoLegalityWrapper.GetTemplate(set);
 
-                    // Use ALM's GenerateEgg method to properly generate eggs
-                    var pk = sav.GenerateEgg(template, out var result);
+                    // Step 2: wrap ShowdownSet in RegenTemplate for ALM
+                    var regenTemplate = new RegenTemplate(set);
+
+                    // Step 3: generate legal egg
+                    var pk = sav.GenerateEgg(regenTemplate, out var result);
 
                     if (pk == null || result != LegalizationResult.Regenerated)
                         continue;
 
-                    pk = EntityConverter.ConvertToType(pk, typeof(T), out _) ?? pk;
-                    if (pk is not T validPk)
+                    // Step 4: convert to your runtime type
+                    var converted = EntityConverter.ConvertToType(pk, typeof(T), out _) as T;
+                    if (converted == null)
                         continue;
 
-                    var la = new LegalityAnalysis(validPk);
+                    // Step 5: verify legality
+                    var la = new LegalityAnalysis(converted);
                     if (la.Valid)
-                        return validPk;
+                        return converted;
                 }
             }
             finally

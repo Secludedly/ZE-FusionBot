@@ -98,12 +98,12 @@ public static class LanguageHelper
     {
         return typeof(T) switch
         {
-            Type t when t == typeof(PK8) => TrainerSettings.GetSavedTrainerData(GameVersion.SWSH, 8, lang: language),
-            Type t when t == typeof(PB8) => TrainerSettings.GetSavedTrainerData(GameVersion.BDSP, 8, lang: language),
-            Type t when t == typeof(PA8) => TrainerSettings.GetSavedTrainerData(GameVersion.PLA, 8, lang: language),
-            Type t when t == typeof(PK9) => TrainerSettings.GetSavedTrainerData(GameVersion.SV, 9, lang: language),
-            Type t when t == typeof(PA9) => TrainerSettings.GetSavedTrainerData(GameVersion.ZA, 9, lang: language),
-            Type t when t == typeof(PB7) => TrainerSettings.GetSavedTrainerData(GameVersion.GE, 7, lang: language),
+            Type t when t == typeof(PK8) => TrainerSettings.GetSavedTrainerData((byte)8, GameVersion.SWSH, lang: language),
+            Type t when t == typeof(PB8) => TrainerSettings.GetSavedTrainerData((byte)8, GameVersion.BDSP, lang: language),
+            Type t when t == typeof(PA8) => TrainerSettings.GetSavedTrainerData((byte)8, GameVersion.PLA, lang: language),
+            Type t when t == typeof(PK9) => TrainerSettings.GetSavedTrainerData((byte)9, GameVersion.SV, lang: language),
+            Type t when t == typeof(PA9) => TrainerSettings.GetSavedTrainerData((byte)9, GameVersion.ZA, lang: language),
+            Type t when t == typeof(PB7) => TrainerSettings.GetSavedTrainerData((byte)7, GameVersion.GE, lang: language),
             _ => throw new ArgumentException("Type does not have a recognized trainer fetch.", typeof(T).Name)
         };
     }

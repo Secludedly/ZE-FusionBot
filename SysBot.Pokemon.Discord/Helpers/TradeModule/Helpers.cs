@@ -169,13 +169,16 @@ public static class Helpers<T> where T : PKM, new()
         // Generate egg or normal pokemon based on isEgg flag
         if (isEgg)
         {
-            // Use ALM's GenerateEgg method for eggs
-            pkm = sav.GenerateEgg(template, out var eggResult);
+            // Create a proper RegenTemplate from the ShowdownSet
+            var regenTemplate = new RegenTemplate(set);
+
+            // Generate egg using ALM
+            pkm = sav.GenerateEgg(regenTemplate, out var eggResult);
             result = eggResult.ToString();
         }
         else
         {
-            // Use normal generation for non-eggs
+            // Use normal template for regular Pokémon
             pkm = sav.GetLegal(template, out result);
         }
 
