@@ -113,6 +113,7 @@ namespace SysBot.Pokemon.WinForms
                 "Gnuolane Rg.ttf"
                 );
 
+
             // GLOBAL EXCEPTION HANDLERS — LOG BEFORE BOT DIES
             TaskScheduler.UnobservedTaskException += (sender, e) =>
             {
