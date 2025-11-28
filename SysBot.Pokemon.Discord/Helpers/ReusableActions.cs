@@ -122,6 +122,9 @@ public static class ReusableActions
             $".HandlingTrainerFriendship={pkm.HandlingTrainerFriendship}"
         };
 
+            // --- Insert StatNature under Nature ---
+            extra.Insert(0, $".StatNature={pkm.StatNature}");
+
             // Height / Weight
             if (pkm is IScaledSize scaled)
             {

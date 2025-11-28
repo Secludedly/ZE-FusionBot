@@ -11,6 +11,7 @@ using SharpCompress.Common;
 using SysBot.Base;
 using SysBot.Pokemon.Discord;
 using SysBot.Pokemon.Discord.Helpers;
+using SysBot.Pokemon.Discord.Helpers.TradeModule;
 using SysBot.Pokemon.Helpers;
 using System;
 using System.Collections.Generic;
@@ -1323,7 +1324,6 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
                 }
 
                 // ***** FORCE NATURE W/ STAT NATURE OPTION *****
-                // Ensure you have a ForceNatureHelper implementation placed in SysBot.Pokemon.Helpers namespace.
                 // This will reroll PID until PID%25 == requested nature and keep IV/EVs consistent.
                 ForceNatureHelper.ForceNature(pkm, set.Nature, set.Shiny);
 
