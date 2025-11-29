@@ -17,39 +17,32 @@ namespace SysBot.Pokemon.WinForms
 #if NETCOREAPP
             Application.SetHighDpiMode(HighDpiMode.SystemAware);
 #endif
-            var cmd = Environment.GetCommandLineArgs();
-            var cfg = Array.Find(cmd, z => z.EndsWith(".json"));
-            if (cfg != null)
-                ConfigPath = cfg; // <- you had cmd[0], that's wrong
 
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
-            // Show splash
+            // Run splash as the main form temporarily
             var splash = new SplashScreen();
             splash.StartPosition = FormStartPosition.CenterScreen;
             splash.TopMost = true;
-            splash.Show();
-            splash.Refresh();
 
-            // Load assets async
-            Task.Run(async () =>
+            // When splash loads, preload assets async
+            splash.Shown += async (s, e) =>
             {
                 await PreloadAssetsAsync();
 
-                // Switch back to UI thread to create Main form
-                splash.Invoke(() =>
-                {
-                    var mainForm = new Main();
-                    mainForm.StartPosition = FormStartPosition.CenterScreen;
-                    mainForm.Show();
-                    splash.Close();
-                });
-            });
+                // After loading, switch to Main form
+                var mainForm = new Main();
+                mainForm.StartPosition = FormStartPosition.CenterScreen;
+                mainForm.Show();
 
-            // Start UI loop
-            Application.Run();
+                splash.Hide();  // or splash.Close() if you want to dispose
+            };
+
+            // Start UI loop with splash as the main form
+            Application.Run(splash);
         }
+
 
         private static async Task PreloadAssetsAsync()
         {

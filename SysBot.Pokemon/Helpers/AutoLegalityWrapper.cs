@@ -1,7 +1,6 @@
 using PKHeX.Core;
 using PKHeX.Core.AutoMod;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -46,7 +45,7 @@ public static class AutoLegalityWrapper
         Legalizer.EnableEasterEggs = cfg.EnableEasterEggs;
         APILegality.AllowTrainerOverride = cfg.AllowTrainerDataOverride;
         APILegality.AllowBatchCommands = cfg.AllowBatchCommands;
-        cfg.PriorityOrder = APILegality.PriorityOrder = SanitizePriorityOrder(cfg.PriorityOrder);
+        APILegality.PrioritizeGame = cfg.PrioritizeGame;
         // Prevent missing entries in case of deletion
         GameVersion[] validVersions = [.. Enum.GetValues<GameVersion>().Where(ver => ver <= (GameVersion)52 && ver > GameVersion.Any)];
         foreach (var ver in validVersions)
@@ -75,20 +74,6 @@ public static class AutoLegalityWrapper
         cfg.PrioritizeEncounters.AddRange(missing);
         cfg.PrioritizeEncounters = [.. cfg.PrioritizeEncounters.Distinct()]; // Don't allow duplicates.
         EncounterMovesetGenerator.PriorityList = cfg.PrioritizeEncounters;
-    }
-
-    private static List<GameVersion> SanitizePriorityOrder(List<GameVersion> versionList)
-    {
-        var validVersions = Enum.GetValues<GameVersion>().Where(GameUtil.IsValidSavedVersion).Reverse().ToList();
-
-        foreach (var ver in validVersions)
-        {
-            if (!versionList.Contains(ver))
-                versionList.Add(ver); // Add any missing versions.
-        }
-
-        // Remove any versions in versionList that are not in validVersions and clean up duplicates in the process.
-        return [.. versionList.Intersect(validVersions)];
     }
 
     private static void InitializeTrainerDatabase(LegalitySettings cfg)
@@ -136,7 +121,7 @@ public static class AutoLegalityWrapper
             OT = fallback.OT,
             Generation = generation,
         };
-        var exist = TrainerSettings.GetSavedTrainerData(generation, version, fallback);
+        var exist = TrainerSettings.GetSavedTrainerData(version, generation, fallback);
         if (exist is SimpleTrainerInfo) // not anything from files; this assumes ALM returns SimpleTrainerInfo for non-user-provided fake templates.
             TrainerSettings.Register(fallback);
     }
@@ -146,7 +131,7 @@ public static class AutoLegalityWrapper
         var lang = Thread.CurrentThread.CurrentCulture.TwoLetterISOLanguageName[..2];
         LocalizationUtil.SetLocalization(typeof(LegalityCheckResultCode), lang);
         LocalizationUtil.SetLocalization(typeof(MessageStrings), lang);
-        
+
         // Pre-initialize BattleTemplateLocalization to prevent concurrent dictionary access issues
         // This forces all localizations to be loaded at startup before any concurrent operations
         _ = BattleTemplateLocalization.ForceLoadAll();
@@ -179,18 +164,18 @@ public static class AutoLegalityWrapper
 
     public static ITrainerInfo GetTrainerInfo<T>() where T : PKM, new()
     {
-        if (typeof(T) == typeof(PB7))
-            return TrainerSettings.GetSavedTrainerData(GameVersion.GG);
         if (typeof(T) == typeof(PK8))
-            return TrainerSettings.GetSavedTrainerData(GameVersion.SWSH);
+            return TrainerSettings.GetSavedTrainerData(GameVersion.SWSH, 8);
         if (typeof(T) == typeof(PB8))
-            return TrainerSettings.GetSavedTrainerData(GameVersion.BDSP);
+            return TrainerSettings.GetSavedTrainerData(GameVersion.BDSP, 8);
         if (typeof(T) == typeof(PA8))
-            return TrainerSettings.GetSavedTrainerData(GameVersion.PLA);
+            return TrainerSettings.GetSavedTrainerData(GameVersion.PLA, 8);
         if (typeof(T) == typeof(PK9))
-            return TrainerSettings.GetSavedTrainerData(GameVersion.SV);
+            return TrainerSettings.GetSavedTrainerData(GameVersion.SV, 9);
         if (typeof(T) == typeof(PA9))
-            return TrainerSettings.GetSavedTrainerData(GameVersion.ZA);
+            return TrainerSettings.GetSavedTrainerData(GameVersion.ZA, 9);
+        if (typeof(T) == typeof(PB7))
+            return TrainerSettings.GetSavedTrainerData(GameVersion.GE, 7);
 
         throw new ArgumentException("Type does not have a recognized trainer fetch.", typeof(T).Name);
     }

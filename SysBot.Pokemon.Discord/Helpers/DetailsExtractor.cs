@@ -50,11 +50,17 @@ public static class DetailsExtractor<T> where T : PKM, new()
             (SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.ShowIVs ? $"**IVs**: {embedData.IVsDisplay}\n" : "") +
             (SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.ShowEVs && !string.IsNullOrWhiteSpace(embedData.EVsDisplay) ? $"**EVs**: {embedData.EVsDisplay}\n" : "");
 
-        leftSideContent = leftSideContent.TrimEnd('\n');
-        embedBuilder.AddField($"**{embedData.SpeciesName}{(string.IsNullOrEmpty(embedData.FormName) ? "" : $"-{embedData.FormName}")} {embedData.SpecialSymbols}**", leftSideContent, inline: true);
-        embedBuilder.AddField("\u200B", "\u200B", inline: true);
-        embedBuilder.AddField("**__MOVES__**", embedData.MovesDisplay, inline: true);
-    }
+            leftSideContent = leftSideContent.TrimEnd('\n');
+
+            embedBuilder.AddField(
+                $"**{embedData.SpeciesName}{(string.IsNullOrEmpty(embedData.FormName) ? "" : $"-{embedData.FormName}")} {embedData.SpecialSymbols}**",
+                leftSideContent,
+                inline: true);
+
+            embedBuilder.AddField("\u200B", "\u200B", inline: true);
+            embedBuilder.AddField("**__MOVES__**", embedData.MovesDisplay, inline: true);
+        }
+
 
     /// <summary>
     /// Adds special trade information fields to the embed.

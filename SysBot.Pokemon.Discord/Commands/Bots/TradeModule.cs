@@ -11,7 +11,6 @@ using SharpCompress.Common;
 using SysBot.Base;
 using SysBot.Pokemon.Discord;
 using SysBot.Pokemon.Discord.Helpers;
-using SysBot.Pokemon.Discord.Helpers.TradeModule;
 using SysBot.Pokemon.Helpers;
 using System;
 using System.Collections.Generic;
@@ -1322,10 +1321,6 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
                     await Helpers<T>.ReplyAndDeleteAsync(Context, $"Failed to generate Pokémon from your set.\nTry to use `{Prefix}convert` instead, or try removing some information.", 8);
                     return;
                 }
-
-                // ***** FORCE NATURE W/ STAT NATURE OPTION *****
-                // This will reroll PID until PID%25 == requested nature and keep IV/EVs consistent.
-                ForceNatureHelper.ForceNature(pkm, set.Nature, set.Shiny);
 
                 // Convert to the bot's runtime type (T)
                 var pk = EntityConverter.ConvertToType(pkm, typeof(T), out _) as T;

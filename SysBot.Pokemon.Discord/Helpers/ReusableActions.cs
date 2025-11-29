@@ -117,20 +117,10 @@ public static class ReusableActions
             $".MetDate={pkm.MetDate:yyyy-MM-dd}",
             $".MetLocation={pkm.MetLocation}",
             $".MetLevel={pkm.MetLevel}",
-            $".Version={(GameVersion)pkm.Version}",
+            $"~=Version={(GameVersion)pkm.Version}",
             $".OriginalTrainerFriendship={pkm.OriginalTrainerFriendship}",
             $".HandlingTrainerFriendship={pkm.HandlingTrainerFriendship}"
         };
-
-            // --- Insert StatNature under Nature ---
-            extra.Insert(0, $".StatNature={pkm.StatNature}");
-
-            // Height / Weight
-            if (pkm is IScaledSize scaled)
-            {
-                extra.Add($".HeightScalar={scaled.HeightScalar}");
-                extra.Add($".WeightScalar={scaled.WeightScalar}");
-            }
 
             // Scale (SV, PLA)
             if (pkm is PK9 pk9)
