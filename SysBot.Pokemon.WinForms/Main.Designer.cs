@@ -98,7 +98,7 @@ namespace SysBot.Pokemon.WinForms
             btnLogs.Dock = DockStyle.Top;
             btnLogs.FlatAppearance.BorderSize = 0;
             btnLogs.FlatStyle = FlatStyle.Flat;
-            btnLogs.Font = new Font("Enter The Grid", 12F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            btnLogs.Font = new Font("Enter The Grid", 11F);
             btnLogs.ForeColor = Color.White;
             btnLogs.IconChar = IconChar.TextHeight;
             btnLogs.IconColor = Color.White;
@@ -120,7 +120,7 @@ namespace SysBot.Pokemon.WinForms
             btnHub.Dock = DockStyle.Top;
             btnHub.FlatAppearance.BorderSize = 0;
             btnHub.FlatStyle = FlatStyle.Flat;
-            btnHub.Font = new Font("Enter The Grid", 12F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            btnHub.Font = new Font("Enter The Grid", 11F);
             btnHub.ForeColor = Color.White;
             btnHub.IconChar = IconChar.BarChart;
             btnHub.IconColor = Color.White;
@@ -152,7 +152,7 @@ namespace SysBot.Pokemon.WinForms
             btnBots.Dock = DockStyle.Top;
             btnBots.FlatAppearance.BorderSize = 0;
             btnBots.FlatStyle = FlatStyle.Flat;
-            btnBots.Font = new Font("Enter The Grid", 12F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            btnBots.Font = new Font("Enter The Grid", 10.8F, FontStyle.Regular, GraphicsUnit.Point, 0);
             btnBots.ForeColor = Color.White;
             btnBots.IconChar = IconChar.AngleRight;
             btnBots.IconColor = Color.White;
@@ -190,6 +190,7 @@ namespace SysBot.Pokemon.WinForms
             panel6.Name = "panel6";
             panel6.Size = new Size(12, 101);
             panel6.TabIndex = 5;
+            panel6.Paint += panel6_Paint;
             // 
             // panel5
             // 

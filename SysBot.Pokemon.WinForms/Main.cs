@@ -323,7 +323,7 @@ namespace SysBot.Pokemon.WinForms
             _botsForm.ProtocolBox.DataSource = protocols;                              // Bind the ProtocolBox to the list of protocols (Dropdown list)
             _botsForm.ProtocolBox.SelectedValue = (int)SwitchProtocol.WiFi;            // Set the default to WiFi in ProtocolBox
             SaveCurrentConfig();                                                       // Save the current config for BotsForm data
-            
+
             try
             {
                 string? exePath = Application.ExecutablePath;
@@ -782,9 +782,9 @@ namespace SysBot.Pokemon.WinForms
 
             switch (bot)
             {
-        //        case PokeTradeBotPLZA zaBot:
-        //            zaBot.TradeProgressChanged += SetProgress;
-        //            break;
+                case PokeTradeBotPLZA zaBot:
+                    zaBot.TradeProgressChanged += SetProgress;
+                    break;
                 case PokeTradeBotSV svBot:
                     svBot.TradeProgressChanged += SetProgress;
                     break;
@@ -1177,6 +1177,9 @@ namespace SysBot.Pokemon.WinForms
             }
         }
 
+        private void panel6_Paint(object sender, PaintEventArgs e)
+        {
 
+        }
     }
 }
