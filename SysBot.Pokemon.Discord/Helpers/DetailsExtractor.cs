@@ -39,7 +39,7 @@ public static class DetailsExtractor<T> where T : PKM, new()
         string leftSideContent = $"**User:** {trainerMention}\n";
         leftSideContent +=
             (pk.Version is GameVersion.SL or GameVersion.VL && SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.ShowTeraType ? $"**Tera Type:** {embedData.TeraType}\n" : "") +
-            (pk.Version is GameVersion.SL or GameVersion.VL && SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.ShowScale ? $"**Scale:** {embedData.Scale.Item1} ({embedData.Scale.Item2})\n" : "") +
+            (pk.Version is GameVersion.PLA or GameVersion.SL or GameVersion.VL && SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.ShowScale ? $"**Scale:** {embedData.Scale.Item1} ({embedData.Scale.Item2})\n" : "") +
             (SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.ShowLevel ? $"**Level:** {embedData.Level}\n" : "") +
             (SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.ShowBall ? $"**Ball:** {embedData.Ball}\n" : "") +
             (SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.ShowMetLevel ? $"**Met Level:** {embedData.MetLevel}\n" : "") +

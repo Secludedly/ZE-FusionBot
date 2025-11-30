@@ -122,7 +122,7 @@ public static class ReusableActions
             $".HandlingTrainerFriendship={pkm.HandlingTrainerFriendship}"
         };
 
-            // Scale (SV, PLA)
+            // Scale (SV, PLZA)
             if (pkm is PK9 pk9)
                 extra.Add($".Scale={pk9.Scale}");
             else if (pkm is PA9 pa9)
