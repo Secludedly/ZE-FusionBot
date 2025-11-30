@@ -95,7 +95,7 @@ public class DiscordSettings
     [Category(Startup), Description("Bot command prefix.")]
     public string CommandPrefix { get; set; } = "$";
 
-    [Category(Startup), Description("When True, allows any of the following prefixes to be used: ! . = % ~ - + ,\nIf False, reverts to default prefix with a message for the correct prefix."), DisplayName("Allow Any Prefix")]
+    [Category(Startup), Description("When True, allows any of the following prefixes to be used: $ ! . = % ~ - + , / ? * ^ < > ` ; :\nIf False, reverts to default prefix with a message for the correct prefix."), DisplayName("Allow Any Prefix")]
     public bool AllowAnyPrefix { get; set; } = false;
 
     [Category(Operation), Description("Bot can reply with a ShowdownSet in Any channel the bot can see, instead of only channels the bot has been whitelisted to run in. Only make this true if you want the bot to serve more utility in non-bot channels.")]

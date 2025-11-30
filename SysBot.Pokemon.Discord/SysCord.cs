@@ -613,92 +613,61 @@ public sealed partial class SysCord<T> where T : PKM, new()
                 return;
             }
 
+            char[] allowedPrefixes = new[]
+            {
+    '$', '!', '.', '=', '%', '~', '-', '+', ',', '/', '?', '*', '^',
+    '<', '>', '"', '`', '4', ';', ':'
+};
+
             var correctPrefix = SysCordSettings.Settings.CommandPrefix;
             bool allowAnyPrefix = SysCordSettings.HubConfig.Discord.AllowAnyPrefix;
-            var content = msg.Content;
-            var argPos = 0;
+            string content = msg.Content;
+            int argPos = 0;
 
-            char[] allowedPrefixes = new[] { '$', '!', '.', '=', '%', '~', '-', '+', ',' };
+            // --- STRICT MODE (AllowAnyPrefix = false) ---
 
-            bool hasValidPrefix = false;
-            string usedPrefix = null;
-
-            // First: ignore anything that isn't even trying to be a command
-            bool looksLikeCommand =
-                msg.HasMentionPrefix(_client.CurrentUser, ref argPos) ||
-                (content.Length > 0 && allowedPrefixes.Contains(content[0])) ||
-                content.StartsWith(correctPrefix);
-
-            if (!looksLikeCommand)
+            if (!allowAnyPrefix)
             {
-                // Just a person talking — ignore
-                return;
+                // If message doesn't start with ANY allowed prefix → it's just normal chat
+                if (content.Length == 0 || !allowedPrefixes.Contains(content[0]))
+                    return;
+
+                // Now we know it STARTS with a prefix-like symbol.
+                // If it's NOT the correct prefix → show the error.
+                if (!content.StartsWith(correctPrefix))
+                {
+                    await SafeSendMessageAsync(msg.Channel,
+                        $"Incorrect prefix! The correct prefix is `{correctPrefix}`");
+                    return;
+                }
+
+                // Valid strict prefix
+                argPos = correctPrefix.Length;
             }
-
-            // Reset for mention prefix check
-            argPos = 0;
-
-            // Mention prefix is always valid
-            if (msg.HasMentionPrefix(_client.CurrentUser, ref argPos))
+            else
             {
-                hasValidPrefix = true;
-                usedPrefix = $"<@{_client.CurrentUser.Id}>";
-            }
-            // AllowAnyPrefix: accept ANY allowed symbol and NEVER complain
-            else if (allowAnyPrefix)
-            {
+                // AllowAnyPrefix = true → accept ANY allowed prefix OR the correct one.
+
                 if (content.Length > 0 && allowedPrefixes.Contains(content[0]))
                 {
-                    hasValidPrefix = true;
-                    usedPrefix = content[0].ToString();
                     argPos = 1;
                 }
                 else if (content.StartsWith(correctPrefix))
                 {
-                    hasValidPrefix = true;
-                    usedPrefix = correctPrefix;
                     argPos = correctPrefix.Length;
                 }
                 else
                 {
-                    // AllowAnyPrefix = true → DO NOT SEND ANY ERROR EVER
-                    return;
-                }
-            }
-            // Strict prefix mode
-            else
-            {
-                // Only strict prefix allowed — if used, valid
-                if (content.StartsWith(correctPrefix))
-                {
-                    hasValidPrefix = true;
-                    usedPrefix = correctPrefix;
-                    argPos = correctPrefix.Length;
-                }
-                else
-                {
-                    // Now — the ONLY time to send the error.
-                    // User attempted a command via wrong prefix AND strict mode is enabled.
-
-                    string cmdGuess = content.Substring(1).Split(' ')[0];
-                    if (_validCommands.Contains(cmdGuess))
-                    {
-                        await SafeSendMessageAsync(msg.Channel,
-                            $"Incorrect prefix! The correct command is **{correctPrefix}{cmdGuess}**")
-                            .ConfigureAwait(false);
-                    }
-
+                    // normal chatting → ignore
                     return;
                 }
             }
 
-            if (hasValidPrefix)
-            {
-                var context = new SocketCommandContext(_client, msg);
-                var handled = await TryHandleCommandAsync(msg, context, argPos);
-                if (handled)
-                    return;
-            }
+            // --- HANDLE COMMAND ---
+            var context = new SocketCommandContext(_client, msg);
+            var handled = await TryHandleCommandAsync(msg, context, argPos);
+            if (handled)
+                return;
 
 
             if (msg.Attachments.Count > 0)
