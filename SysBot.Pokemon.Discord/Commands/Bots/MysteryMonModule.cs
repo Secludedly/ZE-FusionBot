@@ -71,13 +71,13 @@ namespace SysBot.Pokemon.Discord
                 }
                 else
                 {
-                    await ReplyAsync("Luck was not in your favor. Please try to find your MysteryMon again!\nWhatever it is, it's still waiting for you to find it, so give it another try!");
+                    await ReplyAsync("Please try to find your MysteryMon again! Whatever it is, it's still waiting for you!");
                 }
             }
             catch (Exception ex)
             {
                 LogUtil.LogSafe(ex, nameof(MysteryMonModule<T>));
-                await ReplyAsync("Luck was not in your favor. Please try to find your MysteryMon again!\nWhatever it is, it's still waiting for you to find it, so give it another try!");
+                await ReplyAsync("Please try to find your MysteryMon again! Whatever it is, it's still waiting for you!");
             }
         }
 
@@ -93,7 +93,9 @@ namespace SysBot.Pokemon.Discord
         private static T? GenerateMysteryMon(System.Threading.CancellationToken token)
         {
             var game = GetGameVersion();
-            var speciesList = GetRandomSpecies(game);
+            var speciesList = GetValidSpecies(game);
+            if (speciesList.Count == 0) return default;
+
 
             if (speciesList.Count == 0)
                 return default;
@@ -121,7 +123,6 @@ namespace SysBot.Pokemon.Discord
                 bool success = true;
 
                 success &= SafeApply(working, SetIVs, "IVs", token, 1000);
-                success &= SafeApply(working, SetAlpha, "Alpha", token, 1000, () => working is IAlpha);
                 success &= SafeApply(working, SetEVs, "EVs", token, 1000);
                 success &= SafeApply(working, SetLevel, "Level", token, 1000);
                 success &= SafeApply(working, SetTeraType, "TeraType", token, 1000, () => working is PK9);
@@ -140,7 +141,6 @@ namespace SysBot.Pokemon.Discord
             return default;
         }
 
-        // Smarter retry helper with optional pre-check
         private static bool SafeApply(T pk, Action<T> action, string name, System.Threading.CancellationToken token, int maxAttempts, Func<bool>? preCheck = null)
         {
             if (preCheck != null && !preCheck()) return true; // skip if condition not met
@@ -171,12 +171,11 @@ namespace SysBot.Pokemon.Discord
             return false;
         }
 
-        // --------------------------------------------------------
-        // STEP: IVs (with Alpha bonus)
-        // --------------------------------------------------------
+        // -------------------------------
+        // STEP METHODS
+        // -------------------------------
         private static void SetIVs(T pk)
         {
-            // Start with fully random IVs
             pk.IV_HP = (byte)rng.Next(32);
             pk.IV_ATK = (byte)rng.Next(32);
             pk.IV_DEF = (byte)rng.Next(32);
@@ -184,12 +183,9 @@ namespace SysBot.Pokemon.Discord
             pk.IV_SPD = (byte)rng.Next(32);
             pk.IV_SPE = (byte)rng.Next(32);
 
-            // If this mon is Alpha, force 3 random IVs to be perfect (31)
             if (pk is IAlpha alpha && alpha.IsAlpha)
             {
-                // pick 3 unique stats to max
                 var indices = Enumerable.Range(0, 6).OrderBy(_ => rng.Next()).Take(3).ToArray();
-
                 foreach (int idx in indices)
                 {
                     switch (idx)
@@ -204,29 +200,12 @@ namespace SysBot.Pokemon.Discord
                 }
             }
 
-            // 22% chance for full perfect IVs across all stats
             if (rng.Next(100) < 22)
             {
                 pk.IV_HP = pk.IV_ATK = pk.IV_DEF = pk.IV_SPA = pk.IV_SPD = pk.IV_SPE = 31;
             }
         }
 
-        // --------------------------------------------------------
-        // STEP: Alpha (SV / ZA only)
-        // --------------------------------------------------------
-        private static void SetAlpha(T pk)
-        {
-            // Only PK9 (SV) or PA9 (ZA) can be Alpha
-            if (pk is not IAlpha alpha)
-                return;
-
-            bool makeAlpha = rng.Next(100) < 15; // 15% chance to be Alpha
-            alpha.IsAlpha = makeAlpha;
-        }
-
-        // --------------------------------------------------------
-        // STEP: EVs
-        // --------------------------------------------------------
         private static void SetEVs(T pk)
         {
             int total = 0;
@@ -249,146 +228,104 @@ namespace SysBot.Pokemon.Discord
             pk.EV_SPE = evs[5];
         }
 
-        // --------------------------------------------------------
-        // STEP: Level
-        // --------------------------------------------------------
         private static void SetLevel(T pk)
         {
-            var game = GetGameVersion();
-            bool isAlpha = pk is IAlpha alpha && alpha.IsAlpha;
-
             int level;
-
-            if (isAlpha && (game == GameVersion.SV || game == GameVersion.ZA))
-            {
-                // Alpha Pokémon: force level 69–100
-                level = rng.Next(69, 101);
-            }
-            else
-            {
-                if (rng.Next(100) < 79) // 79% chance
-                {
-                    // High level: 66–100
-                    level = rng.Next(66, 101);
-                }
-                else
-                {
-                    // Low level: 35–60
-                    level = rng.Next(35, 61);
-                }
-            }
+            level = rng.Next(61, 101);
 
             pk.CurrentLevel = (byte)level;
         }
 
-        // --------------------------------------------------------
-        // STEP: Tera Type (SV Only)
-        // --------------------------------------------------------
         private static void SetTeraType(T pk)
         {
-            if (pk is not PK9 pk9)
-                return;
+            if (pk is not PK9 pk9) return;
 
             var personal = pk9.PersonalInfo;
             int t1 = personal.Type1;
             int t2 = personal.Type2;
 
             var pool = Enumerable.Range(0, 18).Where(t => t != t1 && t != t2).ToList();
-            int newType = pool[rng.Next(pool.Count)];
-
-            pk9.SetTeraType((MoveType)newType);
+            pk9.SetTeraType((MoveType)pool[rng.Next(pool.Count)]);
         }
 
-        // --------------------------------------------------------
-        // STEP: Nature
-        // --------------------------------------------------------
         private static void SetNature(T pk)
         {
-            var game = GetGameVersion();
-            // PLZA: skip setting random Nature entirely so that Alpha can legalize without problems.
-            if (game == GameVersion.ZA)
-                return;
-
             pk.Nature = (Nature)rng.Next(25);
         }
 
-        // --------------------------------------------------------
-        // STEP: Shiny
-        // --------------------------------------------------------
         private static void SetShinyStatus(T pk)
         {
-            if (rng.Next(100) < 30) // 30% chance to be shiny
+            if (rng.Next(100) < 65)
                 pk.SetShiny();
         }
 
-        // --------------------------------------------------------
-        // STEP: Held Item
-        // --------------------------------------------------------
         private static void SetHeldItem(T pk)
         {
-            var game = GetGameVersion();
-            var pool = GetHeldItemPool(game);
-
+            var pool = GetHeldItemPool(GetGameVersion());
             pk.HeldItem = pool.Count == 0 ? 0 : pool[rng.Next(pool.Count)];
         }
 
         // --------------------------------------------------------
-        // SUPPORT METHODS
+        // SPECIES CACHE (only define once)
         // --------------------------------------------------------
-        private static List<ushort> GetRandomSpecies(GameVersion game)
-        {
-            var strings = GameInfo.GetStrings("en");
-            return strings.specieslist
-                .Select((n, i) => (n, i))
-                .Where(p => !string.IsNullOrWhiteSpace(p.n) && !BannedSpecies.Contains((ushort)p.i))
-                .Select(p => (ushort)p.i)
-                .ToList();
-        }
+        private static readonly Dictionary<GameVersion, List<ushort>> _speciesCache = new();
 
-        private static bool SafeApplyWithRetries(T pk, Action<T> action, string name, int maxAttempts)
+        // -------------------------------
+        // SPECIES HELPER
+        // -------------------------------
+        private static List<ushort> GetValidSpecies(GameVersion game)
         {
-            for (int attempt = 0; attempt < maxAttempts; attempt++)
+            if (_speciesCache.TryGetValue(game, out var cached))
+                return cached;
+
+            var list = new List<ushort>();
+
+            IPersonalTable? table = game switch
             {
-                var backup = (T)pk.Clone();
-                try
-                {
-                    action(pk);
-                    var la = new LegalityAnalysis(pk);
-                    if (la.Valid)
-                    {
-                        LogUtil.LogInfo($"[MysteryMon] Step '{name}' → OK on attempt {attempt + 1}", "MysteryMon");
-                        return true;
-                    }
-                    pk = backup; // restore for next attempt
-                }
-                catch
-                {
-                    pk = backup; // restore on exception
-                }
+                GameVersion.SWSH => PersonalTable.SWSH,
+                GameVersion.BDSP => PersonalTable.BDSP,
+                GameVersion.PLA => PersonalTable.LA,
+                GameVersion.SV => PersonalTable.SV,
+                GameVersion.ZA => PersonalTable.ZA,
+                _ => null
+            };
+
+            if (table == null)
+            {
+                LogUtil.LogError($"[MysteryMon] No personal table available for {game}", "MysteryMon");
+                _speciesCache[game] = list;
+                return list;
             }
 
-            LogUtil.LogError($"[MysteryMon] Step '{name}' → FAILED after {maxAttempts} attempts", "MysteryMon");
-            return false;
+            for (ushort s = 1; s <= table.MaxSpeciesID; s++)
+            {
+                var piBase = table.GetFormEntry(s, 0);
+                bool present = game switch
+                {
+                    GameVersion.SWSH => piBase is PersonalInfo8SWSH sw && sw.IsPresentInGame,
+                    GameVersion.BDSP => piBase is PersonalInfo8BDSP bdsp && bdsp.IsPresentInGame,
+                    GameVersion.PLA => piBase is PersonalInfo8LA la && la.IsPresentInGame,
+                    GameVersion.SV => piBase is PersonalInfo9SV sv && sv.IsPresentInGame,
+                    GameVersion.ZA => piBase is PersonalInfo9ZA za && za.IsPresentInGame,
+                    _ => false
+                };
+
+                if (!present)
+                    continue;
+
+                if (BannedSpecies.Contains(s))
+                    continue;
+
+                list.Add(s);
+            }
+
+            _speciesCache[game] = list;
+            return list;
         }
 
-        private async Task AddTradeToQueueAsync(int code, string trainer, T pk, RequestSignificance sig, SocketUser usr)
-        {
-            var la = new LegalityAnalysis(pk);
-            if (!la.Valid)
-                return;
-
-            await QueueHelper<T>.AddToQueueAsync(
-                Context,
-                code,
-                trainer,
-                sig,
-                pk,
-                PokeRoutineType.LinkTrade,
-                PokeTradeType.Specific,
-                usr
-            );
-        }
-
+        // -------------------------------
+        // HELD ITEMS
+        // -------------------------------
         private static List<int> GetHeldItemPool(GameVersion game) =>
             game switch
             {
@@ -426,5 +363,26 @@ namespace SysBot.Pokemon.Discord
                 var t when t == typeof(PA9) => GameVersion.ZA,
                 _ => throw new ArgumentException("Unsupported game version.")
             };
+
+        // -------------------------------
+        // QUEUE HELPER
+        // -------------------------------
+        private async Task AddTradeToQueueAsync(int code, string trainer, T pk, RequestSignificance sig, SocketUser usr)
+        {
+            var la = new LegalityAnalysis(pk);
+            if (!la.Valid)
+                return;
+
+            await QueueHelper<T>.AddToQueueAsync(
+                Context,
+                code,
+                trainer,
+                sig,
+                pk,
+                PokeRoutineType.LinkTrade,
+                PokeTradeType.Specific,
+                usr
+            );
+        }
     }
 }
