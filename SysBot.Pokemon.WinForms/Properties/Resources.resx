@@ -157,37 +157,4 @@
     <data name="lgpe_mode_upper" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\lgpe_mode_upper.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
-  <data name="status_aqua" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\status_aqua.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="status_red" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\status_red.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="status_transparent" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\status_transparent.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="status_yellow" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\status_yellow.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="status_green" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\status_green.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="bdsp_mode_upper" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\bdsp_mode_upper.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="lgpe_mode_upper" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\lgpe_mode_upper.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="pla_mode_upper" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\pla_mode_upper.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="plza_mode_upper" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\plza_mode_upper.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="sv_mode_upper" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\sv_mode_upper.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="swsh_mode_upper" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\swsh_mode_upper.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
 </root>
