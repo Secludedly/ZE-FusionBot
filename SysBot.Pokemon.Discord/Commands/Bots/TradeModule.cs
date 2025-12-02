@@ -211,7 +211,7 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
             return;
         }
 
-        content = BatchCommandNormalizer.NormalizeBatchCommands(content);
+//        content = BatchCommandNormalizer.NormalizeBatchCommands(content);
         content = ReusableActions.StripCodeBlock(content);
         var set = new ShowdownSet(content); // <-- ShowdownSet
 

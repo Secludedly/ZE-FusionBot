@@ -66,12 +66,16 @@ namespace SysBot.Pokemon.Discord
 
                     await AddTradeToQueueAsync(code, Context.User.Username, pkm, sig, Context.User);
 
+                    // Send the hype message after queuing
+                    await ReplyAsync("### Here's your Mystery Pokémon, with complete randomization! Take good care of it!");
+
                     if (Context.Message is IUserMessage m)
-                        _ = DeleteMessageAfterDelay(m, 2000);
+                        _ = DeleteMessageAfterDelay(m, 10000);
                 }
+
                 else
                 {
-                    await ReplyAsync("Please try to find your MysteryMon again! Whatever it is, it's still waiting for you!");
+                    await ReplyAsync("Please try to find your Mystery Pokémon again! Whatever it is, it's still waiting for you!");
                 }
             }
             catch (Exception ex)

@@ -146,41 +146,39 @@ public static class DetailsExtractor<T> where T : PKM, new()
         Span<int> ivs = stackalloc int[6];
         pk.GetIVs(ivs);
 
-        // IV order & labels (HP → Atk → Def → SpA → SpD → Spe)
-        string[] labels = { "HP", "Atk", "Def", "SpA", "SpD", "Spe" };
+        // IV labels in HP → Atk → Def → SpA → SpD → Spe order
+        string[] labels = { "HP", "Atk", "Def", "SpA", "SpD", "SpSpe", "Spe" };
 
-        // Count perfect IVs (31s)
+        // Count perfect IVs (31)
         int perfectIVCount = 0;
         for (int i = 0; i < ivs.Length; i++)
         {
-            if (ivs[i] == 31) perfectIVCount++;
+            if (ivs[i] == 31)
+                perfectIVCount++;
         }
 
-        // Build the list of non-perfect IVs (including 0s), skip 31s
-        var nonPerfectIVs = new List<string>();
+        // // Build the list of non-perfect IVs (including 0s), skip 31s
+        var nonPerfect = new List<string>();
         for (int i = 0; i < ivs.Length; i++)
         {
             if (ivs[i] != 31)
-                nonPerfectIVs.Add($"{ivs[i]} {labels[i]}");
+                nonPerfect.Add($"{ivs[i]} {labels[i]}");
         }
 
         // Compose final display
         string ivsDisplay;
+
         if (perfectIVCount == 6)
         {
-            ivsDisplay = "6IV"; // All perfect
+            ivsDisplay = "6IV";
         }
         else
         {
-            // Always show the count of perfect IVs first
-            ivsDisplay = perfectIVCount > 0 ? $"{perfectIVCount}IV" : "0IV";
-
-            // Append non-perfect IVs
-            if (nonPerfectIVs.Count > 0)
-                ivsDisplay += " | " + string.Join(" / ", nonPerfectIVs);
+            ivsDisplay = string.Join(" / ", nonPerfect);
         }
 
         embedData.IVsDisplay = ivsDisplay;
+
 
         int[] evs = GetEVs(pk);
         embedData.EVsDisplay = string.Join(" / ", new[] {
@@ -440,12 +438,12 @@ public static class DetailsExtractor<T> where T : PKM, new()
     private static string GetTradeTitle(bool isMysteryEgg, bool isCloneRequest, bool isDumpRequest, bool isFixOTRequest, bool isSpecialRequest, bool isBatchTrade, int batchTradeNumber, string pokemonDisplayName, bool isShiny)
     {
         string shinyEmoji = isShiny ? "✨ " : "";
-        return isMysteryEgg ? "✨ Shiny Mystery Egg ✨" :
+        return isMysteryEgg ? "Mystery Egg Request!" :
                isBatchTrade ? $"Batch Trade #{batchTradeNumber} - {shinyEmoji}{pokemonDisplayName}" :
-               isFixOTRequest ? "FixOT Request" :
-               isSpecialRequest ? "Special Request" :
-               isCloneRequest ? "Clone Pod Activated!" :
-               isDumpRequest ? "Pokémon Dump" :
+               isFixOTRequest ? "FixOT Request!" :
+               isSpecialRequest ? "Special Request!" :
+               isCloneRequest ? "Clone Request!" :
+               isDumpRequest ? "Dump Request!" :
                "";
     }
 }

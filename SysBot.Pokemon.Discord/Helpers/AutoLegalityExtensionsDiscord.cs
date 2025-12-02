@@ -82,7 +82,7 @@ public static class AutoLegalityExtensionsDiscord
 
     public static Task ReplyWithLegalizedSetAsync(this ISocketMessageChannel channel, string content, byte gen)
     {
-        content = BatchCommandNormalizer.NormalizeBatchCommands(content);
+//        content = BatchCommandNormalizer.NormalizeBatchCommands(content);
         content = ReusableActions.StripCodeBlock(content);
         var set = new ShowdownSet(content);
         var sav = AutoLegalityWrapper.GetTrainerInfo(gen);
@@ -91,7 +91,7 @@ public static class AutoLegalityExtensionsDiscord
 
     public static Task ReplyWithLegalizedSetAsync<T>(this ISocketMessageChannel channel, string content) where T : PKM, new()
     {
-        content = BatchCommandNormalizer.NormalizeBatchCommands(content);
+//        content = BatchCommandNormalizer.NormalizeBatchCommands(content);
         content = ReusableActions.StripCodeBlock(content);
         var set = new ShowdownSet(content);
         var sav = AutoLegalityWrapper.GetTrainerInfo<T>();
