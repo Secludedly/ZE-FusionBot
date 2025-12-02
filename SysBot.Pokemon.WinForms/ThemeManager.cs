@@ -91,7 +91,7 @@ public static class ThemeManager
         {
             PanelBase = Color.FromArgb(28, 24, 70),
             Shadow = Color.FromArgb(15, 12, 55),
-            Hover = Color.FromArgb(38, 34, 90),
+            Hover = Color.FromArgb(28, 24, 70),
             ForeColor = Color.White
 
         },
@@ -100,7 +100,7 @@ public static class ThemeManager
         {
             PanelBase = Color.FromArgb(35, 28, 85),
             Shadow = Color.FromArgb(20, 15, 60),
-            Hover = Color.FromArgb(50, 40, 100),
+            Hover = Color.FromArgb(35, 28, 85),
             ForeColor = Color.White
 
         },
@@ -109,7 +109,7 @@ public static class ThemeManager
         {
             PanelBase = Color.FromArgb(25, 30, 70),
             Shadow = Color.FromArgb(15, 15, 50),
-            Hover = Color.FromArgb(35, 40, 90),
+            Hover = Color.FromArgb(25, 30, 70),
             ForeColor = Color.White
 
         },
@@ -118,16 +118,24 @@ public static class ThemeManager
         {
             PanelBase = Color.FromArgb(45, 20, 90),
             Shadow = Color.FromArgb(20, 10, 50),
-            Hover = Color.FromArgb(60, 30, 120),
+            Hover = Color.FromArgb(45, 20, 90),
             ForeColor = Color.White
 
+        },
+
+        ["Lavender Dream"] = new ThemeColors
+        {
+            PanelBase = Color.FromArgb(180, 160, 220),
+            Shadow = Color.FromArgb(110, 90, 170),
+            Hover = Color.FromArgb(180, 160, 220),
+            ForeColor = Color.White
         },
 
         ["Stellar Night"] = new ThemeColors
         {
             PanelBase = Color.FromArgb(30, 25, 75),
             Shadow = Color.FromArgb(12, 10, 45),
-            Hover = Color.FromArgb(40, 35, 90),
+            Hover = Color.FromArgb(30, 25, 75),
             ForeColor = Color.White
 
         },
@@ -136,7 +144,7 @@ public static class ThemeManager
         {
             PanelBase = Color.FromArgb(15, 10, 50),
             Shadow = Color.FromArgb(5, 5, 25),
-            Hover = Color.FromArgb(25, 20, 70),
+            Hover = Color.FromArgb(15, 10, 50),
             ForeColor = Color.White
 
         },
@@ -159,29 +167,31 @@ public static class ThemeManager
 
         },
 
-        ["WTF?"] = new ThemeColors
+        ["Black & White"] = new ThemeColors
         {
-            PanelBase = Color.FromArgb(69, 99, 14),
-            Shadow = Color.FromArgb(79, 9, 117),
-            Hover = Color.FromArgb(0, 150, 120),
+            PanelBase = Color.FromArgb(0, 0, 0),
+            Shadow = Color.FromArgb(255, 255, 255),
+            Hover = Color.FromArgb(42, 42, 42),
             ForeColor = Color.White
 
         },
 
-        ["Ocean Depths"] = new ThemeColors
+        ["Dark Fade Out"] = new ThemeColors
         {
-            PanelBase = Color.FromArgb(0, 40, 80),
-            Shadow = Color.FromArgb(0, 20, 50),
-            Hover = Color.FromArgb(0, 40, 80),
+            PanelBase = Color.FromArgb(32, 32, 32),
+            Shadow = Color.FromArgb(96, 96, 96),
+            Hover = Color.FromArgb(0, 0, 0),
             ForeColor = Color.White
+
         },
 
-        ["Lavender Dream"] = new ThemeColors
+        ["Silver & Cold"] = new ThemeColors
         {
-            PanelBase = Color.FromArgb(180, 160, 220),
-            Shadow = Color.FromArgb(140, 120, 200),
-            Hover = Color.FromArgb(180, 160, 220),
+            PanelBase = Color.FromArgb(64, 64, 64),
+            Shadow = Color.FromArgb(0, 153, 153),
+            Hover = Color.FromArgb(32, 32, 32),
             ForeColor = Color.White
+
         },
 
         ["Frostbite"] = new ThemeColors
@@ -189,6 +199,46 @@ public static class ThemeManager
             PanelBase = Color.FromArgb(120, 180, 220),
             Shadow = Color.FromArgb(180, 220, 255),
             Hover = Color.FromArgb(120, 180, 220),
+            ForeColor = Color.White
+        },
+
+        ["Midnight Frost"] = new ThemeColors
+        {
+            PanelBase = Color.FromArgb(20, 25, 55),
+            Shadow = Color.FromArgb(10, 10, 30),
+            Hover = Color.FromArgb(20, 25, 55),
+            ForeColor = Color.White
+        },
+
+        ["Arctic Halo"] = new ThemeColors
+        {
+            PanelBase = Color.FromArgb(15, 20, 50),
+            Shadow = Color.FromArgb(240, 240, 255),
+            Hover = Color.FromArgb(15, 20, 50),
+            ForeColor = Color.White
+        },
+
+        ["Winter Void"] = new ThemeColors
+        {
+            PanelBase = Color.FromArgb(12, 18, 45),
+            Shadow = Color.FromArgb(90, 110, 150),
+            Hover = Color.FromArgb(12, 18, 45),
+            ForeColor = Color.White
+        },
+
+        ["Stormbreaker"] = new ThemeColors
+        {
+            PanelBase = Color.FromArgb(8, 10, 30),
+            Shadow = Color.FromArgb(40, 0, 60),
+            Hover = Color.FromArgb(8, 10, 30),
+            ForeColor = Color.White
+        },
+
+        ["Lunar Abyss"] = new ThemeColors
+        {
+            PanelBase = Color.FromArgb(10, 10, 28),
+            Shadow = Color.FromArgb(5, 5, 18),
+            Hover = Color.FromArgb(10, 10, 28),
             ForeColor = Color.White
         },
 
@@ -200,19 +250,11 @@ public static class ThemeManager
             ForeColor = Color.White
         },
 
-        ["Molten Core"] = new ThemeColors
+        ["Blue Eclipse"] = new ThemeColors
         {
-            PanelBase = Color.FromArgb(40, 10, 0),
-            Shadow = Color.FromArgb(30, 5, 0),
-            Hover = Color.FromArgb(40, 10, 0),
-            ForeColor = Color.White
-        },
-
-        ["Mint Mirage"] = new ThemeColors
-        {
-            PanelBase = Color.FromArgb(180, 255, 220),
-            Shadow = Color.FromArgb(140, 200, 180),
-            Hover = Color.FromArgb(180, 255, 220),
+            PanelBase = Color.FromArgb(18, 22, 60),
+            Shadow = Color.FromArgb(0, 20, 70),
+            Hover = Color.FromArgb(18, 22, 60),
             ForeColor = Color.White
         },
 
@@ -222,6 +264,23 @@ public static class ThemeManager
             Shadow = Color.FromArgb(20, 0, 40),
             Hover = Color.FromArgb(50, 0, 80),
             ForeColor = Color.White
+        },
+
+        ["Ghostline Noir"] = new ThemeColors
+        {
+            PanelBase = Color.FromArgb(5, 5, 5),
+            Shadow = Color.FromArgb(30, 35, 50),
+            Hover = Color.FromArgb(5, 5, 5),
+            ForeColor = Color.White
+        },
+
+        ["WTF? :O"] = new ThemeColors
+        {
+            PanelBase = Color.FromArgb(69, 99, 14),
+            Shadow = Color.FromArgb(150, 4, 100),
+            Hover = Color.FromArgb(0, 150, 120),
+            ForeColor = Color.White
+
         },
     };
 

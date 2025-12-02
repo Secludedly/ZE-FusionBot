@@ -15,6 +15,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Drawing.Text;
 using System.Text.Json;
@@ -27,15 +28,15 @@ namespace SysBot.Pokemon.WinForms
 {
     public sealed partial class Main : Form
     {
-        // Main form properties
-        private Form activeForm = null; // Active child form in the main panel
+        // Currently active child form
+        private Form activeForm = null;
 
-        // Running environment and configuration
-        private IPokeBotRunner RunningEnvironment { get; set; } // Bot runner based on game mode
+        // Current running environment
+        private IPokeBotRunner RunningEnvironment { get; set; }
 
         // Program configuration
         [Browsable(false)]
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] // Do not serialize in the designer
         public static ProgramConfig Config { get; set; }
 
         // Static properties for update state
@@ -46,31 +47,35 @@ namespace SysBot.Pokemon.WinForms
         [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public static Main? Instance { get; private set; }
 
-        // Program has update flag
+        // Update available flag
         internal bool hasUpdate = false;
 
-        // Flag to indicate if the form is still loading
-        private bool _isFormLoading = true;
+        // Currently active button in the left panel, for setting Bots as default
+        private IconButton currentBtn;
 
-        // Left‑side button styling
-        private IconButton currentBtn;                             // Currently active button
-        private Panel leftBorderBtn;                               // Left border panel for the active button
-        private Dictionary<IconButton, Timer> hoverTimers = new(); // Dictionary to hold hover timers for buttons
-
-        // BotsForm & runner to help manage the bots
+        private Panel leftBorderBtn;
+        private Dictionary<IconButton, Timer> hoverTimers = new();
+  
+        private bool _isFormLoading = true;               // Flag to indicate if the form is still loading
         private readonly List<PokeBotState> Bots = new(); // List of bots created in the program
-        private BotsForm _botsForm;                       // BotsForm instance to manage bot controls
         private IPokeBotRunner _runner;                   // Runner instance to manage bot operations
+        private BotsForm _botsForm;                       // BotsForm instance to manage bot controls
+        private LogsForm _logsForm;                       // LogsForm instance to display logs
+        private HubForm _hubForm;                         // HubForm instance to manage hub settings
 
-        // Place GameMode BG Images into panelLeftSide
-        public Panel PanelLeftSide => panelLeftSide;
+        public Panel PanelLeftSide => panelLeftSide;      // Expose panelLeftSide for other forms
 
-        // LogsForm loading
-        private LogsForm _logsForm;
+        // UI EFFECTS VARIABLES
+        private Dictionary<IconButton, Timer> pulseTimers = new();
+        private readonly Dictionary<Control, Timer> shakeTimers = new();
+        private readonly Dictionary<Control, int> shakeFrames = new();
+        private readonly Dictionary<Control, Point> originalLocations = new();
+        private readonly Random rng = new();
+        private readonly List<Sparkle> sparkles = new();
+        private readonly Random glitterRng = new Random();
+        private Timer glitterTimer;
 
-        // HubForm loading
-        private HubForm _hubForm;
-
+        // Ensure FontAwesome buttons render correctly
         private void EnsureFontAwesomeButtonsRender()
         {
             // Force the FontAwesome font to be applied and glyphs to render
@@ -81,23 +86,29 @@ namespace SysBot.Pokemon.WinForms
             }
         }
 
-        // Main Constructor
+
+        ////////////////////////////////////////////////////////////
+        /////// MAIN FORM CONSTRUCTOR INITIALIZING FOR /////////////
+        /////// UI EFFECTS, EXCEPTION HANDLERS, BOT HANDLING ///////
+        /////// FORMS, WEBSERVER, FONTS, THEMES, UPDATES ///////////
+        ////////////////////////////////////////////////////////////
+
         public Main()
         {
-            // Load custom fonts before initializing
+            // Load embedded resource fonts
             FontManager.LoadFonts(
                 "bahnschrift.ttf",
                 "Bobbleboddy_light.ttf",
+                "EnterTheGrid.ttf",
                 "gadugi.ttf",
                 "gadugib.ttf",
+                "GNUOLANERG.ttf",
+                "Montserrat-Bold.ttf",
+                "Montserrat-Regular.ttf",
                 "segoeui.ttf",
                 "segoeuib.ttf",
                 "segoeuii.ttf",
                 "segoeuil.ttf",
-                "UbuntuMono-R.ttf",
-                "UbuntuMono-B.ttf",
-                "UbuntuMono-BI.ttf",
-                "UbuntuMono-RI.ttf",
                 "segoeuisl.ttf",
                 "segoeuiz.ttf",
                 "seguibl.ttf",
@@ -107,44 +118,80 @@ namespace SysBot.Pokemon.WinForms
                 "seguisbi.ttf",
                 "seguisli.ttf",
                 "SegUIVar.ttf",
-                "Montserrat-Bold.ttf",
-                "Montserrat-Regular.ttf",
-                "Enter The Grid.ttf",
-                "Gnuolane Rg.ttf"
+                "UbuntuMono-R.ttf",
+                "UbuntuMono-B.ttf",
+                "UbuntuMono-BI.ttf",
+                "UbuntuMono-RI.ttf"
                 );
 
 
             // GLOBAL EXCEPTION HANDLERS — LOG BEFORE BOT DIES
-            TaskScheduler.UnobservedTaskException += (sender, e) =>
+            TaskScheduler.UnobservedTaskException += (s, e) =>
             {
-                LogUtil.LogSafe(e.Exception, "🔥 UnobservedTaskException");
-                e.SetObserved(); // Prevents app crash
+                var agg = e.Exception; // always AggregateException
+                var ex = agg.InnerException ?? agg; // unwrap if possible
+
+                // Ignore normal cancellations
+                if (ex is OperationCanceledException)
+                {
+                    e.SetObserved();
+                    return;
+                }
+
+                // Unwrap AGAIN if it's multiple nested levels (task > agg > inner)
+                if (ex is AggregateException agg2 && agg2.InnerException != null)
+                    ex = agg2.InnerException;
+
+                // Ignore OperationAborted socket errors
+                if (ex is SocketException se && se.SocketErrorCode == SocketError.OperationAborted)
+                {
+                    e.SetObserved();
+                    return;
+                }
+
+                // LOG every real problem
+                LogUtil.LogSafe(ex, "Unobserved Task Exception");
+                e.SetObserved();
             };
 
             AppDomain.CurrentDomain.UnhandledException += (sender, e) =>
             {
                 if (e.ExceptionObject is Exception ex)
-                    LogUtil.LogSafe(ex, "💥 UnhandledException");
+                    LogUtil.LogSafe(ex, "Unhandled Exception");
                 else
-                    LogUtil.LogGeneric($"💀 Non-Exception UnhandledException: {e.ExceptionObject}", "💥 UnhandledException");
+                    LogUtil.LogGeneric($"Non-Exception - Unhandled Exception: {e.ExceptionObject}", "Unhandled Exception");
             };
+
 
             Task.Run(BotMonitor);      // Start the bot monitor
             InitializeComponent();     // Initialize all the form components before program
+            SetupTitleBarButtonHoverEffects();
+            panelTitleBar.Paint += panelTitleBar_Paint;
+            InitGlitter();
+
+            this.Shown += async (s, e) =>
+            {
+                await Task.Delay(500);
+                ActivateButton(btnBots); // now the outline pulse will start immediately
+            };
             Instance = this;
             InitializeLeftSideImage(); // Initialize the left side BG image in panelLeftSide
             InitializeUpperImage();    // Initialize the upper image in panelTitleBar
+
+            // Force load FontAwesome font
+            btnBots.IconChar = IconChar.Robot;
+            btnHub.IconChar = IconChar.TableList;
+            btnLogs.IconChar = IconChar.ListDots;
+            btnMinimize.IconChar = IconChar.WindowMinimize;
+            btnClose.IconChar = IconChar.Close;
+            btnMaximize.IconChar = IconChar.WindowMaximize;
 
             // Wait for the form crap to load before initializing
             this.Load += async (s, e) => await InitializeAsync();
 
             // Set up left‑panel buttons & effects
-            ApplyButtonEffects();
             var baseColor = ThemeManager.CurrentColors.PanelBase; // Base color for buttons according to themes
             var hoverColor = ThemeManager.CurrentColors.Hover;    // Hover color for buttons according to themes
-            SetupHoverAnimation(btnBots, baseColor, hoverColor);  // Bots button
-            SetupHoverAnimation(btnHub, baseColor, hoverColor);   // Hub button
-            SetupHoverAnimation(btnLogs, baseColor, hoverColor);  // Logs button
             leftBorderBtn = new Panel { Size = new Size(7, 60) }; // Left border for active button
             panelLeftSide.Controls.Add(leftBorderBtn);            // Add left border to the panel
             panelTitleBar.MouseDown += panelTitleBar_MouseDown;   // Allow dragging the window from the title bar
@@ -167,11 +214,6 @@ namespace SysBot.Pokemon.WinForms
             btnClose.Click += BtnClose_Click;       // Close button
             btnMaximize.Click += BtnMaximize_Click; // Maximize button
             btnMinimize.Click += BtnMinimize_Click; // Minimize button
-
-            // Set up hover animations for Close/Maximize/Minimize buttons
-            SetupTopButtonHoverAnimation(btnClose, Color.FromArgb(232, 17, 35));    // Color is red
-            SetupTopButtonHoverAnimation(btnMaximize, Color.FromArgb(0, 120, 215)); // Color is blue
-            SetupTopButtonHoverAnimation(btnMinimize, Color.FromArgb(255, 185, 0)); // Color is yellow
         }
 
         // Runs once when Main form first loads
@@ -242,9 +284,9 @@ namespace SysBot.Pokemon.WinForms
             LoadLogoImage(Config.Hub.BotLogoImage); // Load a URL image to replace logo
             InitUtil.InitializeStubs(Config.Mode);     // Stubby McStubbinson will set environment based on config mode
             _isFormLoading = false;                    // ...but is it loading?
-            ActivateButton(btnBots, RGBColors.color9); // We gonna start this party off right with the Bots Control panel and set its button color
-            OpenChildForm(_botsForm);                  // I don't usually like to incite violence on children, but this time, open them kids up!
-            SaveCurrentConfig();                       // Save me from myself... or save to the config.
+            OpenChildForm(_botsForm);
+            SetupThemeAwareButtons();
+            SaveCurrentConfig();
 
             _botsForm.StartButton.Click += B_Start_Click;           // Start button... do any of these really need explaining?
             _botsForm.StopButton.Click += B_Stop_Click;             // Stop button
@@ -256,6 +298,7 @@ namespace SysBot.Pokemon.WinForms
 
             this.ActiveControl = null;
             LogUtil.LogInfo("System", "Bot initialization complete");
+
             // Start web server async to avoid UI blocking
             _ = Task.Run(() =>
             {
@@ -270,10 +313,14 @@ namespace SysBot.Pokemon.WinForms
             });
         }
 
-        // Save the current running environment config
+
+        ///////////////////////////////////////////////////
+        ///////// SET CURRENT RUNNING ENVIRONMENT /////////
+        ///////////////////////////////////////////////////
+
         private static IPokeBotRunner GetRunner(ProgramConfig cfg) => cfg.Mode switch
         {
-            ProgramMode.SWSH => new PokeBotRunnerImpl<PK8>(cfg.Hub, new BotFactory8SWSH()), // Too lazy, won't explain, very simple, much sexy
+            ProgramMode.SWSH => new PokeBotRunnerImpl<PK8>(cfg.Hub, new BotFactory8SWSH()),
             ProgramMode.BDSP => new PokeBotRunnerImpl<PB8>(cfg.Hub, new BotFactory8BS()),
             ProgramMode.LA => new PokeBotRunnerImpl<PA8>(cfg.Hub, new BotFactory8LA()),
             ProgramMode.SV => new PokeBotRunnerImpl<PK9>(cfg.Hub, new BotFactory9SV()),
@@ -282,7 +329,11 @@ namespace SysBot.Pokemon.WinForms
             _ => throw new IndexOutOfRangeException("Unsupported mode."), // A LIE
         };
 
-        // Read the fucking state of all bots in the BotsForm like a creepy code stalker
+
+        //////////////////////////////////////////////////////////////////
+        /////// BOT CONTROL AND COMMAND LOGIC FOR UI AND WEBSERVER ///////
+        //////////////////////////////////////////////////////////////////
+
         private async Task BotMonitor()
         {
             while (!Disposing)
@@ -402,7 +453,6 @@ namespace SysBot.Pokemon.WinForms
                 WebApiCommand.Resume => BotController.BotControlCommand.Resume,
                 WebApiCommand.Restart => BotController.BotControlCommand.Restart,
                 WebApiCommand.RebootAndStop => BotController.BotControlCommand.RebootAndStop,
-
                 WebApiCommand.ScreenOnAll => BotController.BotControlCommand.ScreenOn,
                 WebApiCommand.ScreenOffAll => BotController.BotControlCommand.ScreenOff,
 
@@ -531,6 +581,11 @@ namespace SysBot.Pokemon.WinForms
             };
         }
 
+
+        ///////////////////////////////////////////////////
+        ////// THEME MANAGEMENT FOR MAIN UI ELEMENTS //////
+        ///////////////////////////////////////////////////
+
         private void CB_Themes_SelectedIndexChanged(object sender, EventArgs e)
         {
             if (CB_Themes.SelectedItem is not string selected)
@@ -551,7 +606,11 @@ namespace SysBot.Pokemon.WinForms
             ThemeManager.ApplyTheme(this, Config.Theme);
         }
 
-        // Creates a new bot config based on current settings in BotsForm class
+
+        ///////////////////////////////////////////////////////////////////
+        /////// BOT HANDLING FOR INITIATING A NEW BOT IN THE FORMS ////////
+        /////// ALSO HOLDS RANDOM CALL TO STOP THE WEBSERVER AFTER ////////
+        ///////////////////////////////////////////////////////////////////
         private PokeBotState CreateNewBotConfig() // Create a new bot configuration based on the current settings in the BotsForm
         {
             var ip = _botsForm.IPBox.Text.Trim();    // Get the IP address from the IPBox and trim any whitespace
@@ -576,6 +635,7 @@ namespace SysBot.Pokemon.WinForms
                 WinFormsUtil.Error("Please select a routine.");
                 return null;
             }
+            this.StopWebServer(); // Stop the web server to free up resources before adding a new bot
 
             // Create a new SwitchConnectionConfig based on the IP and port
             var cfg = BotConfigUtil.GetConfig<SwitchConnectionConfig>(ip, port); // Get the connection config based on the IP and port
@@ -585,6 +645,11 @@ namespace SysBot.Pokemon.WinForms
             pk.Initialize(type);                                                 // Initialize the PokeBotState with the selected routine type
             return pk;                                                           // Return the new PokeBotState configuration
         }
+
+
+        ///////////////////////////////////////////////////
+        ////////// IMAGES FOR THE MAIN UI FORMS ///////////
+        ///////////////////////////////////////////////////
 
         // Initialize the method for the left side image in the panelLeftSide
         private PictureBox leftSideImage;
@@ -761,6 +826,11 @@ namespace SysBot.Pokemon.WinForms
             }
         }
 
+
+        ///////////////////////////////////////////////////
+        //////////// PROGRESS BAR UPDATE LOGIC ////////////
+        ///////////////////////////////////////////////////
+       
         private void HookBotProgress(PokeBotState cfg, PokeRoutineExecutorBase bot)
         {
             BotController? botControl = _botsForm.BotPanel.Controls
@@ -803,6 +873,11 @@ namespace SysBot.Pokemon.WinForms
             }
         }
 
+
+        ///////////////////////////////////////////////////
+        //// FLP BOT AND PROTOCOL ADDITIONAL HANDLING /////
+        ///////////////////////////////////////////////////
+
         // Resize the BotController controls when the panel is resized, focused on width
         private void FLP_Bots_Resize(object sender, EventArgs e)
         {
@@ -816,6 +891,11 @@ namespace SysBot.Pokemon.WinForms
         {
             _botsForm.IPBox.Visible = _botsForm.ProtocolBox.SelectedIndex == 0; // Show the IPBox only if the selected protocol is WiFi
         }
+
+
+        ///////////////////////////////////////////////////
+        /////// MOVE UI VIA MOUSE ON PANELTITLEBAR ////////
+        ///////////////////////////////////////////////////
 
         private void InitializeTitleBarDrag()
         {
@@ -836,7 +916,6 @@ namespace SysBot.Pokemon.WinForms
                 HookDrag(child);
         }
 
-        // Drag the window from the titlebar
         [DllImport("user32.DLL", EntryPoint = "ReleaseCapture")] // Release the mouse capture
         private extern static void ReleaseCapture();             // Release the mouse capture to allow dragging the window
         [DllImport("user32.DLL", EntryPoint = "SendMessage")]    // Send a message to the window
@@ -849,34 +928,44 @@ namespace SysBot.Pokemon.WinForms
             SendMessage(this.Handle, 0x112, 0xf012, 0); // Send a message to the window to allow dragging
         }
 
-        // Method to activate Bots button and change its color, loading BotsForm class
+
+        ///////////////////////////////////////////////////
+        ////////// BOTS/HUB/LOGS BUTTON HANDLING //////////
+        ////////// CLOSE/MAX/MIN BUTTON HANDLING //////////
+        ///////////////////////////////////////////////////
+
+        // Method to activate Bots button and load BotsForm
         private void Bots_Click(object sender, EventArgs e)
         {
-            ActivateButton(sender, RGBColors.color9); // Change the color of the active Bots button
-            OpenChildForm(_botsForm);                 // Load the BotsForm in the main panel
+            if (sender is IconButton btn)
+            {
+                ActivateButton(btn);
+                OpenChildForm(_botsForm);
+            }
         }
 
-        // Method to activate Hub button and change its color, loading HubForm class
+        // Method to activate Hub button and load HubForm
         private void Hub_Click(object sender, EventArgs e)
         {
-            ActivateButton(sender, RGBColors.color5); // Change the color of the active Hub button
-            currentBtn.Refresh();                     // Refresh the current button to apply the new color
-            leftBorderBtn.Refresh();                  // Refresh the left border to match the active button
+            if (sender is IconButton btn)
+            {
+                ActivateButton(btn);
+                // Ensure HubForm exists
+                if (_hubForm == null || _hubForm.IsDisposed)
+                    _hubForm = new HubForm(Config.Hub);
 
-            // If the HubForm is not initialized, create a new instance
-            if (_hubForm == null || _hubForm.IsDisposed)
-                _hubForm = new HubForm(Config.Hub);
-
-            OpenChildForm(_hubForm); // Load the HubForm in the main panel
+                OpenChildForm(_hubForm);
+            }
         }
 
-        // Method to activate Logs button and change its color, loading LogsForm class
+        // Method to activate Logs button and load LogsForm
         private void Logs_Click(object sender, EventArgs e)
         {
-            ActivateButton(sender, Color.FromArgb(0, 255, 255)); // Change the color of the active Logs button
-            currentBtn.Refresh();                                // Refresh the current button to apply the new color
-            leftBorderBtn.Refresh();                             // Refresh the left border to match the active button
-            OpenChildForm(_logsForm);                            // Load the LogsForm in the main panel
+            if (sender is IconButton btn)
+            {
+                ActivateButton(btn);
+                OpenChildForm(_logsForm);
+            }
         }
 
         // Close button
@@ -888,7 +977,6 @@ namespace SysBot.Pokemon.WinForms
         // Maximize and Restore button
         private void BtnMaximize_Click(object sender, EventArgs e)
         {
-
             if (WindowState == FormWindowState.Normal)   // If the window is in normal state, then...
                 WindowState = FormWindowState.Maximized; // ...Maximize the window
             else
@@ -904,47 +992,97 @@ namespace SysBot.Pokemon.WinForms
         // Method and logic to open the child form(Bots, Hub, or Logs) in panelMain
         private async void OpenChildForm(Form childForm)
         {
-            // If the active form is already open, hide it
-            if (activeForm != null) activeForm.Hide();
+            activeForm?.Hide(); // Hide the currently active form, if any
+            activeForm = childForm; // Set the new active form
 
-            activeForm = childForm;                           // Set the active form to the new child form
-            childForm.TopLevel = false;                       // Set the child form to be a non-top-level form
-            childForm.FormBorderStyle = FormBorderStyle.None; // Remove the border style of the child form
-            panelMain.Controls.Add(childForm);                // Add the child form to the main panel
-            SlideFadeInForm(childForm);                       // Activate the SlideFadeInForm method to the child form
-            childForm.Size = panelMain.ClientSize;                         // Set the size of the child form to match the panelMain size
-            childForm.Location = new Point(panelMain.ClientSize.Width, 0); // Set the initial location of the child form to the right edge of the panelMain
-            childForm.Opacity = 0;                                         // Set the initial opacity of the child form to 0 (invisible)
-            childForm.Show();                                              // Show the child form
-
-            // SlideFadeInForm utilization in the child form
-            while (childForm.Left > 0 || childForm.Opacity < 1.0) // While the child form is not fully visible
+            // If the form is not already in the panel, add it
+            if (!panelMain.Controls.Contains(childForm))
             {
-                // Slide the child form to the left and increase its opacity
-                await Task.Delay(10);                                        // Wait for 10 milliseconds for smoother animation
-                childForm.Left = Math.Max(childForm.Left - 40, 0);           // Move the child form left by 40 pixels, but not less than 0
-                childForm.Opacity = Math.Min(childForm.Opacity + 0.05, 1.0); // Increase the opacity of the child form by 0.05, but not more than 1.0 (fully visible)
+                childForm.TopLevel = false; // Set the form to be a non-top-level form
+                childForm.FormBorderStyle = FormBorderStyle.None; // Remove the border style
+                panelMain.Controls.Add(childForm); // Add the form to the panelMain controls
             }
-            childForm.Dock = DockStyle.Fill; // Set the child form to fill the entire panelMain
-            childForm.BringToFront();        // Bring the child form to the front of the panelMain controls
+
+            childForm.Dock = DockStyle.None; // needed for slide
+            childForm.Size = panelMain.ClientSize; // set size to panel size
+            childForm.Left = panelMain.ClientSize.Width; // reset slide start
+            childForm.Opacity = 0; // reset fade start
+            childForm.Show(); // Show the form
+            childForm.BringToFront(); // Bring the form to the front of panelMain
+
+            // Slide/fade animation
+            while (childForm.Left > 0 || childForm.Opacity < 1)
+            {
+                await Task.Delay(10);
+                childForm.Left = Math.Max(childForm.Left - 40, 0);
+                childForm.Opacity = Math.Min(childForm.Opacity + 0.05, 1);
+            }
+
+            childForm.Dock = DockStyle.Fill;
         }
 
-        // RGB Color dictionary
-        private struct RGBColors
+
+        ///////////////////////////////////////////////////
+        ///////// GUI THEMING AND BUTTON HANDLING /////////
+        ///////////////////////////////////////////////////
+
+        public void SetupThemeAwareButtons()
         {
-            public static Color color1 = Color.FromArgb(172, 126, 241); // Vibrant Purple
-            public static Color color2 = Color.FromArgb(249, 118, 176); // Dark Crimson Pink
-            public static Color color3 = Color.FromArgb(253, 138, 114); // Light Orange
-            public static Color color4 = Color.FromArgb(95, 77, 221);   // Dark Purple
-            public static Color color5 = Color.FromArgb(249, 88, 155);  // Light Pink
-            public static Color color6 = Color.FromArgb(24, 161, 251);  // Light Blue
-            public static Color color7 = Color.FromArgb(100, 149, 237); // Corn Flower Blue
-            public static Color color8 = Color.FromArgb(60, 179, 113);  // Medium Sea Green
-            public static Color color9 = Color.FromArgb(147, 112, 219); // Medium Purple
-            public static Color color10 = Color.FromArgb(176, 196, 222);// Light Steel Blue
-            public static Color color11 = Color.FromArgb(240, 255, 240);// Honeydew
-            public static Color color12 = Color.FromArgb(230, 230, 250);// Lavender
+            // Use the current theme colors
+            var colors = ThemeManager.CurrentColors;
+
+            foreach (var btn in new[] { btnBots, btnHub, btnLogs })
+            {
+                btn.BackColor = colors.PanelBase;
+                btn.ForeColor = colors.ForeColor;
+                btn.UseVisualStyleBackColor = false;
+                btn.FlatStyle = FlatStyle.Flat;
+                btn.FlatAppearance.BorderSize = 0;
+
+                // Hover animations
+                btn.MouseEnter += (s, e) => StartHoverFade(btn, colors.Shadow, 150);
+                btn.MouseLeave += (s, e) => StartHoverFade(btn, colors.PanelBase);
+
+                // Click effects
+                btn.Click += (s, e) =>
+                {
+                    ActivateButton(btn);
+                    FlashClick(btn);
+                };
+            }
         }
+
+        // Method to activate the buttons and set the left border
+        private void ActivateButton(IconButton btn)
+        {
+            if (currentBtn == btn) return; // already active
+
+            // Reset previous
+            DisableButton();
+
+            currentBtn = btn;
+
+            // Outline colors
+            Color outlineColor = btn switch
+            {
+                var b when b == btnBots => Color.FromArgb(180, 150, 255),
+                var b when b == btnHub => Color.HotPink,
+                var b when b == btnLogs => Color.Cyan,
+                _ => Color.White
+            };
+
+            btn.FlatAppearance.BorderSize = 1; // thinner outline
+            btn.FlatAppearance.BorderColor = outlineColor;
+
+            // START the glow pulse on the active button
+            StartOutlinePulse(btn, outlineColor);
+
+            // Update top panel
+            lblTitleChildForm.Text = btn.Text;
+            childFormIcon.IconChar = btn.IconChar;
+            childFormIcon.IconColor = outlineColor;
+        }
+
 
         // Method to slide and fade in the child forms (Bots, Hub, Logs) when it is opened
         private async void SlideFadeInForm(Form form)
@@ -966,184 +1104,169 @@ namespace SysBot.Pokemon.WinForms
             form.BringToFront();        // Bring the form to the front of panelMain
         }
 
-        // Animation method for the Bots, Hub, and Logs buttons
-        private void ApplyButtonEffects()
+        // Smooth hover fade
+        private void StartHoverFade(IconButton btn, Color targetColor, int durationMs = 200)
         {
-            foreach (Control control in panelLeftSide.Controls)     // Go through each control in the left side panel
+            if (hoverTimers.ContainsKey(btn))
             {
-                if (control is FontAwesome.Sharp.IconButton button) // Check if the control is an IconButton 
+                hoverTimers[btn].Stop();
+                hoverTimers[btn].Dispose();
+                hoverTimers.Remove(btn);
+            }
+
+            Color startColor = btn.BackColor;
+            int steps = durationMs / 10; // ~60 FPS
+            int currentStep = 0;
+
+            Timer timer = new Timer { Interval = 26 };
+            timer.Tick += (s, e) =>
+            {
+                currentStep++;
+                float t = EaseInOut((float)currentStep / steps);
+                btn.BackColor = LerpColor(startColor, targetColor, t);
+
+                if (currentStep >= steps)
                 {
-                    button.MouseEnter += (s, e) => AnimateButtonHover(button, true);  // Start hover animation
-                    button.MouseLeave += (s, e) => AnimateButtonHover(button, false); // Stop hover animation
+                    timer.Stop();
+                    timer.Dispose();
+                    hoverTimers.Remove(btn);
                 }
-            }
-        }
-
-        // Animation method for Bots, Hub, and Logs button hover effect
-        private async void AnimateButtonHover(FontAwesome.Sharp.IconButton button, bool hover)
-        {
-            float targetScale = hover ? 0.1f : 0.4f;                       // Target scale for hover effect
-            float step = 0.01f * (hover ? 1 : -1);                         // Step size for scaling
-            float currentScale = button.Tag is float scale ? scale : 1.0f; // Get current scale from Tag or default to 1.0f
-
-            while ((hover && currentScale < targetScale) || (!hover && currentScale > targetScale)) // While scaling towards target
-            {
-                currentScale = Math.Clamp(currentScale + step, 1.0f, 1.1f);                         // Clamp the scale between 1.0 and 1.1
-                button.Tag = currentScale;                                                          // Store the current scale in the button's Tag property
-                button.Font = new Font(button.Font.FontFamily, 12F * currentScale, FontStyle.Bold); // Adjust font size based on scale
-                await Task.Delay(10);                                                               // Delay for 10 milliseconds for smoother animation
-            }
-        }
-        public void SetupThemeAwareButtons()
-        {
-            // Use the current theme colors
-            var baseColor = ThemeManager.CurrentColors.PanelBase;
-            var hoverColor = ThemeManager.CurrentColors.Hover;
-
-            SetupHoverAnimation(btnBots, baseColor, hoverColor);
-            SetupHoverAnimation(btnHub, baseColor, hoverColor);
-            SetupHoverAnimation(btnLogs, baseColor, hoverColor);
-        }
-
-        // Method to set up hover animation for Bots, Hub, and Logs button
-        private void SetupHoverAnimation(IconButton button, Color baseColor, Color hoverColor)
-        {
-            Timer fadeTimer = new Timer();                  // Create a new timer for the hover animation
-            fadeTimer.Interval = 25;                        // Lower value = smoother effect
-            float t = 1f;                                   // Current interpolation value (0 to 1)
-            float speed = 0.05f;                            // Lower value = slower fade
-            bool hovering = false;                          // Whether the mouse is hovering over the button
-
-            // Start the fade timer when the button is hovered over or not
-            fadeTimer.Tick += (s, e) =>
-            {
-                if (hovering && t < 1f)       // If hovering, increase the interpolation value
-                    t += speed;
-                else if (!hovering && t > 0f) // If not hovering, decrease the interpolation value
-                    t -= speed;
-
-                t = Math.Clamp(t, 0f, 1f); // Ensure t(interpolation) is between 0 and 1
-
-                // Interpolate the button's background color based on the interpolation value
-                int r = (int)(baseColor.R + (hoverColor.R - baseColor.R) * t);
-                int g = (int)(baseColor.G + (hoverColor.G - baseColor.G) * t);
-                int b = (int)(baseColor.B + (hoverColor.B - baseColor.B) * t);
-                button.BackColor = Color.FromArgb(r, g, b);
-
-                if ((hovering && t >= 1f) || (!hovering && t <= 0f)) // Wait for animation timer to complete
-                    fadeTimer.Stop();                                // Stop the timer when complete
             };
 
-            // Assign the hover state to the button
-            button.MouseEnter += (s, e) => StartColorFade(button, ThemeManager.CurrentColors.PanelBase); // Hover color
-            button.MouseLeave += (s, e) => StartColorFade(button, ThemeManager.CurrentColors.Hover);     // Default color
-            button.UseVisualStyleBackColor = false;      // Set UseVisualStyleBackColor to false to allow custom colors
-            button.BackColor = baseColor;                // Set the initial background color of the button
+            hoverTimers[btn] = timer;
+            timer.Start();
         }
 
-        // Method to set up hover animation for the top buttons (Close, Minimize, Maximize)
-        private void SetupTopButtonHoverAnimation(IconPictureBox button, Color hoverColor)
+        private void StartOutlinePulse(IconButton btn, Color baseColor)
         {
-            Color baseColor = button.BackColor;            // Default color for the buttons before hover
-            float fadeSpeed = 0.01f;                       // Speed of the fade animation, lower value = slower fade
-            Timer fadeTimer = new Timer { Interval = 10 }; // Timer for the fade animation, lower value = smoother effect
-            float step = 1f;                               // Current step in the fade animation, higher values = slower fade
-            bool hovering = false;                         // Whether the mouse is hovering over the button
-
-            // Start the fade timer when the button is hovered over or not
-            fadeTimer.Tick += (s, e) =>
+            // stop any existing pulse first
+            if (pulseTimers.TryGetValue(btn, out var oldTimer))
             {
-                if (hovering && step < 1f) // If hovering, increase the step value of 1 (fade in) according to timer
-                    step += fadeSpeed;
-                else if (!hovering && step > 0f) // If not hovering, decrease the step value of 0 (fade out) according to timer
-                    step -= fadeSpeed;
-
-                // Clamp the step value between 0 and 1
-                step = Math.Clamp(step, 0f, 1f);                                      // Ensure step is between 0 and 1
-                button.BackColor = LerpColor(baseColor, hoverColor, EaseInOut(step)); // Interpolate color based on step value
-
-                if ((hovering && step >= 1f) || (!hovering && step <= 0f)) // Wait for animation timer to complete
-                    fadeTimer.Stop();                                      // Stop the timer when complete
-            };
-
-            button.MouseEnter += (s, e) => { hovering = true; fadeTimer.Start(); };  // Start the fade timer when the mouse enters the button
-            button.MouseLeave += (s, e) => { hovering = false; fadeTimer.Start(); }; // Stop the fade timer when the mouse leaves the button
-        }
-
-        // Method to start the color fade animation on the Bots, Hub, and Logs buttons
-        private void StartColorFade(IconButton btn, Color endColor)
-        {
-            if (hoverTimers.ContainsKey(btn)) // If the button already has a hover timer, stop and dispose of it
-            {
-                hoverTimers[btn].Stop();    // Stop the existing timer
-                hoverTimers[btn].Dispose(); // Dispose of the existing timer
+                oldTimer.Stop();
+                oldTimer.Dispose();
+                pulseTimers.Remove(btn);
             }
 
-            Timer t = new Timer();            // Create a new timer for the hover animation
-            Color startColor = ThemeManager.CurrentColors.PanelBase; // Current color of the button
-            float fadeSpeed = 0.04f;          // 0.02 = 750ms fade, higher values = slower fade
-            float step = 0.1f;                // Current step in the fade animation, higher values = slower fade
-            t.Interval = 10;                  // Around 60fps, lower value = smoother effect
+            float t = 0f;
+            bool forward = true;
 
-            // Set up the timer tick event for the hover animation
-            t.Tick += (s, e) =>
+            Timer pulseTimer = new Timer { Interval = 16 }; // ~60 FPS
+            pulseTimer.Tick += (s, e) =>
             {
-                step += fadeSpeed;
-                if (step >= 1.0f) // Fade speed step reached 100%
-                {
-                    btn.BackColor = ThemeManager.CurrentColors.Hover; // Set the button's background color to the end color
-                    t.Stop();                 // Stop the timer when the fade is complete
-                    t.Dispose();              // Dispose of the timer to free resources
-                    hoverTimers.Remove(btn);  // Remove the button from the hover timers dictionary
-                    return;
-                }
+                // update t
+                t += forward ? 0.03f : -0.03f;
+                if (t >= 1f) { t = 1f; forward = false; }
+                if (t <= 0f) { t = 0f; forward = true; }
 
-                btn.BackColor = LerpColor(startColor, endColor, EaseInOut(step)); // Interpolate color
+                // calculate new color, clamp to 0-255
+                int Clamp(int val) => Math.Max(0, Math.Min(255, val));
+                float intensity = 0.6f + 0.4f * t; // base 60% -> 100%
+                btn.FlatAppearance.BorderColor = Color.FromArgb(
+                    Clamp((int)(baseColor.R * intensity)),
+                    Clamp((int)(baseColor.G * intensity)),
+                    Clamp((int)(baseColor.B * intensity))
+                 );
             };
 
-            hoverTimers[btn] = t; // Store the timer in the hover timers dictionary
-            t.Start();            // Start the timer to begin the hover animation
+            pulseTimer.Start();
+            pulseTimers[btn] = pulseTimer;
         }
 
-        // Linear interpolation for colors on Bots, Hub, and Logs button hover effect
-        private float EaseInOut(float t) => t < 0.5 ? 4 * t * t * t : 1 - MathF.Pow(-2 * t + 2, 3) / 2;
-
-        // Lerp color method for the Bots, Hub, and Logs button hover effect
-        private Color LerpColor(Color start, Color end, float t) // Linearly interpolate between two colors
+        // Call this when disabling a button
+        private void StopOutlinePulse(IconButton btn)
         {
-            t = Math.Clamp(t, 0f, 1f); // ensure 0 ≤ t ≤ 1 for good interpolation
+            if (pulseTimers.TryGetValue(btn, out var timer))
+            {
+                timer.Stop();
+                timer.Dispose();
+                pulseTimers.Remove(btn);
+            }
+            // reset outline color
+            btn.FlatAppearance.BorderColor = ThemeManager.CurrentColors.PanelBase;
+        }
 
-            // Calculate the interpolated color components
-            int r = (int)Math.Clamp(start.R + (end.R - start.R) * t, 0, 255);
-            int g = (int)Math.Clamp(start.G + (end.G - start.G) * t, 0, 255);
-            int b = (int)Math.Clamp(start.B + (end.B - start.B) * t, 0, 255);
+        // Click flash animation
+        private async void FlashClick(IconButton btn)
+        {
+            Color flashColor = ThemeManager.CurrentColors.Shadow;
+            Color original = btn.BackColor;
+
+            btn.BackColor = flashColor;
+            await Task.Delay(100); // quick flash
+            btn.BackColor = original;
+        }
+
+        // Smooth color interpolation
+        private Color LerpColor(Color start, Color end, float t)
+        {
+            int r = (int)(start.R + (end.R - start.R) * t);
+            int g = (int)(start.G + (end.G - start.G) * t);
+            int b = (int)(start.B + (end.B - start.B) * t);
             return Color.FromArgb(r, g, b);
         }
 
-        // Method to activate the buttons and set the left border
-        private void ActivateButton(object senderBtn, Color color)
-        {
-            if (senderBtn != null) // Check if the sender is not null
-            {
-                DisableButton();
-                // Cast the sender to Bots, Hub, and Logs button
-                currentBtn = (IconButton)senderBtn;
-                currentBtn.BackColor = Color.FromArgb(37, 36, 81);                // Darker shade for active button
-                currentBtn.ForeColor = color;                                     // Set the text color of the active button
-                currentBtn.TextAlign = ContentAlignment.MiddleCenter;             // Center the text in the active button
-                currentBtn.IconColor = color;                                     // Set the icon color of the active button
-                currentBtn.TextImageRelation = TextImageRelation.TextBeforeImage; // Set the text and image relation of the active button
-                currentBtn.ImageAlign = ContentAlignment.MiddleRight;             // Align the image to the right of the text in the active button
+        // Easing function for smooth transitions
+        private float EaseInOut(float t) => t < 0.5f ? 4 * t * t * t : 1 - MathF.Pow(-2 * t + 2, 3) / 2;
 
-                // Set the left border button properties
-                leftBorderBtn.BackColor = color;                              // Set the left border color
-                leftBorderBtn.Location = new Point(0, currentBtn.Location.Y); // Set the left border position to the active button's position
-                leftBorderBtn.Visible = true;                                 // Make the left border visible
-                leftBorderBtn.BringToFront();                                 // Bring the left border to the front
-                childFormIcon.IconChar = currentBtn.IconChar;                 // Set the icon of the current child form to the active button's icon
-                childFormIcon.IconColor = color;                              // Set the icon color of the current child form to the active button's color
-                lblTitleChildForm.Text = ((IconButton)senderBtn).Text;        // Set the title of the child form to the active button's text
-            }
+        private void SetupTitleBarButtonHoverEffects()
+        {
+            // Colors
+            Color normalClose = Color.Red;
+            Color hoverClose = Color.OrangeRed;
+
+            Color normalMaximize = Color.White;
+            Color hoverMaximize = Color.DarkGray;
+
+            Color normalMinimize = Color.White;
+            Color hoverMinimize = Color.DarkGray;
+
+            // Close button
+            btnClose.MouseEnter += (s, e) => btnClose.IconColor = hoverClose;
+            btnClose.MouseLeave += (s, e) => btnClose.IconColor = normalClose;
+
+            // Maximize button
+            btnMaximize.MouseEnter += (s, e) => btnMaximize.IconColor = hoverMaximize;
+            btnMaximize.MouseLeave += (s, e) => btnMaximize.IconColor = normalMaximize;
+
+            // Minimize button
+            btnMinimize.MouseEnter += (s, e) => btnMinimize.IconColor = hoverMinimize;
+            btnMinimize.MouseLeave += (s, e) => btnMinimize.IconColor = normalMinimize;
+        }
+
+        private void InitGlitter()
+        {
+            glitterTimer = new Timer { Interval = 33 }; // ~30 FPS
+            glitterTimer.Tick += (s, e) =>
+            {
+                // Randomly spawn new sparkles
+                if (glitterRng.NextDouble() < 0.2) // 20% chance each tick
+                {
+                    PointF pos = new PointF(
+                        glitterRng.Next(panelTitleBar.Width),
+                        glitterRng.Next(panelTitleBar.Height)
+                    );
+                    sparkles.Add(new Sparkle(pos));
+                }
+
+                // Update existing sparkles
+                for (int i = sparkles.Count - 1; i >= 0; i--)
+                {
+                    if (sparkles[i].Tick())
+                        sparkles.RemoveAt(i);
+                }
+
+                // Redraw panel
+                panelTitleBar.Invalidate();
+            };
+
+            glitterTimer.Start();
+
+            // Paint handler
+            panelTitleBar.Paint += (s, e) =>
+            {
+                foreach (var sp in sparkles)
+                    sp.Draw(e.Graphics);
+            };
         }
 
         // Method to disable the current button and reset its style to default
@@ -1151,16 +1274,19 @@ namespace SysBot.Pokemon.WinForms
         {
             if (currentBtn != null)
             {
-                currentBtn.BackColor = ThemeManager.CurrentColors.PanelBase;      // Default background color
-                currentBtn.ForeColor = Color.Gainsboro;                           // Default text color
-                currentBtn.TextAlign = ContentAlignment.MiddleLeft;               // Center the text in the button
-                currentBtn.IconColor = Color.Gainsboro;                           // Default icon color
-                currentBtn.TextImageRelation = TextImageRelation.ImageBeforeText; // Set the text and image relation to default
-                currentBtn.ImageAlign = ContentAlignment.MiddleLeft;              // Align the image to the left of the text in the button
+                StopOutlinePulse(currentBtn); // STOP pulse animation
+                currentBtn.BackColor = ThemeManager.CurrentColors.PanelBase; // default bg
+                currentBtn.TextAlign = ContentAlignment.MiddleLeft;
+                currentBtn.TextImageRelation = TextImageRelation.ImageBeforeText;
+                currentBtn.ImageAlign = ContentAlignment.MiddleLeft;
+                currentBtn.FlatAppearance.BorderSize = 0; // remove outline
             }
         }
 
-        // Config save method
+
+        ///////////////////////////////////////////////////
+        //////////////// SAVING TO CONFIG /////////////////
+        ///////////////////////////////////////////////////
         public void SaveCurrentConfig()
         {
             try
@@ -1177,6 +1303,7 @@ namespace SysBot.Pokemon.WinForms
             }
         }
 
+        // WINFORMS JUNK THAT'S NEEDED
         private void panel6_Paint(object sender, PaintEventArgs e)
         {
 

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Text;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 
@@ -17,7 +18,11 @@ namespace SysBot.Pokemon.WinForms
         {
             foreach (var fileName in fontFileNames)
             {
-                string resourcePath = $"SysBot.Pokemon.WinForms.Fonts.{fileName}";
+                string? resourcePath = Assembly.GetExecutingAssembly()
+                .GetManifestResourceNames()
+                .FirstOrDefault(n => n.EndsWith(fileName, StringComparison.OrdinalIgnoreCase));
+                if (resourcePath == null)
+                    throw new Exception($"Embedded font not found for filename: {fileName}");
 
                 using Stream fontStream = Assembly.GetExecutingAssembly().GetManifestResourceStream(resourcePath)
                     ?? throw new Exception($"Embedded font '{resourcePath}' not found.");

@@ -188,7 +188,7 @@ namespace SysBot.Pokemon.WinForms
             });
 
             Text = "Bots Controller";
-            Size = new Size(708, 53);
+            Size = new Size(722, 53);
         }
 
         private void CB_GameMode_SelectedIndexChanged(object sender, EventArgs e)

@@ -31,10 +31,14 @@
   <ItemGroup>
     <EmbeddedResource Include="Fonts\bahnschrift.ttf" />
     <EmbeddedResource Include="Fonts\Bobbleboddy_light.ttf" />
-    <EmbeddedResource Include="Fonts\Enter The Grid.ttf" />
+    <EmbeddedResource Include="Fonts\EnterTheGrid.ttf" />
+    <EmbeddedResource Include="Fonts\FontAwesome6BrandsRegular.ttf" />
+    <EmbeddedResource Include="Fonts\FontAwesome6FreeRegular.ttf" />
+    <EmbeddedResource Include="Fonts\FontAwesome6FreeSolid.ttf" />
+    <EmbeddedResource Include="Fonts\FontAwesomev4CompatibilityRegular.ttf" />
     <EmbeddedResource Include="Fonts\gadugi.ttf" />
     <EmbeddedResource Include="Fonts\gadugib.ttf" />
-    <EmbeddedResource Include="Fonts\Gnuolane Rg.ttf" />
+    <EmbeddedResource Include="Fonts\GNUOLANERG.TTF" />
     <EmbeddedResource Include="Fonts\Montserrat-Bold.ttf" />
     <EmbeddedResource Include="Fonts\Montserrat-Regular.ttf" />
     <EmbeddedResource Include="Fonts\segoeui.ttf" />

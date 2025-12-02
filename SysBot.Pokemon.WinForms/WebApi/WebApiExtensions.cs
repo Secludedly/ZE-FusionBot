@@ -379,31 +379,39 @@ public static class WebApiExtensions
             }
         }
     }
-    
-    private static async Task AcceptClientsAsync(CancellationToken cancellationToken)
+
+    private static async Task AcceptClientsAsync(CancellationToken token)
     {
-        while (!cancellationToken.IsCancellationRequested)
+        while (!token.IsCancellationRequested)
         {
             try
             {
-                var tcpTask = _tcp!.AcceptTcpClientAsync();
-                var tcs = new TaskCompletionSource<bool>();
-                
-                using var registration = cancellationToken.Register(() => tcs.SetCanceled());
-                var completedTask = await Task.WhenAny(tcpTask, tcs.Task);
-                
-                if (completedTask == tcpTask && tcpTask.IsCompletedSuccessfully)
-                {
-                    _ = HandleClientSafelyAsync(tcpTask.Result);
-                }
+                var client = await _tcp!.AcceptTcpClientAsync(token);
+                _ = HandleClientSafelyAsync(client);
             }
-            catch (ObjectDisposedException) when (cancellationToken.IsCancellationRequested)
+            catch (OperationCanceledException)
             {
+                // Normal shutdown — don't scream about it
                 break;
+            }
+            catch (SocketException ex) when (ex.SocketErrorCode == SocketError.OperationAborted)
+            {
+                // Also normal during shutdown
+                break;
+            }
+            catch (ObjectDisposedException)
+            {
+                // Listener got cleaned up during exit
+                break;
+            }
+            catch (Exception ex)
+            {
+                LogUtil.LogError($"TCP Listener Error: {ex}", "TCP");
             }
         }
     }
-    
+
+
     private static async Task HandleClientSafelyAsync(TcpClient client)
     {
         try

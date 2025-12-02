@@ -191,7 +191,7 @@ public partial class BotController : UserControl
         if (_currentProgress == 100)
         {
             _holdAt100 = true;
-            _progressFill.BackColor = Color.FromArgb(127, 255, 212); // or Color.FromArgb(0, 255, 0) for neon green
+            _progressFill.BackColor = Color.FromArgb(249, 88, 155); // 100% progress color
 
             _holdTimer = new Timer { Interval = 6000 }; // 6 seconds
             _holdTimer.Tick += (s, e) =>
