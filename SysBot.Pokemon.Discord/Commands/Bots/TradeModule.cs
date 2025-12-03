@@ -11,6 +11,7 @@ using SharpCompress.Common;
 using SysBot.Base;
 using SysBot.Pokemon.Discord;
 using SysBot.Pokemon.Discord.Helpers;
+using SysBot.Pokemon.Discord.Helpers.TradeModule;
 using SysBot.Pokemon.Helpers;
 using System;
 using System.Collections.Generic;
@@ -24,6 +25,7 @@ using static SysBot.Pokemon.TradeSettings.TradeSettingsCategory;
 using System.Collections.Concurrent;
 using System.Reflection;
 using System.Text;
+using SysBot.Pokemon.Discord.Helpers.TradeModule;
 
 namespace SysBot.Pokemon.Discord;
 
@@ -238,6 +240,10 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
                     await Helpers<T>.ReplyAndDeleteAsync(Context, reason, 6);
                     return;
                 }
+                // ***** FORCE NATURE *****
+                // This will reroll PID until PID%25 == requested nature and keep IV/EVs consistent.
+
+                ForceNatureHelper.ForceNature(pkm, set.Nature, set.Shiny);
 
                 // Convert to bot runtime type
                 pkm = EntityConverter.ConvertToType(pkm, typeof(T), out _) ?? pkm;
@@ -1253,53 +1259,6 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
             {
                 // Parse the Showdown set and detect manual trainer overrides
                 var set = new ShowdownSet(content);
-
-                // -----------------------------------------------
-                // Parse Set Nature (ex: “Adamant Nature”)
-                // ShowdownSet.Nature is ALREADY a Nature enum.
-                // -----------------------------------------------
-                Nature? parsedSetNature = null;
-
-                if (set.Nature != PKHeX.Core.Nature.Random) // Random means user didn't specify one
-                    parsedSetNature = set.Nature;
-
-                // -----------------------------------------------
-                // Robust StatNature parsing
-                // -----------------------------------------------
-                Nature? parsedStatNature = null;
-
-                foreach (var l in content.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
-                {
-                    // Normalize: remove invisible chars, trim, lowercase
-                    string clean = l.Normalize(NormalizationForm.FormKC)
-                                     .Trim()
-                                     .Replace("\u00A0", ""); // replace non-breaking spaces
-
-                    // Match either .StatNature= or Stat Nature:
-                    if (clean.StartsWith(".statnature=", StringComparison.OrdinalIgnoreCase))
-                        clean = clean[".statnature=".Length..].Trim();
-                    else if (clean.StartsWith("stat nature:", StringComparison.OrdinalIgnoreCase))
-                        clean = clean["stat nature:".Length..].Trim();
-                    else
-                        continue;
-
-                    if (Enum.TryParse<Nature>(clean, ignoreCase: true, out var sn))
-                    {
-                        parsedStatNature = sn;
-                        break;
-                    }
-                }
-
-                // -----------------------------------------------
-                // Detect shiny request (ALM-style or manually)
-                // -----------------------------------------------
-                bool isShinyRequested = content.Contains("Shiny: Yes", StringComparison.OrdinalIgnoreCase)
-                                     || content.Contains("Shiny: Square", StringComparison.OrdinalIgnoreCase)
-                                     || content.Contains("Shiny: Star", StringComparison.OrdinalIgnoreCase)
-                                     || content.Contains(".Shiny", StringComparison.OrdinalIgnoreCase);
-
-
-
                 var ignoreAutoOT = content.Contains("OT:") || content.Contains("TID:") || content.Contains("SID:");
 
                 // Legacy helper: returns the processed pokemon + extra info (errors, lgcode, etc.)
