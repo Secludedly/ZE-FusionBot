@@ -217,7 +217,7 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
         var set = new ShowdownSet(content); // <-- ShowdownSet
 
         // You can still get template if you want other ALM things, but not for GenerateEgg
-        // var template = AutoLegalityWrapper.GetTemplate(set);
+         var template = AutoLegalityWrapper.GetTemplate(set);
 
         _ = Task.Run(async () =>
         {
