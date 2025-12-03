@@ -147,7 +147,7 @@ public static class DetailsExtractor<T> where T : PKM, new()
         pk.GetIVs(ivs);
 
         // IV labels in HP → Atk → Def → SpA → SpD → Spe order
-        string[] labels = { "HP", "Atk", "Def", "SpA", "SpD", "SpSpe", "Spe" };
+        string[] labels = { "HP", "Atk", "Def", "SpA", "SpD", "Spe" };
 
         // Count perfect IVs (31)
         int perfectIVCount = 0;

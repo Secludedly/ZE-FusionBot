@@ -25,7 +25,6 @@ using static SysBot.Pokemon.TradeSettings.TradeSettingsCategory;
 using System.Collections.Concurrent;
 using System.Reflection;
 using System.Text;
-using SysBot.Pokemon.Discord.Helpers.TradeModule;
 
 namespace SysBot.Pokemon.Discord;
 
@@ -213,7 +212,7 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
             return;
         }
 
-//        content = BatchCommandNormalizer.NormalizeBatchCommands(content);
+        content = BatchCommandNormalizer.NormalizeBatchCommands(content);
         content = ReusableActions.StripCodeBlock(content);
         var set = new ShowdownSet(content); // <-- ShowdownSet
 
@@ -689,10 +688,10 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
                 foreach (var idx in selections)
                 {
                     // Use ReusableActions to clean and normalize each block
-                    // Use BatchNormalizer to ensure consistent command formatting with custom class
+                    // Use BatchCommandNormalizer to ensure consistent command formatting with custom class
                     string showdownBlock = sets[idx - 1];
                     showdownBlock = ReusableActions.StripCodeBlock(showdownBlock);
-                    showdownBlock = BatchNormalizer.NormalizeBatchCommands(showdownBlock);
+                    showdownBlock = BatchCommandNormalizer.NormalizeBatchCommands(showdownBlock);
 
                     await ProcessSingleTextTradeAsync(showdownBlock, batchTradeCode, tradeNumber, selections.Count, user);
 
