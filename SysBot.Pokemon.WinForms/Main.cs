@@ -95,36 +95,6 @@ namespace SysBot.Pokemon.WinForms
 
         public Main()
         {
-            // Load embedded resource fonts
-            FontManager.LoadFonts(
-                "bahnschrift.ttf",
-                "Bobbleboddy_light.ttf",
-                "EnterTheGrid.ttf",
-                "gadugi.ttf",
-                "gadugib.ttf",
-                "GNUOLANERG.ttf",
-                "Montserrat-Bold.ttf",
-                "Montserrat-Regular.ttf",
-                "segoeui.ttf",
-                "segoeuib.ttf",
-                "segoeuii.ttf",
-                "segoeuil.ttf",
-                "segoeuisl.ttf",
-                "segoeuiz.ttf",
-                "seguibl.ttf",
-                "seguibli.ttf",
-                "seguili.ttf",
-                "seguisb.ttf",
-                "seguisbi.ttf",
-                "seguisli.ttf",
-                "SegUIVar.ttf",
-                "UbuntuMono-R.ttf",
-                "UbuntuMono-B.ttf",
-                "UbuntuMono-BI.ttf",
-                "UbuntuMono-RI.ttf"
-                );
-
-
             // GLOBAL EXCEPTION HANDLERS — LOG BEFORE BOT DIES
             TaskScheduler.UnobservedTaskException += (s, e) =>
             {
@@ -165,6 +135,7 @@ namespace SysBot.Pokemon.WinForms
 
             Task.Run(BotMonitor);      // Start the bot monitor
             InitializeComponent();     // Initialize all the form components before program
+            EnsureFontAwesomeButtonsRender();
             SetupTitleBarButtonHoverEffects();
             panelTitleBar.Paint += panelTitleBar_Paint;
             InitGlitter();

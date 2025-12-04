@@ -44,16 +44,24 @@ namespace SysBot.Pokemon.WinForms
             // When splash loads, preload assets async
             splash.Shown += async (s, e) =>
             {
-                await PreloadAssetsAsync();
+                // Start loading assets
+                var preloadTask = PreloadAssetsAsync();
 
-                // After loading, switch to Main form
+                // Require splash to last at least 3 seconds
+                await Task.WhenAll(
+                    preloadTask,
+                    Task.Delay(3000)
+                );
+
+                // After loading + delay, show main form
                 var mainForm = new Main();
                 mainForm.StartPosition = FormStartPosition.CenterScreen;
                 mainForm.Show();
 
-                // Close the splash screen
+                // Hide splash
                 splash.Hide();
             };
+
 
             ///////////////////////////////////////////
             /// Prevent crashes from missing fonts ////
@@ -106,40 +114,37 @@ namespace SysBot.Pokemon.WinForms
         ////////////////////////////////////////////
         private static async Task PreloadAssetsAsync()
         {
-            // Loading time for splash screen visibility
-            await Task.Delay(1650);
-
-            // Load fonts
             await Task.Run(() =>
             {
                 FontManager.LoadFonts(
-                "bahnschrift.ttf",
-                "Bobbleboddy_light.ttf",
-                "EnterTheGrid.ttf",
-                "gadugi.ttf",
-                "gadugib.ttf",
-                "GNUOLANERG.ttf",
-                "Montserrat-Bold.ttf",
-                "Montserrat-Regular.ttf",
-                "segoeui.ttf",
-                "segoeuib.ttf",
-                "segoeuii.ttf",
-                "segoeuil.ttf",
-                "segoeuisl.ttf",
-                "segoeuiz.ttf",
-                "seguibl.ttf",
-                "seguibli.ttf",
-                "seguili.ttf",
-                "seguisb.ttf",
-                "seguisbi.ttf",
-                "seguisli.ttf",
-                "SegUIVar.ttf",
-                "UbuntuMono-R.ttf",
-                "UbuntuMono-B.ttf",
-                "UbuntuMono-BI.ttf",
-                "UbuntuMono-RI.ttf"
+                    "bahnschrift.ttf",
+                    "Bobbleboddy_light.ttf",
+                    "EnterTheGrid.ttf",
+                    "gadugi.ttf",
+                    "gadugib.ttf",
+                    "GNUOLANERG.ttf",
+                    "Montserrat-Bold.ttf",
+                    "Montserrat-Regular.ttf",
+                    "segoeui.ttf",
+                    "segoeuib.ttf",
+                    "segoeuii.ttf",
+                    "segoeuil.ttf",
+                    "segoeuisl.ttf",
+                    "segoeuiz.ttf",
+                    "seguibl.ttf",
+                    "seguibli.ttf",
+                    "seguili.ttf",
+                    "seguisb.ttf",
+                    "seguisbi.ttf",
+                    "seguisli.ttf",
+                    "SegUIVar.ttf",
+                    "UbuntuMono-R.ttf",
+                    "UbuntuMono-B.ttf",
+                    "UbuntuMono-BI.ttf",
+                    "UbuntuMono-RI.ttf"
                 );
             });
         }
     }
 }
+

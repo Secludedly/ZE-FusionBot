@@ -16,6 +16,9 @@ namespace SysBot.Pokemon.WinForms
 
         public static void LoadFonts(params string[] fontFileNames)
         {
+            foreach (var name in FontManager.LoadedFamilies)
+                Console.WriteLine("FONT LOADED (DEBUG): " + name);
+
             foreach (var fileName in fontFileNames)
             {
                 string? resourcePath = Assembly.GetExecutingAssembly()

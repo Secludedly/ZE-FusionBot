@@ -1019,7 +1019,7 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
     }
 
     [Command("batchtradezip")]
-    [Alias("btz", "batchzip", "ziptrade")]
+    [Alias("btz", "batchzip", "ziptrade", "7z", "rar", "zip", "bt7", "btr", "batch7z", "batchrar")]
     [Summary("Upload a .zip/.rar/.7z containing PKM files to trade multiple Pokémon at once.")]
     [RequireQueueRole(nameof(DiscordManager.RolesTrade))]
     public async Task BatchTradeZipAsync()
