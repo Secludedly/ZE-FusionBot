@@ -1,9 +1,10 @@
 using PKHeX.Core;
+using PKHeX.Core.AutoMod;
 using System;
-using System.Linq;
 using System.Collections.Generic;
 using System.ComponentModel;
 using PKHeX.Core.AutoMod;
+using System.Linq;
 
 namespace SysBot.Pokemon;
 
@@ -68,8 +69,8 @@ public class LegalitySettings
 
     [Category(Generate), Description("The order in which Pokémon encounter types are attempted.")]
     public List<EncounterTypeGroup> PrioritizeEncounters { get; set; } =
-    [
-        EncounterTypeGroup.Slot, EncounterTypeGroup.Egg,
+[
+    EncounterTypeGroup.Slot, EncounterTypeGroup.Egg,
         EncounterTypeGroup.Static, EncounterTypeGroup.Mystery,
         EncounterTypeGroup.Trade,
     ];

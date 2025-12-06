@@ -17,7 +17,10 @@ public static class Program
     {
         var bot = new PokeBotState { Connection = new SwitchConnectionConfig { IP = "192.168.0.1", Port = 6000 }, InitialRoutine = PokeRoutineType.FlexTrade };
         var cfg = new ProgramConfig { Bots = [bot] };
-        var created = JsonSerializer.Serialize(cfg, ProgramConfigContext.Default.ProgramConfig);
+        var created = JsonSerializer.Serialize(new JsonSerializerOptions // Serialize the current config to json
+        {
+            WriteIndented = true
+        });
         File.WriteAllText(ConfigPath, created);
         LogUtil.LogInfo("SysBot", "Created new config file since none was found in the program's path. Please configure it and restart the program.");
         LogUtil.LogInfo("SysBot", "It is suggested to configure this config file using the GUI project if possible, as it will help you assign values correctly.");
@@ -40,7 +43,7 @@ public static class Program
         try
         {
             var lines = File.ReadAllText(ConfigPath);
-            var cfg = JsonSerializer.Deserialize(lines, ProgramConfigContext.Default.ProgramConfig) ?? new ProgramConfig();
+            var cfg = JsonSerializer.Deserialize<ProgramConfig>(lines) ?? new ProgramConfig();
             PokeTradeBotSWSH.SeedChecker = new Z3SeedSearchHandler<PK8>();
             BotContainer.RunBots(cfg);
         }
@@ -51,10 +54,6 @@ public static class Program
         }
     }
 }
-
-[JsonSerializable(typeof(ProgramConfig))]
-[JsonSourceGenerationOptions(WriteIndented = true, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
-public sealed partial class ProgramConfigContext : JsonSerializerContext;
 
 public static class BotContainer
 {

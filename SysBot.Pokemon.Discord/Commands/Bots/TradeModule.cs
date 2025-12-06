@@ -14,17 +14,17 @@ using SysBot.Pokemon.Discord.Helpers;
 using SysBot.Pokemon.Discord.Helpers.TradeModule;
 using SysBot.Pokemon.Helpers;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.IO.Compression;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
+using System.Reflection;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using static SysBot.Pokemon.TradeSettings.TradeSettingsCategory;
-using System.Collections.Concurrent;
-using System.Reflection;
-using System.Text;
 
 namespace SysBot.Pokemon.Discord;
 
@@ -211,10 +211,9 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
                 "You already have an existing trade in the queue that cannot be cleared. Please wait until it is processed.", 5);
             return;
         }
-
         content = BatchCommandNormalizer.NormalizeBatchCommands(content);
         content = ReusableActions.StripCodeBlock(content);
-        var set = new ShowdownSet(content); // <-- ShowdownSet
+        var set = new ShowdownSet(content);
 
         // You can still get template if you want other ALM things, but not for GenerateEgg
          var template = AutoLegalityWrapper.GetTemplate(set);
@@ -239,9 +238,9 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
                     await Helpers<T>.ReplyAndDeleteAsync(Context, reason, 6);
                     return;
                 }
+
                 // ***** FORCE NATURE *****
                 // This will reroll PID until PID%25 == requested nature and keep IV/EVs consistent.
-
                 ForceNatureHelper.ForceNature(pkm, set.Nature, set.Shiny);
 
                 // Convert to bot runtime type
@@ -688,7 +687,6 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
                 foreach (var idx in selections)
                 {
                     // Use ReusableActions to clean and normalize each block
-                    // Use BatchCommandNormalizer to ensure consistent command formatting with custom class
                     string showdownBlock = sets[idx - 1];
                     showdownBlock = ReusableActions.StripCodeBlock(showdownBlock);
                     showdownBlock = BatchCommandNormalizer.NormalizeBatchCommands(showdownBlock);
@@ -827,6 +825,7 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
         var sentEmbed = await ReplyAsync(embed: embed.Build());
         _ = DeleteMessagesAfterDelayAsync(null, sentEmbed, 60);
     }
+
 
     [Command("tradeList")]
     [Alias("tl")]
@@ -1235,7 +1234,6 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
             _ = Helpers<T>.DeleteMessagesAfterDelayAsync(msg, null, 6);
     }
 
-
     #endregion
 
     #region Private Helper Methods
@@ -1257,7 +1255,10 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
             try
             {
                 // Parse the Showdown set and detect manual trainer overrides
+                content = BatchCommandNormalizer.NormalizeBatchCommands(content);
+                content = ReusableActions.StripCodeBlock(content);
                 var set = new ShowdownSet(content);
+
                 var ignoreAutoOT = content.Contains("OT:") || content.Contains("TID:") || content.Contains("SID:");
 
                 // Legacy helper: returns the processed pokemon + extra info (errors, lgcode, etc.)
@@ -1287,6 +1288,11 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
                     await Helpers<T>.ReplyAndDeleteAsync(Context, "Failed to convert Pokémon to correct type.", 5);
                     return;
                 }
+
+                // ***** FORCE NATURE *****
+                // This will reroll PID until PID%25 == requested nature and keep IV/EVs consistent.
+                ForceNatureHelper.ForceNature(pkm, set.Nature, set.Shiny);
+
                 // Raw message ad check BEFORE generating PKM
                 if (TradeExtensions<T>.ContainsAdText(content, out var domain))
                 {

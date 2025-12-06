@@ -269,26 +269,26 @@ public static class DetailsExtractor<T> where T : PKM, new()
         return userDetailsText;
     }
 
-    private static string GetLanguageDisplay<T>(T pk) where T : PKM
+    private static string GetLanguageDisplay(T pk)
     {
         int safeLanguage = pk.Language;
-        var langID = (LanguageID)pk.Language;
 
-        // Use your helper to get the readable language name
-        string languageName = LanguageHelper.GetLanguageName(langID);
+        string languageName = "Unknown";
+        var languageList = GameInfo.LanguageDataSource(pk.Format, pk.Context);
+        var languageEntry = languageList.FirstOrDefault(l => l.Value == pk.Language);
 
-        // If the PKHeX GameInfo lookup fails, fall back to LanguageHelper
-        if (string.IsNullOrWhiteSpace(languageName) || languageName == "Unknown")
+        if (languageEntry != null)
         {
-            var languageList = GameInfo.LanguageDataSource(pk.Format, pk.Context);
-            var languageEntry = languageList.FirstOrDefault(l => l.Value == pk.Language);
-            languageName = languageEntry?.Text ?? LanguageHelper.GetLanguageName(langID);
+            languageName = languageEntry.Text;
+        }
+        else
+        {
+            languageName = ((LanguageID)pk.Language).GetLanguageCode();
         }
 
-        // Handle "safe language" display if applicable
         if (safeLanguage != pk.Language)
         {
-            string safeLanguageName = LanguageHelper.GetLanguageName((LanguageID)safeLanguage);
+            string safeLanguageName = languageList.FirstOrDefault(l => l.Value == safeLanguage)?.Text ?? ((LanguageID)safeLanguage).GetLanguageCode();
             return $"{languageName} (Safe: {safeLanguageName})";
         }
 

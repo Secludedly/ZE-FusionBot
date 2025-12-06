@@ -124,7 +124,6 @@ public static class Helpers<T> where T : PKM, new()
 
     public static Task<ProcessedPokemonResult<T>> ProcessShowdownSetAsync(string content, bool ignoreAutoOT = false)
     {
-        content = BatchNormalizer.NormalizeBatchCommands(content);
         content = ReusableActions.StripCodeBlock(content);
         bool isEgg = TradeExtensions<T>.IsEggCheck(content);
 

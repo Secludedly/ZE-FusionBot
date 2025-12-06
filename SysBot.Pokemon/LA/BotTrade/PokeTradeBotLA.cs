@@ -335,7 +335,7 @@ public class PokeTradeBotLA(PokeTradeHub<PA8> Hub, PokeBotState Config) : PokeRo
                 {
                     var pokemon = allReceived[j];
                     var speciesName = SpeciesName.GetSpeciesName(pokemon.Species, 2);
-                    Log($"  - Returning: {LanguageHelper.GetLocalizedSpeciesLog(pokemon)} (Checksum: {pokemon.Checksum:X8})");
+                    Log($"  - Returning: {GameInfo.GetStrings("en").Species[pokemon.Species]} (Checksum: {pokemon.Checksum:X8})");
 
 
                     // Send the Pokemon directly to the notifier
@@ -618,10 +618,7 @@ public class PokeTradeBotLA(PokeTradeHub<PA8> Hub, PokeBotState Config) : PokeRo
                 return PokeTradeResult.TrainerTooSlow;
             }
 
-            string otName = poke.Trainer.TrainerName;
-            var receivedSpeciesStr = LanguageHelper.GetLocalizedSpeciesLog(received);
-            var sentSpeciesStr = LanguageHelper.GetLocalizedSpeciesLog(toSend);
-            Log($"Trade completed. Received {receivedSpeciesStr} from {otName} in exchange for {sentSpeciesStr}.");
+            Log("User completed the trade.");
             TradeProgressChanged?.Invoke(100);
 
             UpdateCountsAndExport(poke, received, toSend);
@@ -629,7 +626,7 @@ public class PokeTradeBotLA(PokeTradeHub<PA8> Hub, PokeBotState Config) : PokeRo
 
             BatchTracker.AddReceivedPokemon(originalTrainerID, received);
             completedTrades = currentTradeIndex + 1;
-            Log($"Added received Pokémon {LanguageHelper.GetLocalizedSpeciesLog(received)} (Checksum: {received.Checksum:X8}) to batch tracker for trainer {originalTrainerID} (Trade {completedTrades}/{totalBatchTrades})");
+            Log($"Added received Pokémon {received.Species} (Checksum: {received.Checksum:X8}) to batch tracker for trainer {originalTrainerID} (Trade {completedTrades}/{totalBatchTrades})");
 
             if (completedTrades == totalBatchTrades)
             {
@@ -651,7 +648,7 @@ public class PokeTradeBotLA(PokeTradeHub<PA8> Hub, PokeBotState Config) : PokeRo
                     for (int j = 0; j < allReceived.Count; j++)
                     {
                         var pokemon = allReceived[j];
-                        var speciesName = LanguageHelper.GetLocalizedSpeciesLog(pokemon);
+                        var speciesName = SpeciesName.GetSpeciesName(pokemon.Species, 2);
                         Log($"  - Returning: {speciesName} (Checksum: {pokemon.Checksum:X8})");
 
                         // Send the Pokemon directly to the notifier
@@ -1125,7 +1122,7 @@ public class PokeTradeBotLA(PokeTradeHub<PA8> Hub, PokeBotState Config) : PokeRo
         var la = new LegalityAnalysis(offered);
         if (!la.Valid)
         {
-            Log($"Clone request (from {poke.Trainer.TrainerName}) has detected an invalid Pokémon: {LanguageHelper.GetLocalizedSpeciesLog(offered)}.");
+            Log($"Clone request (from {poke.Trainer.TrainerName}) has detected an invalid Pokémon: {GameInfo.GetStrings("en").Species[offered.Species]}.");
             if (DumpSetting.Dump)
                 DumpPokemon(DumpSetting.DumpFolder, "hacked", offered);
 
@@ -1144,7 +1141,7 @@ public class PokeTradeBotLA(PokeTradeHub<PA8> Hub, PokeBotState Config) : PokeRo
             clone.Tracker = 0;
 
         poke.SendNotification(this, $"**Cloned your {GameInfo.GetStrings("en").Species[clone.Species]}!**\nNow press B to cancel your offer and trade me a Pokémon you don't want.");
-        Log($"Cloned a {LanguageHelper.GetLocalizedSpeciesLog(clone)}. Waiting for user to change their Pokémon...");
+        Log($"Cloned a {GameInfo.GetStrings("en").Species[clone.Species]}. Waiting for user to change their Pokémon...");
         TradeProgressChanged?.Invoke(82);
 
 
@@ -1308,7 +1305,7 @@ public class PokeTradeBotLA(PokeTradeHub<PA8> Hub, PokeBotState Config) : PokeRo
 
         if (!laInit.Valid)
         {
-            Log($"FixOT request has detected an illegal Pokémon from {name}: {LanguageHelper.GetLocalizedSpeciesLog(offered)}");
+            Log($"FixOT request has detected an illegal Pokémon from {name}: {GameInfo.GetStrings("en").Species[offered.Species]}");
             var report = laInit.Report();
             Log(laInit.Report());
             poke.SendNotification(this, $"**Shown Pokémon is not legal. Attempting to regenerate...**\n\n```{report}```");
@@ -1342,7 +1339,7 @@ public class PokeTradeBotLA(PokeTradeHub<PA8> Hub, PokeBotState Config) : PokeRo
 
         TradeExtensions<PA8>.HasAdName(offered, out string detectedAd);
         poke.SendNotification(this, $"{(!laInit.Valid ? "**Legalized" : "**Fixed Nickname/OT for")} {(Species)clone.Species}** (found ad: {detectedAd})! Now confirm the trade!");
-        Log($"{(!laInit.Valid ? "Legalized" : "Fixed Nickname/OT for")} {LanguageHelper.GetLocalizedSpeciesLog(clone)}!");
+        Log($"{(!laInit.Valid ? "Legalized" : "Fixed Nickname/OT for")} {GameInfo.GetStrings("en").Species[clone.Species]}!");
         TradeProgressChanged?.Invoke(82);
 
         if (await CheckCloneChangedOffer(token).ConfigureAwait(false))

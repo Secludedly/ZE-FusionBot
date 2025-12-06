@@ -445,10 +445,7 @@ public class PokeTradeBotLGPE(PokeTradeHub<PB7> Hub, PokeBotState Config) : Poke
         }
 
         // As long as we got rid of our inject in b1s1, assume the trade went through.
-        string otName = poke.Trainer.TrainerName;
-        var receivedSpeciesStr = LanguageHelper.GetLocalizedSpeciesLog(received);
-        var sentSpeciesStr = LanguageHelper.GetLocalizedSpeciesLog(toSend);
-        Log($"Trade completed. Received {receivedSpeciesStr} from {otName} in exchange for {sentSpeciesStr}.");
+        Log("User completed the trade.");
         TradeProgressChanged?.Invoke(100);
 
 

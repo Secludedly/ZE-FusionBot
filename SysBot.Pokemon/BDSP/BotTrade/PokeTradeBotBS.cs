@@ -635,7 +635,7 @@ public class PokeTradeBotBS : PokeRoutineExecutor8BS, ICountBot, ITradeBot, IDis
         var la = new LegalityAnalysis(offered);
         if (!la.Valid)
         {
-            Log($"Clone request (from {poke.Trainer.TrainerName}) has detected an invalid Pokémon: {LanguageHelper.GetLocalizedSpeciesLog(offered)}.");
+            Log($"Clone request (from {poke.Trainer.TrainerName}) has detected an invalid Pokémon: {GameInfo.GetStrings("en").Species[offered.Species]}.");
 
             if (DumpSetting.Dump)
                 DumpPokemon(DumpSetting.DumpFolder, "hacked", offered);
@@ -655,7 +655,7 @@ public class PokeTradeBotBS : PokeRoutineExecutor8BS, ICountBot, ITradeBot, IDis
             clone.Tracker = 0;
 
         poke.SendNotification(this, $"**Cloned your {GameInfo.GetStrings("en").Species[clone.Species]}!**\nNow press B to cancel your offer and trade me a Pokémon you don't want.");
-        Log($"Cloned a {LanguageHelper.GetLocalizedSpeciesLog(clone)}. Waiting for user to change their Pokémon...");
+        Log($"Cloned a {GameInfo.GetStrings("en").Species[clone.Species]}. Waiting for user to change their Pokémon...");
         TradeProgressChanged?.Invoke(84);
 
 
@@ -732,7 +732,7 @@ public class PokeTradeBotBS : PokeRoutineExecutor8BS, ICountBot, ITradeBot, IDis
 
         if (!laInit.Valid)
         {
-            Log($"FixOT request has detected an illegal Pokémon from {name}: {LanguageHelper.GetLocalizedSpeciesLog(offered)}");
+            Log($"FixOT request has detected an illegal Pokémon from {name}: {GameInfo.GetStrings("en").Species[offered.Species]}");
             var report = laInit.Report();
             Log(laInit.Report());
             poke.SendNotification(this, $"**Shown Pokémon is not legal. Attempting to regenerate...**\n\n```{report}```");
@@ -768,7 +768,7 @@ public class PokeTradeBotBS : PokeRoutineExecutor8BS, ICountBot, ITradeBot, IDis
 
         TradeExtensions<PB8>.HasAdName(offered, out string detectedAd);
         poke.SendNotification(this, $"{(!laInit.Valid ? "**Legalized" : "**Fixed Nickname/OT for")} {(Species)clone.Species}** (found ad: {detectedAd})! Now confirm the trade!");
-        Log($"{(!laInit.Valid ? "Legalized" : "Fixed Nickname/OT for")} {LanguageHelper.GetLocalizedSpeciesLog(clone)}!");
+        Log($"{(!laInit.Valid ? "Legalized" : "Fixed Nickname/OT for")} {GameInfo.GetStrings("en").Species[clone.Species]}!");
         TradeProgressChanged?.Invoke(84);
 
         await SetBoxPokemonAbsolute(BoxStartOffset, clone, token, sav).ConfigureAwait(false);
@@ -781,7 +781,7 @@ public class PokeTradeBotBS : PokeRoutineExecutor8BS, ICountBot, ITradeBot, IDis
         bool changed = pk2 == null || !comp.SequenceEqual(lastOffered) || clone.Species != pk2.Species || offered.OriginalTrainerName != pk2.OriginalTrainerName;
         if (changed)
         {
-            Log($"{name} changed the shown Pokémon ({LanguageHelper.GetLocalizedSpeciesLog(clone)}){(pk2 != null ? $" to {LanguageHelper.GetLocalizedSpeciesLog(pk2)}" : "")}");
+            Log($"{name} changed the shown Pokémon ({GameInfo.GetStrings("en").Species[clone.Species]}){(pk2 != null ? $" to {GameInfo.GetStrings("en").Species[pk2.Species]}" : "")}");
             poke.SendNotification(this, "**Send away the originally shown Pokémon, please!**");
 
             bool verify = await ReadUntilChanged(LinkTradePokemonOffset, comp, 10_000, 0_200, false, true, token).ConfigureAwait(false);
@@ -1116,10 +1116,9 @@ public class PokeTradeBotBS : PokeRoutineExecutor8BS, ICountBot, ITradeBot, IDis
         }
 
         // As long as we got rid of our inject in b1s1, assume the trade went through.
-        string otName = poke.Trainer.TrainerName;
-        var receivedSpeciesStr = LanguageHelper.GetLocalizedSpeciesLog(received);
-        var sentSpeciesStr = LanguageHelper.GetLocalizedSpeciesLog(toSend);
-        Log($"Trade completed. Received {receivedSpeciesStr} from {otName} in exchange for {sentSpeciesStr}.");
+        // As long as we got rid of our inject in b1s1, assume the trade went through.
+        Log("User completed the trade.");
+        poke.TradeFinished(this, received);
         TradeProgressChanged?.Invoke(100);
 
         poke.TradeFinished(this, received);
@@ -1210,7 +1209,7 @@ public class PokeTradeBotBS : PokeRoutineExecutor8BS, ICountBot, ITradeBot, IDis
                 for (int j = 0; j < allReceived.Count; j++)
                 {
                     var pokemon = allReceived[j];
-                    var speciesName = LanguageHelper.GetLocalizedSpeciesLog(pokemon);
+                    var speciesName = SpeciesName.GetSpeciesName(pokemon.Species, 2);
                     Log($"  - Returning: {speciesName} (Checksum: {pokemon.Checksum:X8})");
 
                     // Send the Pokemon directly to the notifier
@@ -1491,8 +1490,7 @@ public class PokeTradeBotBS : PokeRoutineExecutor8BS, ICountBot, ITradeBot, IDis
 
             BatchTracker.AddReceivedPokemon(originalTrainerID, received);
             completedTrades = currentTradeIndex + 1;
-            var speciesName = LanguageHelper.GetLocalizedSpeciesLog(received);
-            Log($"Added received Pokémon {speciesName} (Checksum: {received.Checksum:X8}) to batch tracker for trainer {originalTrainerID} (Trade {completedTrades}/{totalBatchTrades})");
+            Log($"Added received Pokémon {received.Species} (Checksum: {received.Checksum:X8}) to batch tracker for trainer {originalTrainerID} (Trade {completedTrades}/{totalBatchTrades})");
 
             if (completedTrades == totalBatchTrades)
             {
@@ -1514,6 +1512,7 @@ public class PokeTradeBotBS : PokeRoutineExecutor8BS, ICountBot, ITradeBot, IDis
                     for (int j = 0; j < allReceived.Count; j++)
                     {
                         var pokemon = allReceived[j];
+                        var speciesName = SpeciesName.GetSpeciesName(pokemon.Species, 2);
                         Log($"  - Returning: {speciesName} (Checksum: {pokemon.Checksum:X8})");
 
                         // Send the Pokemon directly to the notifier
