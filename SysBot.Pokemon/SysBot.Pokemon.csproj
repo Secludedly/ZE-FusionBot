@@ -12,13 +12,13 @@
     <Folder Include="deps\" />
   </ItemGroup>
   <ItemGroup>
-    <Reference Include="PKHeX.Core">
-      <HintPath>deps\PKHeX.Core.dll</HintPath>
-    </Reference>
-    <Reference Include="PKHeX.Core.AutoMod">
+  <Reference Include="PKHeX.Core">
+  <HintPath>deps\PKHeX.Core.dll</HintPath>
+</Reference>
+      <Reference Include="PKHeX.Core.AutoMod">
       <HintPath>deps\PKHeX.Core.AutoMod.dll</HintPath>
     </Reference>
-  </ItemGroup>
+	</ItemGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <DebugType>none</DebugType>
   </PropertyGroup>

@@ -20,7 +20,7 @@
 	<PackageReference Include="HtmlAgilityPack" Version="1.11.57" />
   </ItemGroup>
   <ItemGroup>
-    <Reference Include="PKHeX.Core">
+      <Reference Include="PKHeX.Core">
       <HintPath>..\SysBot.Pokemon\deps\PKHeX.Core.dll</HintPath>
     </Reference>
     <Reference Include="PKHeX.Core.AutoMod">

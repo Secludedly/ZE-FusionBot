@@ -187,7 +187,7 @@ namespace SysBot.Pokemon.WinForms
                 _FLP_Bots
             });
 
-            Text = "Bots Controller";
+            Text = "Bots";
             Size = new Size(722, 53);
         }
 
@@ -328,7 +328,7 @@ namespace SysBot.Pokemon.WinForms
             else
             {
                 // Default size if no others exist
-                controller.Size = new Size(700, 110);
+                controller.Size = new Size(722, 53);
             }
 
             controller.Initialize(runner, cfg);

@@ -61,7 +61,7 @@ namespace SysBot.Pokemon.WinForms
             LogsBox.TextChanged += LogsBox_TextChanged;
         }
 
-        private void LogsBox_TextChanged(object sender, EventArgs e)
+        private void LogsBox_TextChanged(object? sender, EventArgs e)
         {
             placeholderLabel.Visible = string.IsNullOrEmpty(LogsBox.Text);
         }
@@ -161,9 +161,9 @@ namespace SysBot.Pokemon.WinForms
             return panel;
         }
 
-        private void SearchBox_TextChanged(object sender, EventArgs e)
+        private void SearchBox_TextChanged(object? sender, EventArgs e)
         {
-            // Don’t trigger when it’s the placeholder text
+            // Don’t trigger when it’s the placeholder text  
             if (searchBox.Text == "Search logs...")
                 return;
 

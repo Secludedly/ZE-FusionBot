@@ -9,16 +9,16 @@ public class FolderSettings : IDumper
 
     private const string Files = nameof(Files);
 
-    [Category(Files), Description("Source folder: where PKM files to distribute are selected from.")]
+    [Category(Files), Description("Source folder: where PKM files to distribute are selected from."), DisplayName("Distribute Folder")]
     public string DistributeFolder { get; set; } = string.Empty;
 
-    [Category(FeatureToggle), Description("When enabled, dumps any received PKM files (trade results) to the DumpFolder.")]
+    [Category(FeatureToggle), Description("When enabled, dumps any received PKM files (trade results) to the DumpFolder."), DisplayName("Enable Dump")]
     public bool Dump { get; set; }
 
-    [Category(Files), Description("Destination folder: where all received PKM files are dumped to.")]
+    [Category(Files), Description("Destination folder: where all received PKM files are dumped to."), DisplayName("Dump Folder")]
     public string DumpFolder { get; set; } = string.Empty;
 
-    [Category(Files), Description("Directory where your Switch Remote For PC is located.")]
+    [Category(Files), Description("Directory where your Switch Remote For PC is located."), DisplayName("Switch Remote for PC Location")]
     public string SwitchRemoteForPC { get; set; } = string.Empty;
 
 

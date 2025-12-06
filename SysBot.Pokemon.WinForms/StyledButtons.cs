@@ -142,7 +142,7 @@ public class FancyButton : Button
         Invalidate();
     }
 
-    private void FancyButton_MouseEnter(object sender, EventArgs e)
+    private void FancyButton_MouseEnter(object? sender, EventArgs e)
     {
         isHovered = true;
 
@@ -153,7 +153,7 @@ public class FancyButton : Button
         Invalidate();
     }
 
-    private void FancyButton_MouseLeave(object sender, EventArgs e)
+    private void FancyButton_MouseLeave(object? sender, EventArgs e)
     {
         isHovered = false;
         isClicked = false;

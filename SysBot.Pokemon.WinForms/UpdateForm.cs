@@ -62,6 +62,7 @@ namespace SysBot.Pokemon.WinForms
             labelUpdateInfo = new Label();
             buttonDownload = new Button();
             textBoxChangelog = new TextBox();
+            labelChangelogTitle = new Label(); // Ensure labelChangelogTitle is initialized
             SuspendLayout();
             // 
             // labelUpdateInfo
@@ -76,7 +77,7 @@ namespace SysBot.Pokemon.WinForms
             // 
             // labelChangelogTitle
             //
-            labelChangelogTitle = new Label();
+            labelChangelogTitle = new Label(); // Ensure labelChangelogTitle is explicitly initialized
             labelChangelogTitle.AutoSize = true;
             labelChangelogTitle.ForeColor = Color.White;
             labelChangelogTitle.Font = new Font("Segoe UI", 10F, FontStyle.Bold, GraphicsUnit.Point);
@@ -144,11 +145,10 @@ namespace SysBot.Pokemon.WinForms
             textBoxChangelog.Text = changelog;
         }
 
-        private async void ButtonDownload_Click(object sender, EventArgs e)
+        private async void ButtonDownload_Click(object? sender, EventArgs e)
         {
             await PerformUpdateAsync();
         }
-
         public async Task PerformUpdateAsync()
         {
             buttonDownload.Enabled = false;

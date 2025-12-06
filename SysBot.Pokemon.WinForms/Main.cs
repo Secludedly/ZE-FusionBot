@@ -23,6 +23,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using static SysBot.Pokemon.WinForms.BotController;
 using WebApiCommand = SysBot.Pokemon.WinForms.WebApi.BotControlCommand;
+using System.Net.Http;
 
 namespace SysBot.Pokemon.WinForms
 {
@@ -58,7 +59,6 @@ namespace SysBot.Pokemon.WinForms
   
         private bool _isFormLoading = true;               // Flag to indicate if the form is still loading
         private readonly List<PokeBotState> Bots = new(); // List of bots created in the program
-        private IPokeBotRunner _runner;                   // Runner instance to manage bot operations
         private BotsForm _botsForm;                       // BotsForm instance to manage bot controls
         private LogsForm _logsForm;                       // LogsForm instance to display logs
         private HubForm _hubForm;                         // HubForm instance to manage hub settings
@@ -254,7 +254,6 @@ namespace SysBot.Pokemon.WinForms
             CB_Themes.SelectedIndexChanged += CB_Themes_SelectedIndexChanged;
             LoadLogoImage(Config.Hub.BotLogoImage); // Load a URL image to replace logo
             InitUtil.InitializeStubs(Config.Mode);     // Stubby McStubbinson will set environment based on config mode
-            _isFormLoading = false;                    // ...but is it loading?
             OpenChildForm(_botsForm);
             SetupThemeAwareButtons();
             SaveCurrentConfig();
@@ -364,7 +363,7 @@ namespace SysBot.Pokemon.WinForms
         }
 
         // Start the bot with the current config
-        private void B_Start_Click(object sender, EventArgs e) // Start all bots on Start button click
+        private void B_Start_Click(object? sender, EventArgs e) // Start all bots on Start button click
         {
             SaveCurrentConfig();                               // Save the current config before starting the bot
 
@@ -378,7 +377,7 @@ namespace SysBot.Pokemon.WinForms
         }
 
         // Restart the bot and stop all consoles with current config
-        private void B_RebootStop_Click(object sender, EventArgs e) // Restart all bots and reboot the game on console
+        private void B_RebootStop_Click(object? sender, EventArgs e) // Restart all bots and reboot the game on console
         {
             B_Stop_Click(sender, e); // Stop all bots first
 
@@ -432,7 +431,7 @@ namespace SysBot.Pokemon.WinForms
         }
 
         // Stop or Idle/Resume all bots
-        private void B_Stop_Click(object sender, EventArgs e)     // Stop all bots on Stop button click
+        private void B_Stop_Click(object? sender, EventArgs e)     // Stop all bots on Stop button click
         {
             var env = RunningEnvironment;                         // Get the current running environment
             if (!_botsForm.BotPanel.Controls.OfType<BotController>().Any(c => c.IsRunning()) && (ModifierKeys & Keys.Alt) == 0)
@@ -465,7 +464,7 @@ namespace SysBot.Pokemon.WinForms
         }
 
         // Add a new bot with the current config
-        private void B_New_Click(object sender, EventArgs e) // Add a new bot on Add button click
+        private void B_New_Click(object? sender, EventArgs e) // Add a new bot on Add button click
         {
             var cfg = CreateNewBotConfig(); // Create a new bot config based on current settings in BotsForm
 
@@ -481,7 +480,7 @@ namespace SysBot.Pokemon.WinForms
         }
 
         // Update handling
-        private async void Updater_Click(object sender, EventArgs e)
+        private async void Updater_Click(object? sender, EventArgs e)
         {
             await UpdateChecker.CheckForUpdatesAsync(forceShow: true); // Will auto-handle the UpdateForm without all the other crap
         }
@@ -489,7 +488,7 @@ namespace SysBot.Pokemon.WinForms
         // Add a new bot to the environment and UI
         private bool AddBot(PokeBotState? cfg)
         {
-            if (!cfg.IsValid())
+            if (cfg == null || !cfg.IsValid()) // Ensure cfg is not null before calling IsValid()
                 return false;
 
             if (Bots.Any(z => z.Connection.Equals(cfg.Connection)))
@@ -557,9 +556,14 @@ namespace SysBot.Pokemon.WinForms
         ////// THEME MANAGEMENT FOR MAIN UI ELEMENTS //////
         ///////////////////////////////////////////////////
 
-        private void CB_Themes_SelectedIndexChanged(object sender, EventArgs e)
+
+        // Update the method signature to explicitly allow nullability for the 'sender' parameter.
+        private void CB_Themes_SelectedIndexChanged(object? sender, EventArgs e)
         {
-            if (CB_Themes.SelectedItem is not string selected)
+            if (sender is not ComboBox comboBox)
+                return;
+
+            if (comboBox.SelectedItem is not string selected)
                 return;
 
             Config.Theme = selected;
@@ -582,7 +586,7 @@ namespace SysBot.Pokemon.WinForms
         /////// BOT HANDLING FOR INITIATING A NEW BOT IN THE FORMS ////////
         /////// ALSO HOLDS RANDOM CALL TO STOP THE WEBSERVER AFTER ////////
         ///////////////////////////////////////////////////////////////////
-        private PokeBotState CreateNewBotConfig() // Create a new bot configuration based on the current settings in the BotsForm
+        private PokeBotState? CreateNewBotConfig() // Create a new bot configuration based on the current settings in the BotsForm
         {
             var ip = _botsForm.IPBox.Text.Trim();    // Get the IP address from the IPBox and trim any whitespace
             var port = (int)_botsForm.PortBox.Value; // Get the port number from the PortBox
@@ -710,8 +714,8 @@ namespace SysBot.Pokemon.WinForms
             {
                 if (Uri.IsWellFormedUriString(logoPath, UriKind.Absolute))
                 {
-                    using var client = new WebClient();
-                    using var stream = client.OpenRead(logoPath);
+                    using var httpClient = new HttpClient();
+                    using var stream = httpClient.GetStreamAsync(logoPath).Result;
                     if (stream != null)
                         pictureLogo.Image = Image.FromStream(stream);
                 }
@@ -891,7 +895,8 @@ namespace SysBot.Pokemon.WinForms
         private extern static void ReleaseCapture();             // Release the mouse capture to allow dragging the window
         [DllImport("user32.DLL", EntryPoint = "SendMessage")]    // Send a message to the window
         private extern static void SendMessage(System.IntPtr hWnd, int wMsg, int wParam, int lParam); // Send a message to the window to allow dragging
-        private void panelTitleBar_MouseDown(object sender, MouseEventArgs e)                         // Allow dragging the window from the title bar
+        // Update the method signature to explicitly allow nullability for the 'sender' parameter.
+        private void panelTitleBar_MouseDown(object? sender, MouseEventArgs e)
         {
             if (sender == btnClose || sender == btnMaximize || sender == btnMinimize)
                 return;

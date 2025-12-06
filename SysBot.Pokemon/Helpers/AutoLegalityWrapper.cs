@@ -46,15 +46,7 @@ public static class AutoLegalityWrapper
         Legalizer.EnableEasterEggs = cfg.EnableEasterEggs;
         APILegality.AllowTrainerOverride = cfg.AllowTrainerDataOverride;
         APILegality.AllowBatchCommands = cfg.AllowBatchCommands;
-        cfg.PriorityOrder = APILegality.PriorityOrder = SanitizePriorityOrder(cfg.PriorityOrder);
-        // Prevent missing entries in case of deletion
-        GameVersion[] validVersions = [.. Enum.GetValues<GameVersion>().Where(ver => ver <= (GameVersion)52 && ver > GameVersion.Any)];
-        foreach (var ver in validVersions)
-        {
-            if (!cfg.PriorityOrder.Contains(ver))
-                cfg.PriorityOrder.Add(ver);
-        }
-        APILegality.PriorityOrder = cfg.PriorityOrder;
+        APILegality.GameVersionPriority = cfg.GameVersionPriority;
         APILegality.SetBattleVersion = cfg.SetBattleVersion;
         APILegality.Timeout = cfg.Timeout;
         var settings = ParseSettings.Settings;
@@ -222,5 +214,5 @@ public static class AutoLegalityWrapper
 
     public static string GetLegalizationHint(IBattleTemplate set, ITrainerInfo sav, PKM pk) => set.SetAnalysis(sav, pk);
     public static PKM LegalizePokemon(this PKM pk) => pk.Legalize();
-    public static IBattleTemplate GetTemplate(ShowdownSet set) => new RegenTemplate(set);
+    public static RegenTemplate GetTemplate(ShowdownSet set) => new RegenTemplate(set);
 }

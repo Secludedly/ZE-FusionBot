@@ -113,7 +113,7 @@ public partial class BotController : UserControl
         _progressFill.Invalidate(); // redraw sparkle
     }
 
-    private void _progressFill_Paint(object sender, PaintEventArgs e)
+    private void _progressFill_Paint(object? sender, PaintEventArgs e)
     {
         if (_progressFill.Width <= 0)
             return;
@@ -427,14 +427,19 @@ public partial class BotController : UserControl
 
     public void ReloadStatus(BotSource<PokeBotState>? botSource = null)
     {
-        try { botSource ??= GetBot(); }
+        try
+        {
+            botSource ??= GetBotSafely();
+            if (botSource == null) // Ensure botSource is not null
+                return;
+        }
         catch (Exception ex)
         {
             Debug.WriteLine($"[ERROR GETTING BOT]: {ex}");
             return;
         }
 
-        var bot = botSource?.Bot;
+        var bot = botSource.Bot;
         if (bot == null) return;
 
         string status = bot.Connection == null ? "DISCONNECTED"

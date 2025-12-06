@@ -19,17 +19,17 @@ public class FavoredPrioritySettings : IFavoredCPQSetting
     private int _skipPercentage = 50;
     private int _minimumRegularUsersFirst = 3;
 
-    [Category(Operation), Description("Enable or disable priority user favoritism. When disabled, all users are treated equally.")]
+    [Category(Operation), Description("Enable or disable priority user favoritism. When disabled, all users are treated equally."), DisplayName("Enable Favoritism")]
     public bool EnableFavoritism { get; set; } = true;
 
-    [Category(Configure), Description("Percentage of regular users that priority users can skip (0-100). For example: 50% means a priority user joins halfway through the regular users in queue. Higher percentage = more favorable to priority users.")]
+    [Category(Configure), Description("Percentage of regular users that priority users can skip (0-100). For example: 50% means a priority user joins halfway through the regular users in queue. Higher percentage = more favorable to priority users."), DisplayName("Skip Percentage")]
     public int SkipPercentage
     {
         get => _skipPercentage;
         set => _skipPercentage = Math.Clamp(value, MinSkipPercentage, MaxSkipPercentage);
     }
 
-    [Category(Configure), Description("Minimum number of regular users that must be processed before any priority user can skip ahead. This prevents priority users from completely blocking regular users, even in large queues.")]
+    [Category(Configure), Description("Minimum number of regular users that must be processed before any priority user can skip ahead. This prevents priority users from completely blocking regular users, even in large queues."), DisplayName("Minimum User Amount Before Favoritism")]
     public int MinimumRegularUsersFirst
     {
         get => _minimumRegularUsersFirst;
