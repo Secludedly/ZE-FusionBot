@@ -66,6 +66,9 @@
 ## 🖼️ GUI Previews
 
 <p align="center">
+    <img src="https://i.imgur.com/VZ2oeOy.gif" style="max-width: 100%; height: auto;">
+</p>
+<p align="center">
     <img src="https://raw.githubusercontent.com/Secludedly/ZE-FusionBot/main/.readme/README_GeneralOverlook2.gif" style="max-width: 100%; height: auto;">
 </p>
 <p align="center">
