@@ -141,10 +141,11 @@ public static class DetailsExtractor<T> where T : PKM, new()
         Span<int> ivs = stackalloc int[6];
         pk.GetIVs(ivs);
 
-        // IV labels in HP → Atk → Def → SpA → SpD → Spe order
+        // Map PKHeX order to display order: HP / Atk / Def / SpA / SpD / Spe
+        int[] displayOrder = { 0, 1, 2, 4, 5, 3 }; // indices in ivs[]
         string[] labels = { "HP", "Atk", "Def", "SpA", "SpD", "Spe" };
 
-        // Count perfect IVs (31)
+        // Count perfect IVs
         int perfectIVCount = 0;
         for (int i = 0; i < ivs.Length; i++)
         {
@@ -152,26 +153,16 @@ public static class DetailsExtractor<T> where T : PKM, new()
                 perfectIVCount++;
         }
 
-        // // Build the list of non-perfect IVs (including 0s), skip 31s
-        var nonPerfect = new List<string>();
-        for (int i = 0; i < ivs.Length; i++)
+        // Build IV display strings
+        var ivStrings = new List<string>();
+        for (int i = 0; i < displayOrder.Length; i++)
         {
-            if (ivs[i] != 31)
-                nonPerfect.Add($"{ivs[i]} {labels[i]}");
+            int idx = displayOrder[i];
+            ivStrings.Add($"{ivs[idx]} {labels[i]}");
         }
 
         // Compose final display
-        string ivsDisplay;
-
-        if (perfectIVCount == 6)
-        {
-            ivsDisplay = "6IV";
-        }
-        else
-        {
-            ivsDisplay = string.Join(" / ", nonPerfect);
-        }
-
+        string ivsDisplay = perfectIVCount == 6 ? "6IV" : string.Join(" / ", ivStrings);
         embedData.IVsDisplay = ivsDisplay;
 
 

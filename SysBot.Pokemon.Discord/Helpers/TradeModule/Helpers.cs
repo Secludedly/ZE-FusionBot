@@ -124,7 +124,6 @@ public static class Helpers<T> where T : PKM, new()
 
     public static Task<ProcessedPokemonResult<T>> ProcessShowdownSetAsync(string content, bool ignoreAutoOT = false)
     {
-        content = ReusableActions.StripCodeBlock(content);
         bool isEgg = TradeExtensions<T>.IsEggCheck(content);
 
         if (!ShowdownParsing.TryParseAnyLanguage(content, out ShowdownSet? set) || set == null || set.Species == 0)
@@ -241,7 +240,7 @@ public static class Helpers<T> where T : PKM, new()
                 });
             }
         }
-
+    
         // For SWSH (PK8), GO Pokemon can have AutoOT applied, so don't mark them as non-native
         la = new LegalityAnalysis(pk);
         var isNonNative = la.EncounterOriginal.Context != pk.Context || (pk.GO && pk is not PK8);

@@ -241,7 +241,7 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
 
                 // ***** FORCE NATURE *****
                 // This will reroll PID until PID%25 == requested nature and keep IV/EVs consistent.
-                ForceNatureHelper.ForceNature(pkm, set.Nature, set.Shiny);
+                NatureEnforcer.ForceNature(pkm, set.Nature, set.Shiny);
 
                 // Convert to bot runtime type
                 pkm = EntityConverter.ConvertToType(pkm, typeof(T), out _) ?? pkm;
@@ -1254,14 +1254,14 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
         {
             try
             {
-                // Parse the Showdown set and detect manual trainer overrides
+                // Normalize content and parse Showdown set
                 content = BatchCommandNormalizer.NormalizeBatchCommands(content);
                 content = ReusableActions.StripCodeBlock(content);
                 var set = new ShowdownSet(content);
 
                 var ignoreAutoOT = content.Contains("OT:") || content.Contains("TID:") || content.Contains("SID:");
 
-                // Legacy helper: returns the processed pokemon + extra info (errors, lgcode, etc.)
+                // Process the Showdown set for extra info (errors, lgcode, etc.)
                 var processed = await Helpers<T>.ProcessShowdownSetAsync(content, ignoreAutoOT);
                 if (processed.Pokemon == null)
                 {
@@ -1273,7 +1273,7 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
                 var sav = AutoLegalityWrapper.GetTrainerInfo<T>();
                 var template = AutoLegalityWrapper.GetTemplate(set);
 
-                // Generate the legal pokemon (ALM)
+                // Generate the legal Pokémon (ALM)
                 var pkm = sav.GetLegal(template, out var result);
                 if (pkm == null)
                 {
@@ -1289,11 +1289,26 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
                     return;
                 }
 
-                // ***** FORCE NATURE *****
-                // This will reroll PID until PID%25 == requested nature and keep IV/EVs consistent.
-                ForceNatureHelper.ForceNature(pkm, set.Nature, set.Shiny);
+                // -----------------------------
+                // Apply all IVs, HyperTraining, Nature, Shiny in one unified call
+                // -----------------------------
+                // Always pass the Showdown IVs array if present; otherwise, empty = fill all 31
+                int[] requestedIVs = set.IVs != null && set.IVs.Count() == 6
+                    ? set.IVs.ToArray()
+                    : Array.Empty<int>();
 
-                // Raw message ad check BEFORE generating PKM
+                IVEnforcer.ApplyRequestedIVsAndForceNature(
+                    pk,
+                    requestedIVs,
+                    set.Nature,
+                    set.Shiny,
+                    sav,
+                    template
+                );
+
+                // -----------------------------
+                // Raw message ad check BEFORE queuing trade
+                // -----------------------------
                 if (TradeExtensions<T>.ContainsAdText(content, out var domain))
                 {
                     var botName = string.IsNullOrEmpty(SysCordSettings.HubConfig.BotName)
@@ -1306,10 +1321,9 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
                     return;
                 }
 
-                // Final safety refresh
-                pk.RefreshChecksum();
-
+                // -----------------------------
                 // Queue the trade
+                // -----------------------------
                 var sig = Context.User.GetFavor();
                 await Helpers<T>.AddTradeToQueueAsync(
                     Context,
@@ -1342,6 +1356,21 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
         if (pk == null)
             return;
 
+        // For attachments, the PKM already has IVs set by the user
+        // Just clear hypertrain flags to ensure those exact IVs are displayed
+        if (pk is IHyperTrain ht)
+        {
+            ht.HT_HP = false;
+            ht.HT_ATK = false;
+            ht.HT_DEF = false;
+            ht.HT_SPE = false;
+            ht.HT_SPA = false;
+            ht.HT_SPD = false;
+        }
+
+        pk.RefreshChecksum();
+
+        // Queue the trade
         await Helpers<T>.AddTradeToQueueAsync(Context, code, user.Username, pk, sig, user,
             isHiddenTrade: isHiddenTrade, ignoreAutoOT: ignoreAutoOT);
     }

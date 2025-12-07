@@ -5,8 +5,11 @@ using PKHeX.Core;
 using PKHeX.Core.AutoMod;
 using SysBot.Base;
 using SysBot.Pokemon.Discord.Helpers;
+using SysBot.Pokemon.Discord.Helpers.TradeModule;
 using SysBot.Pokemon.Helpers;
 using System;
+using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
 namespace SysBot.Pokemon.Discord;
@@ -46,30 +49,57 @@ public static class AutoLegalityExtensionsDiscord
                 // Generate normally
                 var template = AutoLegalityWrapper.GetTemplate(set);
                 pkm = sav.GetLegal(template, out result);
-            }
 
-            var la = new LegalityAnalysis(pkm);
-            var spec = GameInfo.Strings.Species[set.Species];
-
-            if (!la.Valid)
-            {
-                var reason = result switch
+                if (pkm == null)
                 {
-                    "Timeout" => $"That {spec} set took too long to generate.",
-                    "VersionMismatch" => "Request refused: PKHeX and Auto-Legality Mod version mismatch.",
-                    _ => $"I wasn't able to create a {spec} from that set."
-                };
+                    await channel.SendMessageAsync("Failed to generate Pokémon from your set.").ConfigureAwait(false);
+                    return;
+                }
 
-                var imsg = $"Oops! {reason}";
-                if (result == "Failed")
-                    imsg += $"\n{AutoLegalityWrapper.GetLegalizationHint(set, sav, pkm)}";
+                // -----------------------------
+                // Enforce requested IVs, Nature, and Shiny
+                // -----------------------------
+                if (set.IVs != null && set.IVs.Count() == 6)
+                {
+                    IVEnforcer.ApplyRequestedIVsAndForceNature(
+                        pkm,
+                        set.IVs.ToArray(),
+                        set.Nature,
+                        set.Shiny,
+                        sav,
+                        template
+                    );
+                }
 
-                await channel.SendMessageAsync(imsg).ConfigureAwait(false);
-                return;
+                else
+                {
+                    // Even if no IVs requested, enforce nature/shiny only
+                    NatureEnforcer.ForceNature(pkm, set.Nature, set.Shiny);
+                }
+
+                var la = new LegalityAnalysis(pkm);
+                var spec = GameInfo.Strings.Species[set.Species];
+
+                if (!la.Valid)
+                {
+                    var reason = result switch
+                    {
+                        "Timeout" => $"That {spec} set took too long to generate.",
+                        "VersionMismatch" => "Request refused: PKHeX and Auto-Legality Mod version mismatch.",
+                        _ => $"I wasn't able to create a {spec} from that set."
+                    };
+
+                    var imsg = $"Oops! {reason}";
+                    if (result == "Failed")
+                        imsg += $"\n{AutoLegalityWrapper.GetLegalizationHint(set, sav, pkm)}";
+
+                    await channel.SendMessageAsync(imsg).ConfigureAwait(false);
+                    return;
+                }
+
+                var msg = $"Here's your ({result}) legalized PKM & Showdown Set for {spec} ({la.EncounterOriginal.Name})!";
+                await channel.SendPKMAsync(pkm, msg + $"\n{ReusableActions.GetFormattedShowdownText(pkm)}").ConfigureAwait(false);
             }
-
-            var msg = $"Here's your ({result}) legalized PKM & Showdown Set for {spec} ({la.EncounterOriginal.Name})!";
-            await channel.SendPKMAsync(pkm, msg + $"\n{ReusableActions.GetFormattedShowdownText(pkm)}").ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -78,7 +108,6 @@ public static class AutoLegalityExtensionsDiscord
             await channel.SendMessageAsync(msg).ConfigureAwait(false);
         }
     }
-
 
     public static Task ReplyWithLegalizedSetAsync(this ISocketMessageChannel channel, string content, byte gen)
     {
