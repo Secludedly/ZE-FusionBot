@@ -118,10 +118,25 @@ public class TradeStartModule<T> : ModuleBase<SocketCommandContext> where T : PK
                 ? "Starting trade..."
                 : $"Starting trade...\n{(detail.IsMysteryEgg ? "Mystery Egg" : speciesName)} is on its way!";
 
+            // --- NEW: Handle hidden trades cleanly
+            string authorText;
+            string? authorIconUrl = null;
+
+            if (detail.IsHiddenTrade)
+            {
+                authorText = "Up Next: Hidden User";
+                authorIconUrl = "https://i.imgur.com/pTqYqXP.gif";
+            }
+            else
+            {
+                authorText = $"Up Next: {user.Username}";
+                authorIconUrl = user.GetAvatarUrl() ?? user.GetDefaultAvatarUrl();
+            }
+
             var embed = new EmbedBuilder()
                 .WithColor(new DiscordColor(r, g, b))
                 .WithThumbnailUrl(embedImageUrl)
-                .WithAuthor($"Up Next: {user.Username}", user.GetAvatarUrl() ?? user.GetDefaultAvatarUrl())
+                .WithAuthor(authorText, authorIconUrl)
                 .WithDescription($"**Receiving**: {tradeTitle}\n**Trade ID**: {detail.ID}")
                 .WithFooter($"{footerText}\u200B", ballImgUrl)
                 .Build();

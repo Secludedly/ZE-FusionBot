@@ -780,7 +780,6 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
             isBatchTrade: true,
             batchTradeNumber: tradeNumber,
             totalBatchTrades: totalTrades,
-            isHiddenTrade: false,
             isMysteryEgg: false,
             lgcode: lgCode,
             tradeType: PokeTradeType.Batch,

@@ -120,7 +120,7 @@ public static class QueueHelper<T> where T : PKM, new()
         int uniqueTradeID = GenerateUniqueTradeID();
 
         var detail = new PokeTradeDetail<T>(pk, trainer, notifier, t, code, sig == RequestSignificance.Favored,
-            lgcode, batchTradeNumber, totalBatchTrades, isMysteryEgg, uniqueTradeID, ignoreAutoOT, setEdited);
+            lgcode, batchTradeNumber, totalBatchTrades, isMysteryEgg, isHiddenTrade, uniqueTradeID, ignoreAutoOT, setEdited);
 
         var trade = new TradeEntry<T>(detail, userID, PokeRoutineType.LinkTrade, name, uniqueTradeID);
         var hub = SysCord<T>.Runner.Hub;
@@ -285,13 +285,12 @@ public static class QueueHelper<T> where T : PKM, new()
             else
             {
                  var message = $"▹𝗦𝗨𝗖𝗖𝗘𝗦𝗦𝗙𝗨𝗟𝗟𝗬 𝗔𝗗𝗗𝗘𝗗◃\n" +
-                 $"//【𝐔𝐒𝐄𝐑: {trader.Mention}】\n" +
-                 $"//【𝐐𝐔𝐄𝐔𝐄: LinkTrade】\n" +
+                 $"//【𝐔𝐒𝐄𝐑: ||Owner Access Only||】\n" +
                  $"//【𝐏𝐎𝐒𝐈𝐓𝐈𝐎𝐍: {position.Position}】\n";
 
                 if (embedData.SpeciesName != "---")
                 {
-                    message += $"//【𝐏𝐎𝐊𝐄𝐌𝐎𝐍: {embedData.SpeciesName}】\n";
+                    message += $"//【𝐏𝐎𝐊𝐄𝐌𝐎𝐍: ||{embedData.SpeciesName}||】\n";
                 }
 
                 message += $"//【𝐄𝐓𝐀: {baseEta:F1} Min(s)】";
@@ -324,12 +323,12 @@ public static class QueueHelper<T> where T : PKM, new()
         int uniqueTradeID = GenerateUniqueTradeID();
 
         var detail = new PokeTradeDetail<T>(firstTrade, trainer_info, notifier, PokeTradeType.Batch, code,
-            sig == RequestSignificance.Favored, null, 1, totalBatchTrades, false, uniqueTradeID)
+            sig == RequestSignificance.Favored, null, 1, totalBatchTrades, false)
         {
             BatchTrades = allTrades
         };
 
-        var trade = new TradeEntry<T>(detail, userID, PokeRoutineType.Batch, name, uniqueTradeID);
+        var trade = new TradeEntry<T>(detail, userID, PokeRoutineType.Batch, name, uniqueTradeID: uniqueTradeID);
         var hub = SysCord<T>.Runner.Hub;
         var Info = hub.Queues.Info;
         var added = Info.AddToTradeQueue(trade, userID, false, sig == RequestSignificance.Owner);

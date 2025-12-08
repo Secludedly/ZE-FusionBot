@@ -148,8 +148,20 @@ namespace SysBot.Pokemon.Discord
 
             int uniqueTradeID = GenerateUniqueTradeID();
 
-            var detail = new PokeTradeDetail<T>(firstEgg, trainer, notifier, PokeTradeType.Batch, batchTradeCode,
-                sig == RequestSignificance.Favored, null, 1, batchEggList.Count, true, uniqueTradeID)
+            var detail = new PokeTradeDetail<T>(
+                firstEgg,
+                trainer,
+                notifier,
+                PokeTradeType.Batch,
+                batchTradeCode,
+                sig == RequestSignificance.Favored,
+                null,
+                1,
+                batchEggList.Count,
+                true,               // send code DM
+                true,               // <-- THIS ONE WAS MISSING
+                uniqueTradeID       // now correctly argument 12
+            )
             {
                 BatchTrades = batchEggList
             };
@@ -210,7 +222,7 @@ namespace SysBot.Pokemon.Discord
                 .WithAuthor(new EmbedAuthorBuilder()
                     .WithName($"Mystery Egg for {context.User.Username}")
                     .WithIconUrl(context.User.GetAvatarUrl() ?? context.User.GetDefaultAvatarUrl())
-                    .WithUrl("https://genpkm.com/pokecreator"));
+                    .WithUrl("https://genpkm.com"));
 
             return embedBuilder.Build();
         }
@@ -253,27 +265,22 @@ namespace SysBot.Pokemon.Discord
             {
                 foreach (var species in shuffled)
                 {
-                    // Step 1: create a ShowdownSet for this species
                     var set = CreateEggShowdownSet(species, context);
+                    var template = AutoLegalityWrapper.GetTemplate(set);
 
-                    // Step 2: wrap ShowdownSet in RegenTemplate for ALM
-                    var regenTemplate = new RegenTemplate(set);
-
-                    // Step 3: generate legal egg
-                    var pk = sav.GenerateEgg(regenTemplate, out var result);
+                    // Use ALM's GenerateEgg method to properly generate eggs
+                    var pk = sav.GenerateEgg(template, out var result);
 
                     if (pk == null || result != LegalizationResult.Regenerated)
                         continue;
 
-                    // Step 4: convert to your runtime type
-                    var converted = EntityConverter.ConvertToType(pk, typeof(T), out _) as T;
-                    if (converted == null)
+                    pk = EntityConverter.ConvertToType(pk, typeof(T), out _) ?? pk;
+                    if (pk is not T validPk)
                         continue;
 
-                    // Step 5: verify legality
-                    var la = new LegalityAnalysis(converted);
+                    var la = new LegalityAnalysis(validPk);
                     if (la.Valid)
-                        return converted;
+                        return validPk;
                 }
             }
             finally
@@ -299,10 +306,6 @@ namespace SysBot.Pokemon.Discord
 
         private static string? GetHiddenAbilityName(ushort species, EntityContext context)
         {
-            // First check PKHeX's breed legality
-            if (!AbilityBreedLegality.IsHiddenPossibleHOME(species))
-                return null;
-
             var personalTable = GetPersonalTable(context);
             if (personalTable == null)
                 return null;
@@ -313,6 +316,7 @@ namespace SysBot.Pokemon.Discord
                 if (pi is IPersonalAbility12H piH)
                 {
                     var hiddenAbilityID = piH.AbilityH;
+                    // Check if the hidden ability is different from regular abilities and valid
                     if (hiddenAbilityID > 0 && hiddenAbilityID < GameInfo.Strings.Ability.Count)
                         return GameInfo.Strings.Ability[hiddenAbilityID];
                 }

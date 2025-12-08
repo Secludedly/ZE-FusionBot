@@ -22,6 +22,9 @@ namespace SysBot.Pokemon
         /// </summary>
         public readonly int Code;
 
+        /// <summary> Indicates if the trade is hidden from public queues. </summary>
+        public bool IsHiddenTrade { get; set; } = false;
+
         /// <summary> Data to be traded </summary>
         public TPoke TradeData;
 
@@ -70,8 +73,23 @@ namespace SysBot.Pokemon
 
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 
-        public PokeTradeDetail(TPoke pkm, PokeTradeTrainerInfo info, IPokeTradeNotifier<TPoke> notifier, PokeTradeType type, int code, bool favored = false, List<Pictocodes>? lgcode = null, int batchTradeNumber = 0, int totalBatchTrades = 0, bool isMysteryEgg = false, int uniqueTradeID = 0, bool ignoreAutoOT = false, bool setEdited = false)
-#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+        // PokeTradeDetail.cs — replace the existing constructor with this
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+        public PokeTradeDetail(
+            TPoke pkm,
+            PokeTradeTrainerInfo info,
+            IPokeTradeNotifier<TPoke> notifier,
+            PokeTradeType type,
+            int code,
+            bool favored = false,
+            List<Pictocodes>? lgcode = null,
+            int batchTradeNumber = 0,
+            int totalBatchTrades = 0,
+            bool isMysteryEgg = false,
+            bool isHiddenTrade = false,
+            int uniqueTradeID = 0,
+            bool ignoreAutoOT = false,
+            bool setEdited = false)
         {
             ID = Interlocked.Increment(ref CreatedCount) % 50000;
             Code = code;
@@ -81,16 +99,23 @@ namespace SysBot.Pokemon
             Type = type;
             Time = DateTime.Now;
             IsFavored = favored;
-#pragma warning disable CS8601 // Possible null reference assignment.
+
+            // assign the passed-in LGPE trade code list (can be null)
             LGPETradeCode = lgcode;
-#pragma warning restore CS8601 // Possible null reference assignment.
+
             BatchTradeNumber = batchTradeNumber;
             TotalBatchTrades = totalBatchTrades;
             IsMysteryEgg = isMysteryEgg;
+
+            // FIX: correctly set IsHiddenTrade from the parameter
+            IsHiddenTrade = isHiddenTrade;
+
             UniqueTradeID = uniqueTradeID;
             IgnoreAutoOT = ignoreAutoOT;
             SetEdited = setEdited;
         }
+#pragma warning restore CS8618
+
 
         public void TradeInitialize(PokeRoutineExecutor<TPoke> routine) => Notifier.TradeInitialize(routine, this);
 
