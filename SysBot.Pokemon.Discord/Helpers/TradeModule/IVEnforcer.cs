@@ -20,9 +20,19 @@ namespace SysBot.Pokemon.Discord.Helpers.TradeModule
             IBattleTemplate template,
             int maxPidAttempts = DEFAULT_PID_ATTEMPTS)
         {
+            // IVEnforcer only supports ZA Pokémon
+            if (pk.Version != GameVersion.ZA)
+                throw new InvalidOperationException("IVEnforcer may only be used for ZA Pokémon.");
+
+            // Skip ALL enforcement if the Pokémon is a Fateful Encounter, even if from ZA
+            if (pk.FatefulEncounter)
+                return true;
+
             if (pk == null) throw new ArgumentNullException(nameof(pk));
             if (trainerSav == null) throw new ArgumentNullException(nameof(trainerSav));
             if (template == null) throw new ArgumentNullException(nameof(template));
+            if (pk.FatefulEncounter)
+                return true;
 
             // -----------------------------
             // 1) Apply IVs in PKHeX order (HP/ATK/DEF/SPE/SPA/SPD)
@@ -161,6 +171,9 @@ namespace SysBot.Pokemon.Discord.Helpers.TradeModule
 
         public static void ApplyHyperTrainingIfNeeded(PKM pk)
         {
+            if (pk.Version != GameVersion.ZA)
+                return;
+
             if (pk is not IHyperTrain ht)
                 return;
 

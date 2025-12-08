@@ -1282,7 +1282,7 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
                 }
 
                 // Convert to the bot's runtime type (T)
-                var pk = EntityConverter.ConvertToType(pkm, typeof(T), out _) as T;
+                var pk = (T)(object)pkm;
                 if (pk == null)
                 {
                     await Helpers<T>.ReplyAndDeleteAsync(Context, "Failed to convert Pokémon to correct type.", 5);
@@ -1291,20 +1291,23 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
 
                 // -----------------------------
                 // Apply all IVs, HyperTraining, Nature, Shiny in one unified call
-                // -----------------------------
                 // Always pass the Showdown IVs array if present; otherwise, empty = fill all 31
-                int[] requestedIVs = set.IVs != null && set.IVs.Count() == 6
-                    ? set.IVs.ToArray()
-                    : Array.Empty<int>();
+                // -----------------------------
+                if (pk.Version == GameVersion.ZA)
+                {
+                    int[] requestedIVs = set.IVs != null && set.IVs.Count() == 6
+                        ? set.IVs.ToArray()
+                        : Array.Empty<int>();
 
-                IVEnforcer.ApplyRequestedIVsAndForceNature(
-                    pk,
-                    requestedIVs,
-                    set.Nature,
-                    set.Shiny,
-                    sav,
-                    template
-                );
+                    IVEnforcer.ApplyRequestedIVsAndForceNature(
+                        pk,
+                        requestedIVs,
+                        set.Nature,
+                        set.Shiny,
+                        sav,
+                        template
+                    );
+                }
 
                 // -----------------------------
                 // Raw message ad check BEFORE queuing trade
@@ -1358,14 +1361,19 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
 
         // For attachments, the PKM already has IVs set by the user
         // Just clear hypertrain flags to ensure those exact IVs are displayed
-        if (pk is IHyperTrain ht)
+        if (pk.Version == GameVersion.ZA)
         {
-            ht.HT_HP = false;
-            ht.HT_ATK = false;
-            ht.HT_DEF = false;
-            ht.HT_SPE = false;
-            ht.HT_SPA = false;
-            ht.HT_SPD = false;
+            // For attachments, the PKM already has IVs set by the user
+            // Just clear hypertrain flags to ensure those exact IVs are displayed
+            if (pk is IHyperTrain ht)
+            {
+                ht.HT_HP = false;
+                ht.HT_ATK = false;
+                ht.HT_DEF = false;
+                ht.HT_SPE = false;
+                ht.HT_SPA = false;
+                ht.HT_SPD = false;
+            }
         }
 
         pk.RefreshChecksum();

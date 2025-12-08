@@ -19,6 +19,14 @@ namespace SysBot.Pokemon.Discord.Helpers.TradeModule
             if (pkm == null)
                 throw new ArgumentNullException(nameof(pkm));
 
+            // NatureEnforcer only supports ZA Pokémon
+            if (pkm.Version != GameVersion.ZA)
+                throw new InvalidOperationException("NatureEnforcer is only supported for ZA Pokémon.");
+
+            // Skip ALL enforcement if the Pokémon is a Fateful Encounter, even if from ZA
+            if (pkm.FatefulEncounter)
+                return;
+
             if (desiredNature == Nature.Random && !isShiny)
                 return;
 
