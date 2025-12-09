@@ -21,6 +21,9 @@ public class FolderSettings : IDumper
     [Category(Files), Description("Directory where your Switch Remote For PC is located."), DisplayName("Switch Remote for PC Location")]
     public string SwitchRemoteForPC { get; set; } = string.Empty;
 
+    [Category(Files), Description("Directory where your HOME Tracked Pokémon are located."), DisplayName("HOME-Ready Folder")]
+    public string HOMEReadyPKMFolder { get; set; } = string.Empty;
+
 
     public void CreateDefaults(string path)
     {

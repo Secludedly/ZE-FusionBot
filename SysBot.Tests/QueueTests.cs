@@ -168,8 +168,6 @@ public class QueueTests
             1, // batch trade number
             1, // total batch trades
             false, // not mystery egg
-            uniqueTradeId, // THE UNIQUE ID THAT CHANGES EACH REQUEST
-            false, // ignoreAutoOT
             false  // setEdited
         );
 
