@@ -32,7 +32,7 @@ namespace SysBot.Pokemon.WinForms
                 Font = new Font("Ubuntu Mono", 10),
                 BackColor = Color.FromArgb(10, 10, 40),
                 ForeColor = Color.FromArgb(51, 255, 255),
-                WordWrap = false,
+                WordWrap = true,
                 ScrollBars = RichTextBoxScrollBars.Both,
                 ContextMenuStrip = CreateContextMenu()
             };

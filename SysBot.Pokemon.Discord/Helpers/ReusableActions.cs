@@ -40,6 +40,37 @@ public static class ReusableActions
         // Start with the base Showdown text split into lines
         var lines = ShowdownParsing.GetShowdownText(pkm).Split('\n').ToList();
 
+        // --- Alpha formatting ---
+        if (pkm is IAlpha alpha && alpha.IsAlpha)
+        {
+            int abilityIndex = lines.FindIndex(l => l.StartsWith("Ability:"));
+            if (abilityIndex >= 0)
+                lines.Insert(abilityIndex + 1, "Alpha: Yes");
+            else
+                lines.Add("Alpha: Yes");
+        }
+
+        // --- Shiny formatting ---
+        if (pkm.IsShiny)
+        {
+            int shinyIndex = lines.FindIndex(l => l.StartsWith("Shiny:"));
+
+            if (pkm.Version is GameVersion.SW or GameVersion.SH)
+            {
+                string shiny = (pkm.ShinyXor == 0 || pkm.FatefulEncounter)
+                    ? "Shiny: Square"
+                    : "Shiny: Star";
+
+                if (shinyIndex >= 0) lines[shinyIndex] = shiny;
+                else lines.Add(shiny);
+            }
+            else
+            {
+                if (shinyIndex >= 0) lines[shinyIndex] = "Shiny: Yes";
+                else lines.Add("Shiny: Yes");
+            }
+        }
+
         // Add Egg info if needed
         if (pkm.IsEgg)
             lines.Add("\nPokémon is an egg");
@@ -71,11 +102,8 @@ public static class ReusableActions
         $"OTGender: {(Gender)pkm.OriginalTrainerGender}",
         $"Language: {(LanguageID)pkm.Language}",
         $".MetDate={pkm.MetDate:yyyy-MM-dd}",
-        $".MetLocation={pkm.MetLocation}",
         $".MetLevel={pkm.MetLevel}",
         $".Version={(GameVersion)pkm.Version}",
-        $".OriginalTrainerFriendship={pkm.OriginalTrainerFriendship}",
-        $".HandlingTrainerFriendship={pkm.HandlingTrainerFriendship}"
     };
         lines.InsertRange(insertIndex, trainerInfo);
 
