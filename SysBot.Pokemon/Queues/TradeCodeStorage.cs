@@ -137,6 +137,29 @@ public class TradeCodeStorage
             LogUtil.LogInfo("TradeCodeStorage", $"An error occurred while saving trade codes to file: {ex.Message}");
         }
     }
+
+    public void UpdateTradeDetails(ulong trainerID, string ot, int tid, int sid, string? quote = null, byte? gender = null, int? language = null)
+    {
+        LoadFromFile();
+        if (_tradeCodeDetails!.TryGetValue(trainerID, out var details))
+        {
+            details.OT = ot;
+            details.TID = tid;
+            details.SID = sid;
+
+            if (quote != null)
+                details.Quote = quote;
+
+            if (gender.HasValue)
+                details.Gender = gender;
+
+            if (language.HasValue)
+                details.Language = language;
+
+            SaveToFile();
+        }
+    }
+
     public class TradeCodeDetails
     {
         public int Code { get; set; }
@@ -147,5 +170,6 @@ public class TradeCodeStorage
         // Optional trainer properties
         public byte? Gender { get; set; }
         public int? Language { get; set; }
+        public string? Quote { get; set; }
     }
 }
