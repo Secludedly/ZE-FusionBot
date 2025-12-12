@@ -294,7 +294,10 @@ namespace SysBot.Pokemon.Discord.Modules
                 // Add embed field
                 embed.AddField(
                     $"{index}. {item}",
-                    $"Use `{Prefix}hrr {index}` to request this Pokémon.\nThis file is for **{game}**."
+                    $"Use `{Prefix}hrr {index}` to request this Pokémon.\n" +
+                    $"Use `{Prefix}hrv {index}` to view Pokémon details.\n" +
+                    $"Use `{Prefix}hrd {index}` to download this PKM file.\n" +
+                    $"This file is for **{game}**."
                 );
             }
 
@@ -307,6 +310,189 @@ namespace SysBot.Pokemon.Discord.Modules
                 await embedMsg.DeleteAsync();
             }
             catch { }
+        }
+
+        // ============================================================================
+        //  VIEW
+        // ============================================================================
+        [Command("homereadyview")]
+        [Alias("hrv")]
+        [Summary("Views a HOME-ready PKM in Showdown format before downloading.")]
+        private async Task HOMEReadyViewAsync(int index)
+        {
+            if (string.IsNullOrWhiteSpace(HOMEFolder))
+            {
+                await ReplyAsync("This bot does not have the HOME-Ready module configured.").ConfigureAwait(false);
+                return;
+            }
+
+            try
+            {
+                var files = Directory.GetFiles(HOMEFolder)
+                    .OrderBy(f => f)
+                    .ToList();
+
+                if (files.Count == 0)
+                {
+                    await ReplyAsync("No HOME-ready PKM files found.").ConfigureAwait(false);
+                    return;
+                }
+
+                if (index < 1 || index > files.Count)
+                {
+                    await ReplyAsync("Invalid entry number. Choose a valid file.");
+                    return;
+                }
+
+                var filePath = files[index - 1];
+                var raw = await File.ReadAllBytesAsync(filePath);
+
+                var entity = EntityFormat.GetFromBytes(raw);
+                if (entity == null)
+                {
+                    await ReplyAsync("Could not read the PKM file.").ConfigureAwait(false);
+                    return;
+                }
+
+                // Convert to correct PKM type for this bot
+                PKM? typed = entity as T
+                    ?? EntityConverter.ConvertToType(entity, typeof(T), out _) as T;
+
+                if (typed == null)
+                {
+                    await ReplyAsync("File loaded, but could not convert to your game generation.").ConfigureAwait(false);
+                    return;
+                }
+
+                // Generate showdown text
+                string showdown = ShowdownParsing.GetShowdownText(typed);
+
+                // ============================
+                // METADATA
+                // ============================
+
+                string otName = typed.OriginalTrainerName;
+                string tid = typed.TrainerTID7.ToString();
+
+                string versionName = GameInfo.GetVersionName(typed.Version);
+
+                string metDate = typed.MetDate?.ToString("yyyy-MM-dd") ?? "Unknown";
+
+                string metLocStr = GameInfo.Strings.GetLocationName(
+                    isEggLocation: false,
+                    location: typed.MetLocation,
+                    format: typed.Format,
+                    generation: typed.Generation,
+                    version: typed.Version
+                );
+
+                string game = versionName;
+                ulong homeTracker = GetHomeTrackerSafe(typed);
+                string homeTrackerStr = homeTracker == 0
+                    ? $"N/A - Just trade with a **{game}** bot."
+                    : $"{homeTracker:X16}";
+
+                string details =
+                $@"**Additional Details**
+                • OT: {otName}
+                • TID: {tid}
+                • Game: {versionName}
+                • Met Location: {typed.MetLocation} ({metLocStr})
+                • Met Date: {metDate}
+                • Tracker: {homeTrackerStr}";
+
+
+                string finalText =
+                $"```text\n{showdown}\n```\n{details}";
+
+                var embed = new EmbedBuilder()
+                    .WithTitle($"Viewing HOME-Ready Entry #{index}")
+                    .WithDescription(finalText)
+                    .WithColor(Color.Magenta)
+                    .WithFooter($"Use {Prefix}hrr {index} to request this Pokémon for trade.\n" +
+                    $"Use {Prefix}hrd {index} to download this PKM file.");
+
+                await ReplyAsync(embed: embed.Build());
+            }
+            catch (Exception ex)
+            {
+                await ReplyAsync($"**Error:** {ex.Message}");
+            }
+            finally
+            {
+                try { if (Context.Message is IUserMessage m) await m.DeleteAsync(); } catch { }
+            }
+        }
+
+        private static ulong GetHomeTrackerSafe(PKM pkm)
+        {
+            var type = pkm.GetType();
+            var prop = type.GetProperty("Tracker");
+
+            if (prop == null)
+                return 0; // This format doesn’t support HOME tracking
+
+            object? value = prop.GetValue(pkm);
+            if (value is ulong tracker)
+                return tracker;
+
+            return 0;
+        }
+
+
+        // ============================================================================
+        //  DOWNLOAD FILE
+        // ============================================================================
+        [Command("homereadydownload")]
+        [Alias("hrd")]
+        [Summary("Downloads a HOME-ready PKM file by its number from the list.")]
+        private async Task HOMEReadyDownloadAsync(int index)
+        {
+            if (string.IsNullOrWhiteSpace(HOMEFolder))
+            {
+                await ReplyAsync("This bot does not have the HOME-Ready module configured.").ConfigureAwait(false);
+                return;
+            }
+
+            try
+            {
+                var files = Directory.GetFiles(HOMEFolder)
+                    .OrderBy(f => f)
+                    .ToList();
+
+                if (files.Count == 0)
+                {
+                    await ReplyAsync("No HOME-ready PKM files found.").ConfigureAwait(false);
+                    return;
+                }
+
+                if (index < 1 || index > files.Count)
+                {
+                    await ReplyAsync("Invalid entry number. Choose a valid file.");
+                    return;
+                }
+
+                var filePath = files[index - 1];
+                var fileName = Path.GetFileName(filePath);
+
+                // Send file directly
+                await using (var fs = File.OpenRead(filePath))
+                {
+                    var msg = await Context.Channel.SendFileAsync(
+                        stream: fs,
+                        filename: fileName,
+                        text: $"Here's your HOME-Ready Pokémon file: **{fileName}**"
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                await ReplyAsync($"**Error:** {ex.Message}");
+            }
+            finally
+            {
+                try { if (Context.Message is IUserMessage m) await m.DeleteAsync(); } catch { }
+            }
         }
     }
 }
