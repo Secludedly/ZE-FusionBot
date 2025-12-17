@@ -187,11 +187,6 @@ namespace SysBot.Pokemon.WinForms
             panelTitleBar.Paint += panelTitleBar_Paint;
             InitGlitter();
 
-            this.Shown += async (s, e) =>
-            {
-                await Task.Delay(500);
-                ActivateButton(btnBots); // now the outline pulse will start immediately
-            };
             Instance = this;
             InitializeLeftSideImage(); // Initialize the left side BG image in panelLeftSide
             InitializeUpperImage();    // Initialize the upper image in panelTitleBar
@@ -303,6 +298,10 @@ namespace SysBot.Pokemon.WinForms
             InitUtil.InitializeStubs(Config.Mode);     // Stubby McStubbinson will set environment based on config mode
             OpenChildForm(_botsForm);
             SetupThemeAwareButtons();
+
+            // Activate the Bots button after everything is initialized
+            ActivateButton(btnBots);
+
             SaveCurrentConfig();
 
             _botsForm.StartButton.Click += B_Start_Click;           // Start button... do any of these really need explaining?
