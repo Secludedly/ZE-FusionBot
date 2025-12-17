@@ -2,7 +2,6 @@ using System;
 using System.Drawing;
 using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace SysBot.Pokemon.WinForms
@@ -36,80 +35,10 @@ namespace SysBot.Pokemon.WinForms
             // Set text rendering to be compatible
             Application.SetCompatibleTextRenderingDefault(false);
 
-            // Show splash screen on a separate thread
-            var splash = new SplashScreen();
-            splash.StartPosition = FormStartPosition.CenterScreen;
-            splash.TopMost = true;
-
-            // When splash loads, preload assets and transition to main form
-            splash.Shown += OnSplashShown;
-
-            async void OnSplashShown(object? sender, EventArgs e)
-            {
-                Main? mainForm = null;
-                try
-                {
-                    // Start loading assets
-                    var preloadTask = PreloadAssetsAsync();
-
-                    // Require splash to last at least 3 seconds for visibility
-                    await Task.WhenAll(
-                        preloadTask,
-                        Task.Delay(3000)
-                    ).ConfigureAwait(true);
-
-                    // Create main form on UI thread (may throw if FontAwesome.Sharp has issues)
-                    mainForm = new Main();
-                    mainForm.StartPosition = FormStartPosition.CenterScreen;
-                    mainForm.FormClosed += (s, args) => Application.Exit(); // Ensure app exits when main form closes
-                    mainForm.Show();
-
-                    // Properly close splash screen (not just hide)
-                    splash.Close();
-                }
-                catch (InvalidOperationException ex) when (ex.Message.Contains("Font Awesome") || ex.Message.Contains("font"))
-                {
-                    // Font Awesome library error - try to recover or show helpful message
-                    splash.Close();
-
-                    var result = MessageBox.Show(
-                        "FontAwesome.Sharp library failed to initialize.\n\n" +
-                        "This is usually caused by:\n" +
-                        "• Missing or corrupted FontAwesome.Sharp.dll\n" +
-                        "• Incompatible .NET runtime version\n" +
-                        "• Anti-virus blocking embedded resources\n\n" +
-                        "Try running as administrator or reinstalling the application.\n\n" +
-                        "Technical details:\n" + ex.Message + "\n\n" +
-                        "Continue anyway? (UI may look broken)",
-                        "Font Library Error",
-                        MessageBoxButtons.YesNo,
-                        MessageBoxIcon.Warning
-                    );
-
-                    if (result == DialogResult.Yes && mainForm != null)
-                    {
-                        // User wants to continue despite the error
-                        mainForm.Show();
-                    }
-                    else
-                    {
-                        Application.Exit();
-                    }
-                }
-                catch (Exception ex)
-                {
-                    // If loading fails, show error and close gracefully
-                    splash.Close();
-                    MessageBox.Show(
-                        $"Failed to initialize application:\n\n{ex.Message}\n\n{ex.StackTrace}",
-                        "Startup Error",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Error
-                    );
-                    Application.Exit();
-                }
-            }
-
+            ///////////////////////////////////////////
+            /// Load fonts before showing main form ///
+            ///////////////////////////////////////////
+            LoadFonts();
 
             ///////////////////////////////////////////
             /// Prevent crashes from missing fonts ////
@@ -163,55 +92,52 @@ namespace SysBot.Pokemon.WinForms
 
 
             ///////////////////////////////////////////
-            /// Start UI form on the main thread //////
+            /// Start main form ////////////////////////
             ///////////////////////////////////////////
-            Application.Run(splash);
+            Application.Run(new Main());
         }
 
         ////////////////////////////////////////////
-        // Preload assets like fonts, images, etc.//
+        // Load fonts synchronously on startup ////
         ////////////////////////////////////////////
-        private static async Task PreloadAssetsAsync()
+        private static void LoadFonts()
         {
-            await Task.Run(() =>
+            try
             {
-                try
-                {
-                    FontManager.LoadFonts(
-                        "bahnschrift.ttf",
-                        "Bobbleboddy_light.ttf",
-                        "EnterTheGrid.ttf",
-                        "gadugi.ttf",
-                        "gadugib.ttf",
-                        "GNUOLANERG.ttf",
-                        "Montserrat-Bold.ttf",
-                        "Montserrat-Regular.ttf",
-                        "segoeui.ttf",
-                        "segoeuib.ttf",
-                        "segoeuii.ttf",
-                        "segoeuil.ttf",
-                        "segoeuisl.ttf",
-                        "segoeuiz.ttf",
-                        "seguibl.ttf",
-                        "seguibli.ttf",
-                        "seguili.ttf",
-                        "seguisb.ttf",
-                        "seguisbi.ttf",
-                        "seguisli.ttf",
-                        "SegUIVar.ttf",
-                        "UbuntuMono-R.ttf",
-                        "UbuntuMono-B.ttf",
-                        "UbuntuMono-BI.ttf",
-                        "UbuntuMono-RI.ttf"
-                    );
-                }
-                catch (Exception ex)
-                {
-                    // Log font loading errors but don't fail startup
-                    Console.WriteLine($"[Font Loading Warning] Some fonts failed to load: {ex.Message}");
-                    Console.WriteLine("[Font Loading Warning] Application will use fallback fonts.");
-                }
-            }).ConfigureAwait(false);
+                FontManager.LoadFonts(
+                    "bahnschrift.ttf",
+                    "Bobbleboddy_light.ttf",
+                    "EnterTheGrid.ttf",
+                    "gadugi.ttf",
+                    "gadugib.ttf",
+                    "GNUOLANERG.ttf",
+                    "Montserrat-Bold.ttf",
+                    "Montserrat-Regular.ttf",
+                    "segoeui.ttf",
+                    "segoeuib.ttf",
+                    "segoeuii.ttf",
+                    "segoeuil.ttf",
+                    "segoeuisl.ttf",
+                    "segoeuiz.ttf",
+                    "seguibl.ttf",
+                    "seguibli.ttf",
+                    "seguili.ttf",
+                    "seguisb.ttf",
+                    "seguisbi.ttf",
+                    "seguisli.ttf",
+                    "SegUIVar.ttf",
+                    "UbuntuMono-R.ttf",
+                    "UbuntuMono-B.ttf",
+                    "UbuntuMono-BI.ttf",
+                    "UbuntuMono-RI.ttf"
+                );
+            }
+            catch (Exception ex)
+            {
+                // Log font loading errors but don't fail startup
+                Console.WriteLine($"[Font Loading Warning] Some fonts failed to load: {ex.Message}");
+                Console.WriteLine("[Font Loading Warning] Application will use fallback fonts.");
+            }
         }
     }
 }
