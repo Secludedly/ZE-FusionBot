@@ -168,7 +168,20 @@ namespace SysBot.Pokemon.WinForms
 
 
             Task.Run(BotMonitor);      // Start the bot monitor
-            InitializeComponent();     // Initialize all the form components before program
+
+            try
+            {
+                InitializeComponent();     // Initialize all the form components before program
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("Font Awesome") || ex.Message.Contains("font"))
+            {
+                // FontAwesome.Sharp library failed to load its embedded fonts
+                // This is a critical error, but we'll log it and let Program.cs handle it
+                Console.WriteLine($"[CRITICAL] FontAwesome.Sharp initialization failed: {ex.Message}");
+                Console.WriteLine($"[CRITICAL] Stack trace: {ex.StackTrace}");
+                throw; // Re-throw to let Program.cs catch and display user-friendly message
+            }
+
             InitializeFonts();         // Apply custom fonts after component initialization
             SetupTitleBarButtonHoverEffects();
             panelTitleBar.Paint += panelTitleBar_Paint;

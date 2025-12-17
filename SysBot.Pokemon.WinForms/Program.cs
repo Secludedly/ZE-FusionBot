@@ -46,6 +46,7 @@ namespace SysBot.Pokemon.WinForms
 
             async void OnSplashShown(object? sender, EventArgs e)
             {
+                Main? mainForm = null;
                 try
                 {
                     // Start loading assets
@@ -57,8 +58,8 @@ namespace SysBot.Pokemon.WinForms
                         Task.Delay(3000)
                     ).ConfigureAwait(true);
 
-                    // Create and show main form on UI thread
-                    var mainForm = new Main();
+                    // Create main form on UI thread (may throw if FontAwesome.Sharp has issues)
+                    mainForm = new Main();
                     mainForm.StartPosition = FormStartPosition.CenterScreen;
                     mainForm.FormClosed += (s, args) => Application.Exit(); // Ensure app exits when main form closes
                     mainForm.Show();
@@ -66,16 +67,45 @@ namespace SysBot.Pokemon.WinForms
                     // Properly close splash screen (not just hide)
                     splash.Close();
                 }
+                catch (InvalidOperationException ex) when (ex.Message.Contains("Font Awesome") || ex.Message.Contains("font"))
+                {
+                    // Font Awesome library error - try to recover or show helpful message
+                    splash.Close();
+
+                    var result = MessageBox.Show(
+                        "FontAwesome.Sharp library failed to initialize.\n\n" +
+                        "This is usually caused by:\n" +
+                        "• Missing or corrupted FontAwesome.Sharp.dll\n" +
+                        "• Incompatible .NET runtime version\n" +
+                        "• Anti-virus blocking embedded resources\n\n" +
+                        "Try running as administrator or reinstalling the application.\n\n" +
+                        "Technical details:\n" + ex.Message + "\n\n" +
+                        "Continue anyway? (UI may look broken)",
+                        "Font Library Error",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Warning
+                    );
+
+                    if (result == DialogResult.Yes && mainForm != null)
+                    {
+                        // User wants to continue despite the error
+                        mainForm.Show();
+                    }
+                    else
+                    {
+                        Application.Exit();
+                    }
+                }
                 catch (Exception ex)
                 {
                     // If loading fails, show error and close gracefully
+                    splash.Close();
                     MessageBox.Show(
-                        $"Failed to initialize application:\n{ex.Message}",
+                        $"Failed to initialize application:\n\n{ex.Message}\n\n{ex.StackTrace}",
                         "Startup Error",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Error
                     );
-                    splash.Close();
                     Application.Exit();
                 }
             }
