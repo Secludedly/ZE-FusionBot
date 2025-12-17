@@ -1,5 +1,6 @@
 using Discord;
 using Discord.Commands;
+using Discord.Net;
 using Discord.WebSocket;
 using PKHeX.Core;
 using SysBot.Base;
@@ -141,7 +142,37 @@ public class TradeStartModule<T> : ModuleBase<SocketCommandContext> where T : PK
                 .WithFooter($"{footerText}\u200B", ballImgUrl)
                 .Build();
 
-            await c.SendMessageAsync(embed: embed);
+            // Retry logic for handling transient Discord errors
+            const int maxRetries = 5;
+            int retryCount = 0;
+            int delayMs = 1000;
+
+            while (retryCount < maxRetries)
+            {
+                try
+                {
+                    await c.SendMessageAsync(embed: embed);
+                    break; // Success, exit retry loop
+                }
+                catch (HttpException ex) when (ex.HttpCode == System.Net.HttpStatusCode.InternalServerError)
+                {
+                    retryCount++;
+                    if (retryCount >= maxRetries)
+                    {
+                        LogUtil.LogError($"Failed to send trade start notification to channel {c.Name} after {maxRetries} attempts: {ex.Message}", "TradeStartLogger");
+                        break; // Don't throw, just log the error and continue
+                    }
+
+                    LogUtil.LogInfo($"Discord server error encountered while sending trade start notification, retrying in {delayMs}ms (attempt {retryCount}/{maxRetries})", "TradeStartLogger");
+                    await Task.Delay(delayMs);
+                    delayMs *= 2; // Exponential backoff
+                }
+                catch (Exception ex)
+                {
+                    LogUtil.LogError($"Unexpected error sending trade start notification: {ex.Message}", "TradeStartLogger");
+                    break; // Don't throw, just log and continue
+                }
+            }
         }
 
         SysCord<T>.Runner.Hub.Queues.Forwarders.Add(Logger);

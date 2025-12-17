@@ -1,4 +1,5 @@
 using Discord;
+using Discord.Net;
 using Discord.WebSocket;
 using PKHeX.Core;
 using SysBot.Base;
@@ -7,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace SysBot.Pokemon.Discord;
@@ -14,6 +16,9 @@ namespace SysBot.Pokemon.Discord;
 public static class ReusableActions
 {
     private static readonly string[] separator = [",", ", ", " "];
+
+    // Global rate limiter for Discord DM sends to prevent opening DMs too fast
+    private static readonly SemaphoreSlim _dmRateLimiter = new(1, 1);
 
     public static async Task EchoAndReply(this ISocketMessageChannel channel, string msg)
     {
@@ -208,11 +213,37 @@ public static class ReusableActions
             // Write the file
             await File.WriteAllBytesAsync(tmp, pkm.DecryptedPartyData);
 
-            // Send the file and WAIT for it to complete
-            await channel.SendFileAsync(tmp, msg);
+            // Retry logic for handling transient errors
+            const int maxRetries = 5;
+            int retryCount = 0;
+            int delayMs = 1000;
 
-            // Add a small delay to ensure Discord processes each file separately
-            await Task.Delay(700);
+            while (retryCount < maxRetries)
+            {
+                try
+                {
+                    // Send the file and WAIT for it to complete
+                    await channel.SendFileAsync(tmp, msg);
+
+                    // Add a small delay to ensure Discord processes each file separately
+                    await Task.Delay(500);
+                    break; // Success, exit retry loop
+                }
+                catch (HttpException ex) when (ex.HttpCode == System.Net.HttpStatusCode.InternalServerError)
+                {
+                    retryCount++;
+                    if (retryCount >= maxRetries)
+                    {
+                        LogUtil.LogError($"Failed to send file to channel after {maxRetries} attempts: {ex.Message}", "SendPKMAsync");
+                        throw;
+                    }
+
+                    LogUtil.LogInfo($"Discord server error encountered, retrying in {delayMs}ms (attempt {retryCount}/{maxRetries})", "SendPKMAsync");
+
+                    await Task.Delay(delayMs);
+                    delayMs *= 2; // Exponential backoff
+                }
+            }
         }
         finally
         {
@@ -224,7 +255,7 @@ public static class ReusableActions
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error deleting temporary file: {ex.Message}");
+                LogUtil.LogError($"Error deleting temporary file: {ex.Message}", "SendPKMAsync");
             }
         }
     }
@@ -241,11 +272,49 @@ public static class ReusableActions
             // Write the file
             await File.WriteAllBytesAsync(tmp, pkm.DecryptedPartyData);
 
-            // Send the file and WAIT for it to complete
-            await user.SendFileAsync(tmp, msg);
+            // Use global rate limiter to prevent opening DMs too fast
+            await _dmRateLimiter.WaitAsync();
+            try
+            {
+                // Retry logic for handling rate limits and transient errors
+                const int maxRetries = 5;
+                int retryCount = 0;
+                int delayMs = 1000; // Start with 1 second delay
 
-            // Add a small delay to ensure Discord processes each file separately
-            await Task.Delay(700);
+                while (retryCount < maxRetries)
+                {
+                    try
+                    {
+                        // Send the file and WAIT for it to complete
+                        await user.SendFileAsync(tmp, msg);
+
+                        // Add a delay to ensure Discord processes each file separately
+                        // This delay happens INSIDE the rate limiter to prevent concurrent DM sends
+                        await Task.Delay(1000);
+                        break; // Success, exit retry loop
+                    }
+                    catch (HttpException ex) when (ex.HttpCode == System.Net.HttpStatusCode.InternalServerError ||
+                                                   (ex.DiscordCode.HasValue && (int)ex.DiscordCode.Value == 40003))
+                    {
+                        retryCount++;
+                        if (retryCount >= maxRetries)
+                        {
+                            LogUtil.LogError($"Failed to send DM to user {user.Username} after {maxRetries} attempts: {ex.Message}", "SendPKMAsync");
+                            throw;
+                        }
+
+                        var errorType = (ex.DiscordCode.HasValue && (int)ex.DiscordCode.Value == 40003) ? "rate limit" : "server error";
+                        LogUtil.LogInfo($"Discord {errorType} encountered, retrying in {delayMs}ms (attempt {retryCount}/{maxRetries})", "SendPKMAsync");
+
+                        await Task.Delay(delayMs);
+                        delayMs *= 2; // Exponential backoff
+                    }
+                }
+            }
+            finally
+            {
+                _dmRateLimiter.Release();
+            }
         }
         finally
         {
@@ -257,7 +326,7 @@ public static class ReusableActions
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error deleting temporary file: {ex.Message}");
+                LogUtil.LogError($"Error deleting temporary file: {ex.Message}", "SendPKMAsync");
             }
         }
     }
