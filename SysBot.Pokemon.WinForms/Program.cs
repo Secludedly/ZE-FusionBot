@@ -36,31 +36,49 @@ namespace SysBot.Pokemon.WinForms
             // Set text rendering to be compatible
             Application.SetCompatibleTextRenderingDefault(false);
 
-            // Run splash as the main form temporarily
+            // Show splash screen on a separate thread
             var splash = new SplashScreen();
             splash.StartPosition = FormStartPosition.CenterScreen;
             splash.TopMost = true;
 
-            // When splash loads, preload assets async
-            splash.Shown += async (s, e) =>
+            // When splash loads, preload assets and transition to main form
+            splash.Shown += OnSplashShown;
+
+            async void OnSplashShown(object? sender, EventArgs e)
             {
-                // Start loading assets
-                var preloadTask = PreloadAssetsAsync();
+                try
+                {
+                    // Start loading assets
+                    var preloadTask = PreloadAssetsAsync();
 
-                // Require splash to last at least 3 seconds
-                await Task.WhenAll(
-                    preloadTask,
-                    Task.Delay(3000)
-                );
+                    // Require splash to last at least 3 seconds for visibility
+                    await Task.WhenAll(
+                        preloadTask,
+                        Task.Delay(3000)
+                    ).ConfigureAwait(true);
 
-                // After loading + delay, show main form
-                var mainForm = new Main();
-                mainForm.StartPosition = FormStartPosition.CenterScreen;
-                mainForm.Show();
+                    // Create and show main form on UI thread
+                    var mainForm = new Main();
+                    mainForm.StartPosition = FormStartPosition.CenterScreen;
+                    mainForm.FormClosed += (s, args) => Application.Exit(); // Ensure app exits when main form closes
+                    mainForm.Show();
 
-                // Hide splash
-                splash.Hide();
-            };
+                    // Properly close splash screen (not just hide)
+                    splash.Close();
+                }
+                catch (Exception ex)
+                {
+                    // If loading fails, show error and close gracefully
+                    MessageBox.Show(
+                        $"Failed to initialize application:\n{ex.Message}",
+                        "Startup Error",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error
+                    );
+                    splash.Close();
+                    Application.Exit();
+                }
+            }
 
 
             ///////////////////////////////////////////
@@ -127,34 +145,43 @@ namespace SysBot.Pokemon.WinForms
         {
             await Task.Run(() =>
             {
-                FontManager.LoadFonts(
-                    "bahnschrift.ttf",
-                    "Bobbleboddy_light.ttf",
-                    "EnterTheGrid.ttf",
-                    "gadugi.ttf",
-                    "gadugib.ttf",
-                    "GNUOLANERG.ttf",
-                    "Montserrat-Bold.ttf",
-                    "Montserrat-Regular.ttf",
-                    "segoeui.ttf",
-                    "segoeuib.ttf",
-                    "segoeuii.ttf",
-                    "segoeuil.ttf",
-                    "segoeuisl.ttf",
-                    "segoeuiz.ttf",
-                    "seguibl.ttf",
-                    "seguibli.ttf",
-                    "seguili.ttf",
-                    "seguisb.ttf",
-                    "seguisbi.ttf",
-                    "seguisli.ttf",
-                    "SegUIVar.ttf",
-                    "UbuntuMono-R.ttf",
-                    "UbuntuMono-B.ttf",
-                    "UbuntuMono-BI.ttf",
-                    "UbuntuMono-RI.ttf"
-                );
-            });
+                try
+                {
+                    FontManager.LoadFonts(
+                        "bahnschrift.ttf",
+                        "Bobbleboddy_light.ttf",
+                        "EnterTheGrid.ttf",
+                        "gadugi.ttf",
+                        "gadugib.ttf",
+                        "GNUOLANERG.ttf",
+                        "Montserrat-Bold.ttf",
+                        "Montserrat-Regular.ttf",
+                        "segoeui.ttf",
+                        "segoeuib.ttf",
+                        "segoeuii.ttf",
+                        "segoeuil.ttf",
+                        "segoeuisl.ttf",
+                        "segoeuiz.ttf",
+                        "seguibl.ttf",
+                        "seguibli.ttf",
+                        "seguili.ttf",
+                        "seguisb.ttf",
+                        "seguisbi.ttf",
+                        "seguisli.ttf",
+                        "SegUIVar.ttf",
+                        "UbuntuMono-R.ttf",
+                        "UbuntuMono-B.ttf",
+                        "UbuntuMono-BI.ttf",
+                        "UbuntuMono-RI.ttf"
+                    );
+                }
+                catch (Exception ex)
+                {
+                    // Log font loading errors but don't fail startup
+                    Console.WriteLine($"[Font Loading Warning] Some fonts failed to load: {ex.Message}");
+                    Console.WriteLine("[Font Loading Warning] Application will use fallback fonts.");
+                }
+            }).ConfigureAwait(false);
         }
     }
 }
