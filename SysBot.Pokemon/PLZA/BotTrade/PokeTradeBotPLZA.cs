@@ -904,7 +904,9 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
             var checksumBeforeBatchTrade = pokemonBeforeBatchTrade.Checksum;
 
             // Read the partner's offered Pokemon BEFORE we start pressing A to confirm
-            var offeredBatch = await ReadUntilPresentPointer(Offsets.LinkTradePartnerPokemonPointer, 3_000, 0_500, BoxFormatSlotSize, token).ConfigureAwait(false);
+            // For subsequent trades (after first), give users more time to select their Pokemon
+            int readTimeout = currentTradeIndex == 0 ? 3_000 : 10_000; // 3s for first trade, 10s for subsequent trades
+            var offeredBatch = await ReadUntilPresentPointer(Offsets.LinkTradePartnerPokemonPointer, readTimeout, 0_500, BoxFormatSlotSize, token).ConfigureAwait(false);
             if (offeredBatch == null || offeredBatch.Species == 0 || !offeredBatch.ChecksumValid)
             {
                 Log($"Trade {currentTradeIndex + 1} ended because trainer offer was rescinded too quickly.");
