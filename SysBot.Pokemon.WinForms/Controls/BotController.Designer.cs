@@ -13,8 +13,20 @@ partial class BotController
 
     protected override void Dispose(bool disposing)
     {
-        if (disposing && (components != null))
-            components.Dispose();
+        if (disposing)
+        {
+            components?.Dispose();
+            _glowTimer?.Stop();
+            _glowTimer?.Dispose();
+            _progressAnimationTimer?.Stop();
+            _progressAnimationTimer?.Dispose();
+            _sparkleTimer?.Stop();
+            _sparkleTimer?.Dispose();
+            _holdTimer?.Stop();
+            _holdTimer?.Dispose();
+            _statusGlowTimer?.Stop();
+            _statusGlowTimer?.Dispose();
+        }
         base.Dispose(disposing);
     }
 

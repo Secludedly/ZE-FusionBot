@@ -103,16 +103,6 @@ public partial class BotController : UserControl
         _sparkleTimer.Start();
     }
 
-    private void AnimateSparkle()
-    {
-        _sparkleX += 2; // move sparkle to the right
-
-        if (_sparkleX > _progressFill.Width + _sparkleWidth)
-            _sparkleX = -_sparkleWidth; // reset to start from left again
-
-        _progressFill.Invalidate(); // redraw sparkle
-    }
-
     private void _progressFill_Paint(object? sender, PaintEventArgs e)
     {
         if (_progressFill.Width <= 0)
@@ -142,14 +132,6 @@ public partial class BotController : UserControl
         _progressFill.Paint += _progressFill_Paint;
     }
 
-    private void AnimateShimmer()
-    {
-        int glowWidth = 70; // same as above
-        _shimmerX += 4;
-        if (_shimmerX > Width) _shimmerX = -glowWidth;
-        Invalidate();
-    }
-
     public void SetTradeProgress(int percent)
     {
         if (percent < 0 || percent > 100)
@@ -160,7 +142,6 @@ public partial class BotController : UserControl
 
     public void SetProgressValue(int percent)
     {
-        Console.WriteLine($"SetProgressValue({percent})"); // Add this
         _targetProgress = Math.Clamp(percent, 0, 100);
     }
 
@@ -462,7 +443,15 @@ public partial class BotController : UserControl
         string timeString = lastTime.ToString("h:mm.ss tt");
         string topLine = $"{routine} @ {timeString}";
 
-        rtbBotMeta.SelectionFont = new Font("Segoe UI", 9F, FontStyle.Bold);
+        // Use system font with fallback
+        try
+        {
+            rtbBotMeta.SelectionFont = new Font("Segoe UI", 9F, FontStyle.Bold);
+        }
+        catch
+        {
+            rtbBotMeta.SelectionFont = new Font(FontFamily.GenericSansSerif, 9F, FontStyle.Bold);
+        }
         rtbBotMeta.SelectionColor = Color.White;
         rtbBotMeta.AppendText(topLine);
     }

@@ -13,6 +13,17 @@ namespace SysBot.Pokemon.WinForms
         private const string RepositoryOwner = "Secludedly";
         private const string RepositoryName = "ZE-FusionBot";
 
+        // Reuse HttpClient for better performance and socket management
+        private static readonly HttpClient _httpClient = new()
+        {
+            Timeout = TimeSpan.FromSeconds(30)
+        };
+
+        static UpdateChecker()
+        {
+            _httpClient.DefaultRequestHeaders.Add("User-Agent", "ZE-FusionBot");
+        }
+
         public static async Task<(bool UpdateAvailable, bool UpdateRequired, string NewVersion)> CheckForUpdatesAsync(bool forceShow = false)
         {
             ReleaseInfo? latestRelease = await FetchLatestReleaseAsync();
@@ -49,14 +60,10 @@ namespace SysBot.Pokemon.WinForms
 
         private static async Task<ReleaseInfo?> FetchLatestReleaseAsync()
         {
-            using var client = new HttpClient();
             try
             {
-                // Add a custom header to identify the request
-                client.DefaultRequestHeaders.Add("User-Agent", "ZE-FusionBot");
-
                 string releasesUrl = $"https://api.github.com/repos/{RepositoryOwner}/{RepositoryName}/releases/latest";
-                HttpResponseMessage response = await client.GetAsync(releasesUrl);
+                HttpResponseMessage response = await _httpClient.GetAsync(releasesUrl);
 
                 if (!response.IsSuccessStatusCode)
                 {

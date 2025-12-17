@@ -1,5 +1,6 @@
 using System;
 using System.Drawing;
+using System.Threading;
 
 namespace SysBot.Pokemon.WinForms
 {
@@ -13,23 +14,25 @@ namespace SysBot.Pokemon.WinForms
         public float DX, DY; // tiny random movement
         public Color Color;   // sparkle color
 
-        private static readonly Random rng = new Random();
+        [ThreadStatic]
+        private static Random? _threadRng;
+        private static Random Rng => _threadRng ??= new Random(Environment.TickCount + Thread.CurrentThread.ManagedThreadId);
 
         public Sparkle(PointF pos)
         {
             Position = pos;
 
-            Size = rng.Next(2, 6); // 2–5 px radius
-            MaxLife = Life = rng.Next(30, 80); // lifespan in ticks
+            Size = Rng.Next(2, 6); // 2–5 px radius
+            MaxLife = Life = Rng.Next(30, 80); // lifespan in ticks
             Opacity = 0; // start invisible
 
-            DX = (float)(rng.NextDouble() - 0.5) * 0.5f; // tiny horizontal drift
-            DY = (float)(rng.NextDouble() - 0.5) * 0.5f; // tiny vertical drift
+            DX = (float)(Rng.NextDouble() - 0.5) * 0.5f; // tiny horizontal drift
+            DY = (float)(Rng.NextDouble() - 0.5) * 0.5f; // tiny vertical drift
 
-            // Random color: white or light yellow
-            Color = rng.NextDouble() < 0.5
-                ? Color.FromArgb(255, 255, 255)          // pure white
-                : Color.FromArgb(255, 255, 240, 180);   // soft light yellow
+            // Random color: white or light yellow (Alpha, Red, Green, Blue)
+            Color = Rng.NextDouble() < 0.5
+                ? Color.FromArgb(255, 255, 255, 255)      // pure white
+                : Color.FromArgb(255, 255, 240, 180);     // soft light yellow
         }
 
         public bool Tick()
@@ -38,11 +41,11 @@ namespace SysBot.Pokemon.WinForms
 
             // Smooth fade in/out using sine wave
             float progress = 1f - Life / MaxLife;
-            Opacity = (float)Math.Sin(progress * Math.PI * 0.65); 
+            Opacity = (float)Math.Sin(progress * Math.PI * 0.65);
 
             // Tiny random jitter movement
-            Position.X += DX + (float)(rng.NextDouble() - 0.5) * 0.2f;
-            Position.Y += DY + (float)(rng.NextDouble() - 0.5) * 0.2f;
+            Position.X += DX + (float)(Rng.NextDouble() - 0.5) * 0.2f;
+            Position.Y += DY + (float)(Rng.NextDouble() - 0.5) * 0.2f;
 
             return Life <= 0;
         }
