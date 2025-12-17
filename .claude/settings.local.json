@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "Bash(dotnet build:*)",
-      "Bash(git restore:*)"
+      "Bash(git restore:*)",
+      "Bash(dotnet clean:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ]
   }
 }
