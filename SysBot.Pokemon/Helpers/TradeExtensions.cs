@@ -19,6 +19,13 @@ public abstract class TradeExtensions<T> where T : PKM, new()
     "genpkm.com"
 };
 
+    private static readonly ushort[] ExplicitlyBlockedHeldItems =
+{
+    534, // Red Orb
+    535  // Blue Orb
+};
+
+
     public static readonly string[] MarkTitle =
     [
         " The Peckish",
@@ -552,6 +559,15 @@ public abstract class TradeExtensions<T> where T : PKM, new()
         var held = pkm.HeldItem;
         if (held <= 0)
             return false;
+
+        // HARD BLOCK: Primal Orbs (Mega Dimension DLC)
+        if (ExplicitlyBlockedHeldItems.Contains((ushort)held))
+            return true;
+        if (ExplicitlyBlockedHeldItems.Contains((ushort)held))
+        {
+            Base.LogUtil.LogInfo($"Blocked Primal Orb trade attempt (Item ID: {held})", "BlockItem");
+            return true;
+        }
 
         // Check if item is not allowed to be held in this game context
         if (!ItemRestrictions.IsHeldItemAllowed(held, pkm.Context))
