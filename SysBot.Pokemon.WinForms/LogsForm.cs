@@ -25,17 +25,39 @@ namespace SysBot.Pokemon.WinForms
         {
             InitializeComponent();
 
+            // Use FontManager for custom fonts with fallback
+            Font logsFont;
+            try
+            {
+                logsFont = FontManager.Get("Ubuntu Mono", 10);
+            }
+            catch
+            {
+                logsFont = new Font(FontFamily.GenericMonospace, 10);
+            }
+
             LogsBox = new RichTextBox
             {
                 Dock = DockStyle.Fill,
                 ReadOnly = true,
-                Font = new Font("Ubuntu Mono", 10),
+                Font = logsFont,
                 BackColor = Color.FromArgb(10, 10, 40),
                 ForeColor = Color.FromArgb(51, 255, 255),
                 WordWrap = true,
                 ScrollBars = RichTextBoxScrollBars.Both,
                 ContextMenuStrip = CreateContextMenu()
             };
+
+            // Use the same font for placeholder with fallback
+            Font placeholderFont;
+            try
+            {
+                placeholderFont = FontManager.Get("Ubuntu Mono", 10, FontStyle.Italic);
+            }
+            catch
+            {
+                placeholderFont = new Font(FontFamily.GenericMonospace, 10, FontStyle.Italic);
+            }
 
             placeholderLabel = new Label
             {
@@ -45,7 +67,7 @@ namespace SysBot.Pokemon.WinForms
                 AutoSize = false,
                 TextAlign = ContentAlignment.MiddleCenter,
                 Dock = DockStyle.Fill,
-                Font = new Font("Ubuntu Mono", 10, FontStyle.Italic)
+                Font = placeholderFont
             };
 
             var logsPanel = new Panel { Dock = DockStyle.Fill };
@@ -75,17 +97,39 @@ namespace SysBot.Pokemon.WinForms
                 BackColor = Color.FromArgb(20, 20, 50) // top panel background
             };
 
+            // Use FontManager for Montserrat with fallback
+            Font searchFont;
+            try
+            {
+                searchFont = FontManager.Get("Montserrat", 9, FontStyle.Italic);
+            }
+            catch
+            {
+                searchFont = new Font(FontFamily.GenericSansSerif, 9, FontStyle.Italic);
+            }
+
             // TextBox inside the border panel
             searchBox = new TextBox
             {
                 BorderStyle = BorderStyle.None,
                 BackColor = Color.FromArgb(40, 39, 77),
                 ForeColor = Color.Gray,
-                Font = new Font("Montserrat-Regular", 9, FontStyle.Italic),
+                Font = searchFont,
                 Text = "Search...",
                 Location = new Point(6, 5),
                 Size = new Size(198, 28),
             };
+
+            // Regular font for active search
+            Font searchFontRegular;
+            try
+            {
+                searchFontRegular = FontManager.Get("Montserrat", 9, FontStyle.Regular);
+            }
+            catch
+            {
+                searchFontRegular = new Font(FontFamily.GenericSansSerif, 9, FontStyle.Regular);
+            }
 
             searchBox.Enter += (s, e) =>
             {
@@ -93,7 +137,7 @@ namespace SysBot.Pokemon.WinForms
                 {
                     searchBox.Text = "";
                     searchBox.ForeColor = Color.White;
-                    searchBox.Font = new Font("Montserrat-Regular", 9, FontStyle.Regular);
+                    searchBox.Font = searchFontRegular;
                 }
             };
 
@@ -103,18 +147,29 @@ namespace SysBot.Pokemon.WinForms
                 {
                     searchBox.Text = "Search...";
                     searchBox.ForeColor = Color.Gray;
-                    searchBox.Font = new Font("Montserrat-Regular", 9, FontStyle.Italic);
+                    searchBox.Font = searchFont;
                 }
             };
 
             searchBox.TextChanged += SearchBox_TextChanged;
+
+            // Button font with fallback
+            Font buttonFont;
+            try
+            {
+                buttonFont = FontManager.Get("Montserrat", 8);
+            }
+            catch
+            {
+                buttonFont = new Font(FontFamily.GenericSansSerif, 8);
+            }
 
             nextButton = new FancyButton
             {
                 Text = "NEXT",
                 Location = new Point(210, 2 - 1), // was 210
                 Height = 25,
-                Font = new Font("Montserrat-Regular", 8)
+                Font = buttonFont
             };
             nextButton.Click += (s, e) => PerformSearch(SearchDirection.Forward);
 
@@ -123,7 +178,7 @@ namespace SysBot.Pokemon.WinForms
                 Text = "PREV",
                 Location = new Point(290, 2 - 1), // was 290
                 Height = 25,
-                Font = new Font("Montserrat-Regular", 8)
+                Font = buttonFont
             };
             prevButton.Click += (s, e) => PerformSearch(SearchDirection.Backward);
 
@@ -132,7 +187,7 @@ namespace SysBot.Pokemon.WinForms
                 Text = "CLEAR",
                 Location = new Point(370, 2 - 1), // was 370
                 Height = 25,
-                Font = new Font("Montserrat-Regular", 8)
+                Font = buttonFont
             };
             clearButton.Click += (s, e) =>
             {
@@ -148,7 +203,7 @@ namespace SysBot.Pokemon.WinForms
                 AutoSize = true,
                 Location = new Point(470, 6 - 2), // was 550
                 ForeColor = Color.White,
-                Font = new Font("Montserrat-Regular", 8)
+                Font = buttonFont
             };
 
             panel.Controls.Add(searchBox);
@@ -241,7 +296,15 @@ namespace SysBot.Pokemon.WinForms
             {
                 searchBox.Text = string.Empty;
                 searchBox.ForeColor = Color.White;
-                searchBox.Font = new Font("Montserrat-Regular", 8, FontStyle.Regular);
+                // Use existing font or fallback
+                try
+                {
+                    searchBox.Font = FontManager.Get("Montserrat", 8, FontStyle.Regular);
+                }
+                catch
+                {
+                    searchBox.Font = new Font(FontFamily.GenericSansSerif, 8, FontStyle.Regular);
+                }
             }
         }
 
@@ -251,7 +314,15 @@ namespace SysBot.Pokemon.WinForms
             {
                 searchBox.Text = "Search logs...";
                 searchBox.ForeColor = Color.Gray;
-                searchBox.Font = new Font("Montserrat-Regular", 8, FontStyle.Italic);
+                // Use existing font or fallback
+                try
+                {
+                    searchBox.Font = FontManager.Get("Montserrat", 8, FontStyle.Italic);
+                }
+                catch
+                {
+                    searchBox.Font = new Font(FontFamily.GenericSansSerif, 8, FontStyle.Italic);
+                }
             }
         }
         private enum SearchDirection

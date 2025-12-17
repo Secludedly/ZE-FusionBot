@@ -64,7 +64,16 @@ public class FancyButton : Button
         FlatAppearance.BorderSize = 0;
         BackColor = Color.Transparent;
         ForeColor = Color.White;
-        Font = new Font("Enter The Grid", 10F, FontStyle.Regular);
+
+        // Use FontManager for custom fonts with fallback
+        try
+        {
+            Font = SysBot.Pokemon.WinForms.FontManager.Get("Enter The Grid", 10F, FontStyle.Regular);
+        }
+        catch
+        {
+            Font = new Font(FontFamily.GenericSansSerif, 10F, FontStyle.Regular);
+        }
 
         DoubleBuffered = true;
 

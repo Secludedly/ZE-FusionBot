@@ -13,6 +13,9 @@ namespace SysBot.Pokemon.WinForms
     {
         private static readonly Dictionary<string, FontFamily> _fonts = new();
         private static readonly PrivateFontCollection _fontCollection = new();
+        private static bool _fontsLoaded = false;
+
+        public static bool AreFontsLoaded => _fontsLoaded;
 
         public static void LoadFonts(params string[] fontFileNames)
         {
@@ -48,13 +51,24 @@ namespace SysBot.Pokemon.WinForms
                 if (!_fonts.ContainsKey(actualName))
                     _fonts.Add(actualName, family);
             }
+
+            _fontsLoaded = true;
+            Console.WriteLine($"[FontManager] Successfully loaded {_fonts.Count} font families.");
         }
 
         public static Font Get(string fontFamilyName, float size, FontStyle style = FontStyle.Regular)
         {
+            if (!_fontsLoaded)
+            {
+                Console.WriteLine($"[FontManager] Warning: Fonts not yet loaded, attempting to access '{fontFamilyName}'");
+            }
+
             if (!_fonts.TryGetValue(fontFamilyName, out var family))
             {
-                throw new Exception(
+                Console.WriteLine(
+                    $"[FontManager] Font '{fontFamilyName}' not found. " +
+                    $"Available fonts: {string.Join(", ", _fonts.Keys)}");
+                throw new InvalidOperationException(
                     $"Font '{fontFamilyName}' has not been loaded. " +
                     $"Loaded fonts: {string.Join(", ", _fonts.Keys)}");
             }

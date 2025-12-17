@@ -75,17 +75,51 @@ namespace SysBot.Pokemon.WinForms
         private readonly Random glitterRng = new Random();
         private Timer glitterTimer;
 
-        // Ensure FontAwesome buttons render correctly
-        private void EnsureFontAwesomeButtonsRender()
+        ////////////////////////////////////////////////////////////
+        // Initialize custom fonts for UI controls with fallbacks //
+        ////////////////////////////////////////////////////////////
+        private void InitializeFonts()
         {
-            // Force the FontAwesome font to be applied and glyphs to render
-            foreach (var btn in new[] { btnClose, btnMaximize, btnMinimize })
+            try
             {
-                btn.Font = new Font("FontAwesome", btn.Font.Size); // Make sure FontAwesome is applied
-                btn.Invalidate();                                  // Force redraw
+                // Apply fonts to navigation buttons
+                foreach (var btn in new[] { btnBots, btnHub, btnLogs })
+                {
+                    try
+                    {
+                        btn.Font = FontManager.Get("Enter The Grid", 13.8F);
+                    }
+                    catch
+                    {
+                        btn.Font = new Font(FontFamily.GenericSansSerif, 13.8F);
+                    }
+                }
+
+                // Apply font to title
+                try
+                {
+                    lblTitle.Font = FontManager.Get("Bahnschrift", 7.2F);
+                }
+                catch
+                {
+                    lblTitle.Font = new Font(FontFamily.GenericSansSerif, 7.2F);
+                }
+
+                // Apply font to child form title
+                try
+                {
+                    lblTitleChildForm.Font = FontManager.Get("Gnuolane Rg", 25.8F);
+                }
+                catch
+                {
+                    lblTitleChildForm.Font = new Font(FontFamily.GenericSansSerif, 25.8F);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Font Initialization] Warning: {ex.Message}");
             }
         }
-
 
         ////////////////////////////////////////////////////////////
         /////// MAIN FORM CONSTRUCTOR INITIALIZING FOR /////////////
@@ -135,7 +169,7 @@ namespace SysBot.Pokemon.WinForms
 
             Task.Run(BotMonitor);      // Start the bot monitor
             InitializeComponent();     // Initialize all the form components before program
-            EnsureFontAwesomeButtonsRender();
+            InitializeFonts();         // Apply custom fonts after component initialization
             SetupTitleBarButtonHoverEffects();
             panelTitleBar.Paint += panelTitleBar_Paint;
             InitGlitter();

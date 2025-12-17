@@ -70,6 +70,9 @@ namespace SysBot.Pokemon.WinForms
             {
                 if (e.Exception is ArgumentException && e.Exception.Message.Contains("Font"))
                 {
+                    // Log the font error but don't crash
+                    Console.WriteLine($"[Font Warning] {e.Exception.Message}");
+
                     // Global fallback to avoid crashes from missing fonts
                     Application.UseWaitCursor = false;
 
@@ -81,11 +84,19 @@ namespace SysBot.Pokemon.WinForms
                         .ToList()
                         .ForEach(f => ApplyFallbackFont(f, fallback));
 
-                    return;
+                    return; // Handle gracefully, don't crash
                 }
 
-                // If it's not a font issue, rethrow
-                throw e.Exception;
+                if (e.Exception is InvalidOperationException && e.Exception.Message.Contains("Font"))
+                {
+                    // Log and handle Font Awesome loading errors
+                    Console.WriteLine($"[Font Warning] {e.Exception.Message}");
+                    return; // Handle gracefully, don't crash
+                }
+
+                // For other exceptions, log them but don't crash the entire application
+                Console.WriteLine($"[Unhandled Exception] {e.Exception.GetType().Name}: {e.Exception.Message}");
+                Console.WriteLine(e.Exception.StackTrace);
             };
 
             /// Recursively apply fallback font to control and its children
