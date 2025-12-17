@@ -1464,7 +1464,7 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
         }
 
         Log($"Trade complete! Received {(Species)received.Species}.");
-        TradeProgressChanged?.Invoke(99);
+        TradeProgressChanged?.Invoke(100);
 
         poke.TradeFinished(this, received);
         UpdateCountsAndExport(poke, received, toSend);
