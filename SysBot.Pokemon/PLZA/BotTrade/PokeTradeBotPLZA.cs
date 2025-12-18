@@ -566,7 +566,7 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
             await Click(B, 0_200, token).ConfigureAwait(false);
 
         Log("Returned to overworld.");
-        TradeProgressChanged?.Invoke(0);
+        TradeProgressChanged?.Invoke(100);
         StartFromOverworld = true;
         _wasConnectedToPartner = false;
     }
@@ -1459,6 +1459,7 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
         if (checksumBeforeTrade == checksumAfterTrade)
         {
             Log("Trade was canceled.");
+            TradeProgressChanged?.Invoke(0);
             poke.SendNotification(this, "Trade was canceled. Please try again.");
             await DisconnectFromTrade(token).ConfigureAwait(false);
             await ExitTradeToOverworld(false, token).ConfigureAwait(false);
