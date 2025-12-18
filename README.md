@@ -348,6 +348,7 @@
 | `.OriginalTrainerFriendship=` | `OT Friendship:` | Value 1–255. |
 | `.HandlingTrainerFriendship=` | `HT Friendship:` | Value 1–255. |
 | `.MetDate=` | `Met Date:` | Supports flexible date formats. |
+| `.StatNature=` | `Stat Nature:` | Accepts a Nature keyword. |
 | `~=Version=` | `Game:` or `Version:` | Supports full game names or abbreviations. |
 | `.MetLocation=` | `Met Location:` | Only [numeric IDs](https://github.com/Secludedly/ZE-FusionBot?tab=readme-ov-file#-met-location-reference) currently supported. |
 | `.HyperTrainFlags=` | `HyperTrain:` | True / False. |
