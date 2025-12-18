@@ -1222,11 +1222,16 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
             try
             {
                 // Normalize content and parse Showdown set
+                // IMPORTANT: ShowdownSet is IMMUTABLE — never try to modify Nature/IVs/etc on it
                 content = BatchCommandNormalizer.NormalizeBatchCommands(content);
                 content = ReusableActions.StripCodeBlock(content);
                 var set = new ShowdownSet(content);
 
-                var ignoreAutoOT = content.Contains("OT:") || content.Contains("TID:") || content.Contains("SID:");
+                // Conditions for ignoring AutoOT
+                var ignoreAutoOT =
+                    content.Contains("OT:") ||
+                    content.Contains("TID:") ||
+                    content.Contains("SID:");
 
                 // Process the Showdown set for extra info (errors, lgcode, etc.)
                 var processed = await Helpers<T>.ProcessShowdownSetAsync(content, ignoreAutoOT);
@@ -1241,10 +1246,15 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
                 var template = AutoLegalityWrapper.GetTemplate(set);
 
                 // Generate the legal Pokémon (ALM)
+                // NOTE: If ALM fails here, the request is fundamentally illegal — do NOT try to "fix" it
                 var pkm = sav.GetLegal(template, out var result);
                 if (pkm == null)
                 {
-                    await Helpers<T>.ReplyAndDeleteAsync(Context, $"Failed to generate Pokémon from your set.\nTry to use `{Prefix}convert` instead, or try removing some information.", 8);
+                    await Helpers<T>.ReplyAndDeleteAsync(
+                        Context,
+                        $"Failed to generate Pokémon from your set.\n" +
+                        $"Try `{Prefix}convert` instead, or remove some conflicting information.",
+                        8);
                     return;
                 }
 
@@ -1252,19 +1262,47 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
                 var pk = (T)(object)pkm;
                 if (pk == null)
                 {
-                    await Helpers<T>.ReplyAndDeleteAsync(Context, "Failed to convert Pokémon to correct type.", 5);
+                    await Helpers<T>.ReplyAndDeleteAsync(Context,
+                        "Failed to convert Pokémon to correct runtime type.", 5);
                     return;
                 }
 
+                // --------------------------------------------------
+                // Forced encounter Nature override (POST-ALM)
+                // --------------------------------------------------
+                // CRITICAL:
+                // - Never modify ShowdownSet
+                // - Never override Nature before ALM
+                // - This runs AFTER legality succeeds and is always safe
+                // - ZA-only enforcement
+                if (pk.Version == GameVersion.ZA && !pk.FatefulEncounter)
+                {
+                    if (ForcedEncounterEnforcer.TryGetForcedNature(pk, out var forcedNature))
+                    {
+                        if (pk.Nature != forcedNature)
+                        {
+                            pk.Nature = forcedNature;
+                            pk.StatNature = forcedNature;
+                            pk.RefreshChecksum();
+
+                            LogUtil.LogInfo(
+                                $"{(Species)pk.Species}: User-requested Nature overridden to {forcedNature} (forced encounter rule)",
+                                nameof(TradeModule<T>));
+                        }
+                    }
+                }
+
                 // -----------------------------
-                // Apply all IVs, HyperTraining, Nature, Shiny in one unified call
-                // Always pass the Showdown IVs array if present; otherwise, empty = fill all 31
+                // Apply IVs, HyperTraining, Nature, Shiny
+                // Unified ZA-only enforcement
                 // -----------------------------
                 if (pk.Version == GameVersion.ZA)
                 {
-                    int[] requestedIVs = set.IVs != null && set.IVs.Count() == 6
-                        ? set.IVs.ToArray()
-                        : Array.Empty<int>();
+                    // Always pass full IV array if present; otherwise default logic applies inside IVEnforcer
+                    int[] requestedIVs =
+                        set.IVs != null && set.IVs.Count() == 6
+                            ? set.IVs.ToArray()
+                            : Array.Empty<int>();
 
                     IVEnforcer.ApplyRequestedIVsAndForceNature(
                         pk,
@@ -1284,10 +1322,12 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
                     var botName = string.IsNullOrEmpty(SysCordSettings.HubConfig.BotName)
                         ? "the bot"
                         : SysCordSettings.HubConfig.BotName;
-                    var trainerMention = Context.User.Mention;
-                    await Helpers<T>.ReplyAndDeleteAsync(Context,
-                        $"{trainerMention} just tried to run an ad in my fuckin’ bot, {botName}.\n" +
-                        $"Point and laugh at them for being a bitch ass failure!", 15);
+
+                    await Helpers<T>.ReplyAndDeleteAsync(
+                        Context,
+                        $"{Context.User.Mention} just tried to run an ad in my fuckin’ bot, {botName}.\n" +
+                        $"Point and laugh at them for being a bitch ass failure!",
+                        15);
                     return;
                 }
 
@@ -1311,13 +1351,20 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
             catch (Exception ex)
             {
                 LogUtil.LogSafe(ex, nameof(TradeModule<T>));
-                await Helpers<T>.ReplyAndDeleteAsync(Context, $"An unexpected problem happened with this Showdown Set.\nTry to use `{Prefix}convert` instead, or try removing some information.", 8);
+                await Helpers<T>.ReplyAndDeleteAsync(
+                    Context,
+                    $"An unexpected problem happened with this Showdown Set.\n" +
+                    $"Try `{Prefix}convert` instead, or remove some information.",
+                    8);
             }
         });
 
         // Auto-delete original message (as before)
         if (Context.Message is IUserMessage userMessage)
-            _ = Helpers<T>.DeleteMessagesAfterDelayAsync(userMessage, null, isHiddenTrade ? 0 : 2);
+            _ = Helpers<T>.DeleteMessagesAfterDelayAsync(
+                userMessage,
+                null,
+                isHiddenTrade ? 0 : 2);
     }
 
     private async Task ProcessTradeAttachmentAsync(int code, RequestSignificance sig, SocketUser user, bool isHiddenTrade = false, bool ignoreAutoOT = false)

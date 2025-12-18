@@ -1,6 +1,7 @@
 using PKHeX.Core;
-using System;
+using SysBot.Base;
 using SysBot.Pokemon.Discord.Helpers;
+using System;
 using System.Security.Cryptography;
 
 namespace SysBot.Pokemon.Discord.Helpers.TradeModule
@@ -19,18 +20,26 @@ namespace SysBot.Pokemon.Discord.Helpers.TradeModule
             if (pkm == null)
                 throw new ArgumentNullException(nameof(pkm));
 
-            // NatureEnforcer only supports ZA Pokémon
             if (pkm.Version != GameVersion.ZA)
                 throw new InvalidOperationException("NatureEnforcer is only supported for ZA Pokémon.");
 
-            // Skip ALL enforcement if the Pokémon is a Fateful Encounter, even if from ZA
             if (pkm.FatefulEncounter)
                 return;
+
+            // -----------------------------
+            // FORCE static encounter nature
+            // -----------------------------
+            if (ForcedEncounterEnforcer.TryGetForcedNature(pkm, out var forcedNature))
+            {
+                desiredNature = forcedNature; // Ignore whatever the user requested
+                LogUtil.LogInfo(
+                    $"{(Species)pkm.Species}: Nature forced to {forcedNature} due to static encounter",
+                    nameof(NatureEnforcer));
+            }
 
             if (desiredNature == Nature.Random && !isShiny)
                 return;
 
-            // Already correct
             if (pkm.Nature == desiredNature && (!isShiny || pkm.IsShiny))
             {
                 pkm.StatNature = pkm.Nature;

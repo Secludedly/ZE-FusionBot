@@ -1,6 +1,7 @@
+using PKHeX.Core;
+using SysBot.Base;
 using System;
 using System.Security.Cryptography;
-using PKHeX.Core;
 
 namespace SysBot.Pokemon.Discord.Helpers.TradeModule
 {
@@ -24,6 +25,15 @@ namespace SysBot.Pokemon.Discord.Helpers.TradeModule
             if (pk.Version != GameVersion.ZA)
                 throw new InvalidOperationException("IVEnforcer may only be used for ZA Pokémon.");
 
+            // Enforce forced encounters first
+            if (ForcedEncounterEnforcer.TryGetForcedNature(pk, out var forcedNature))
+            {
+                LogUtil.LogInfo(
+                    $"{(Species)pk.Species}: Nature forced to {forcedNature} due to static encounter",
+                    nameof(IVEnforcer));
+                desiredNature = forcedNature; // Ignore whatever user requested
+            }
+
             // Skip ALL enforcement if the Pokémon is a Fateful Encounter, even if from ZA
             if (pk.FatefulEncounter)
                 return true;
@@ -31,8 +41,6 @@ namespace SysBot.Pokemon.Discord.Helpers.TradeModule
             if (pk == null) throw new ArgumentNullException(nameof(pk));
             if (trainerSav == null) throw new ArgumentNullException(nameof(trainerSav));
             if (template == null) throw new ArgumentNullException(nameof(template));
-            if (pk.FatefulEncounter)
-                return true;
 
             // -----------------------------
             // 1) Apply IVs in PKHeX order (HP/ATK/DEF/SPE/SPA/SPD)
@@ -41,7 +49,7 @@ namespace SysBot.Pokemon.Discord.Helpers.TradeModule
             int[] ivs;
 
             // HARD OVERRIDE for static encounters
-            if (StaticIVEnforcer.TryGetIVs(pk, out var forcedIVs))
+            if (ForcedEncounterEnforcer.TryGetFixedIVs(pk, out var forcedIVs))
             {
                 ivs = forcedIVs;
             }
@@ -184,7 +192,7 @@ namespace SysBot.Pokemon.Discord.Helpers.TradeModule
             if (pk.Version != GameVersion.ZA)
                 return;
 
-            if (StaticIVEnforcer.IVs.ContainsKey((Species)pk.Species))
+            if (ForcedEncounterEnforcer.TryGetFixedIVs(pk, out _))
                 return;
 
             if (pk is not IHyperTrain ht)
