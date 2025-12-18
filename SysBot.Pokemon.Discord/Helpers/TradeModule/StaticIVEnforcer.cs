@@ -21,6 +21,7 @@ namespace SysBot.Pokemon.Discord.Helpers.TradeModule
             { Species.Meloetta,  new[] { 7, 31, 12, 31, 31, 16 } },
             { Species.Groudon,   new[] { 31, 31, 24, 25, 31, 18 } },
             { Species.Darkrai,   new[] { 31, 31, 18, 26, 31, 21 } },
+            { Species.Zygarde,   new[] { 31, 31, 15, 31, 28, 19 } },
         };
 
         // -----------------------------
