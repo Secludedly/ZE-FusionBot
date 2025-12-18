@@ -38,9 +38,19 @@ namespace SysBot.Pokemon.Discord.Helpers.TradeModule
             // 1) Apply IVs in PKHeX order (HP/ATK/DEF/SPE/SPA/SPD)
             // Input should ALREADY be in PKHeX order from user request
             // -----------------------------
-            int[] ivs = requestedIVs.Length == 6
-                ? requestedIVs.ToArray()
-                : new int[] { 31, 31, 31, 31, 31, 31 }; // Default to 6IV if none provided
+            int[] ivs;
+
+            // HARD OVERRIDE for static encounters
+            if (StaticIVEnforcer.TryGetIVs(pk, out var forcedIVs))
+            {
+                ivs = forcedIVs;
+            }
+            else
+            {
+                ivs = requestedIVs.Length == 6
+                    ? requestedIVs.ToArray()
+                    : new int[] { 31, 31, 31, 31, 31, 31 };
+            }
 
             pk.SetIVs(ivs);
 
@@ -172,6 +182,9 @@ namespace SysBot.Pokemon.Discord.Helpers.TradeModule
         public static void ApplyHyperTrainingIfNeeded(PKM pk)
         {
             if (pk.Version != GameVersion.ZA)
+                return;
+
+            if (StaticIVEnforcer.IVs.ContainsKey((Species)pk.Species))
                 return;
 
             if (pk is not IHyperTrain ht)
