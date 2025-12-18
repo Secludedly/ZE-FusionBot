@@ -33,7 +33,7 @@ namespace SysBot.Pokemon.WinForms
             }
             catch
             {
-                logsFont = new Font(FontFamily.GenericMonospace, 10);
+                logsFont = new Font("Ubuntu Mono", 10);
             }
 
             LogsBox = new RichTextBox
@@ -56,7 +56,7 @@ namespace SysBot.Pokemon.WinForms
             }
             catch
             {
-                placeholderFont = new Font(FontFamily.GenericMonospace, 10, FontStyle.Italic);
+                placeholderFont = new Font("Ubuntu Mono", 10, FontStyle.Italic);
             }
 
             placeholderLabel = new Label
@@ -105,7 +105,7 @@ namespace SysBot.Pokemon.WinForms
             }
             catch
             {
-                searchFont = new Font(FontFamily.GenericSansSerif, 9, FontStyle.Italic);
+                searchFont = new Font("Montserrat", 9, FontStyle.Italic);
             }
 
             // TextBox inside the border panel
@@ -128,7 +128,7 @@ namespace SysBot.Pokemon.WinForms
             }
             catch
             {
-                searchFontRegular = new Font(FontFamily.GenericSansSerif, 9, FontStyle.Regular);
+                searchFontRegular = new Font("Montserrat", 9, FontStyle.Regular);
             }
 
             searchBox.Enter += (s, e) =>
@@ -161,7 +161,7 @@ namespace SysBot.Pokemon.WinForms
             }
             catch
             {
-                buttonFont = new Font(FontFamily.GenericSansSerif, 8);
+                buttonFont = new Font("Montserrat", 8);
             }
 
             nextButton = new FancyButton
@@ -303,7 +303,7 @@ namespace SysBot.Pokemon.WinForms
                 }
                 catch
                 {
-                    searchBox.Font = new Font(FontFamily.GenericSansSerif, 8, FontStyle.Regular);
+                    searchBox.Font = new Font("Montserrat", 8, FontStyle.Regular);
                 }
             }
         }
@@ -321,7 +321,7 @@ namespace SysBot.Pokemon.WinForms
                 }
                 catch
                 {
-                    searchBox.Font = new Font(FontFamily.GenericSansSerif, 8, FontStyle.Italic);
+                    searchBox.Font = new Font("Montserrat", 8, FontStyle.Italic);
                 }
             }
         }

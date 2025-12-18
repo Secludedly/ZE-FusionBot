@@ -299,7 +299,7 @@ namespace FusionBot.Modules
                 .AddField(
                     "─ **LEVEL PROGRESS**",
                     $"🏆 **Current Level:** {level}   ⚡ **To Next Level:** {tradesToNextLevel:N0}\n" +
-                    $"**Progress...**\n{progressBar} {(int)Math.Round(progressPct * 100)}%",
+                    $"*Progress...*\n{progressBar} {(int)Math.Round(progressPct * 100)}%",
                     inline: false)
 
                 // Discord Info

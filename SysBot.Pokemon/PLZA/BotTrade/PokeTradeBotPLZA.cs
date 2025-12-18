@@ -905,7 +905,7 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
 
             // Read the partner's offered Pokemon BEFORE we start pressing A to confirm
             // For subsequent trades (after first), give users more time to select their Pokemon
-            int readTimeout = currentTradeIndex == 0 ? 3_000 : 10_000; // 3s for first trade, 10s for subsequent trades
+            int readTimeout = currentTradeIndex == 0 ? 6_000 : 20_000; // 6s for first trade, 20s for subsequent trades
             var offeredBatch = await ReadUntilPresentPointer(Offsets.LinkTradePartnerPokemonPointer, readTimeout, 0_500, BoxFormatSlotSize, token).ConfigureAwait(false);
             if (offeredBatch == null || offeredBatch.Species == 0 || !offeredBatch.ChecksumValid)
             {
@@ -1467,7 +1467,7 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
         }
 
         Log($"Trade complete! Received {(Species)received.Species}.");
-        TradeProgressChanged?.Invoke(100);
+        TradeProgressChanged?.Invoke(98);
 
         poke.TradeFinished(this, received);
         UpdateCountsAndExport(poke, received, toSend);
