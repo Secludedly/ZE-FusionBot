@@ -57,24 +57,28 @@ public static class AutoLegalityExtensionsDiscord
                 }
 
                 // -----------------------------
-                // Enforce requested IVs, Nature, and Shiny
+                // Enforce requested IVs, Nature, and Shiny (Z-A only)
                 // -----------------------------
-                if (set.IVs != null && set.IVs.Count() == 6)
+                // IVEnforcer and NatureEnforcer are only for Z-A (PA9) Pokemon
+                // For other games, the normal legalization process already handles nature/shiny
+                if (pkm is PA9)
                 {
-                    IVEnforcer.ApplyRequestedIVsAndForceNature(
-                        pkm,
-                        set.IVs.ToArray(),
-                        set.Nature,
-                        set.Shiny,
-                        sav,
-                        template
-                    );
-                }
-
-                else
-                {
-                    // Even if no IVs requested, enforce nature/shiny only
-                    NatureEnforcer.ForceNature(pkm, set.Nature, set.Shiny);
+                    if (set.IVs != null && set.IVs.Count() == 6)
+                    {
+                        IVEnforcer.ApplyRequestedIVsAndForceNature(
+                            pkm,
+                            set.IVs.ToArray(),
+                            set.Nature,
+                            set.Shiny,
+                            sav,
+                            template
+                        );
+                    }
+                    else
+                    {
+                        // Even if no IVs requested, enforce nature/shiny only for Z-A
+                        NatureEnforcer.ForceNature(pkm, set.Nature, set.Shiny);
+                    }
                 }
 
                 var la = new LegalityAnalysis(pkm);
@@ -104,7 +108,7 @@ public static class AutoLegalityExtensionsDiscord
         catch (Exception ex)
         {
             LogUtil.LogSafe(ex, nameof(AutoLegalityExtensionsDiscord));
-            var msg = $"Oops! An unexpected problem happened with this Showdown Set:\n```{string.Join("\n", set.GetSetLines())}```";
+            var msg = $"Oops! An unexpected problem happened with this Showdown Set:\n```{string.Join("\n", set.GetSetLines())}```\nError: {ex.Message}";
             await channel.SendMessageAsync(msg).ConfigureAwait(false);
         }
     }
