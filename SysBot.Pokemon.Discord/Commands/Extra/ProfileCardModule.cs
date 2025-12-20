@@ -72,12 +72,14 @@ namespace FusionBot.Modules
         [Command("myinfo")]
         [Alias("mi")]
         [Summary("Displays your FusionBot profile card.")]
-        public async Task MyInfoAsync()
+        public async Task MyInfoAsync(SocketGuildUser? targetUser = null)
         {
-            // Validate context
-            if (Context.User is not SocketGuildUser user)
+            // If no user is mentioned, fallback to the command invoker
+            var user = targetUser ?? (Context.User as SocketGuildUser);
+
+            if (user == null)
             {
-                await ReplyAsync("❌ Can't show profile outside a guild!");
+                await ReplyAsync("❌ Can't show the profile of a user not in this server!");
                 return;
             }
 
@@ -85,7 +87,9 @@ namespace FusionBot.Modules
             var tradeDetails = _tradeStorage.GetTradeDetails(user.Id);
             if (tradeDetails == null)
             {
-                await ReplyAsync("📊 You haven't traded yet, so no profile data exists!");
+                await ReplyAsync(user.Id == Context.User.Id
+                    ? "📊 You haven't traded yet, so no profile data exists!"
+                    : $"📊 {user.Username} hasn't traded yet, so no profile data exists!");
                 return;
             }
 
