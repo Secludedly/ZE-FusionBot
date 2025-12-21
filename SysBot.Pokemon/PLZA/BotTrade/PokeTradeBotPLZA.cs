@@ -229,7 +229,7 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
     // Upon connecting, their Nintendo ID will instantly update.
     protected virtual async Task<TradePartnerWaitResult> WaitForTradePartner(CancellationToken token)
     {
-        Log("Waiting for partner connection to start trading...");
+        Log("Waiting to connect to user before initializing trade process...");
         SetTradeState(TradeState.WaitingForPartner);
 
         // Initial delay to let the game populate NID pointer in memory
@@ -433,7 +433,7 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
             var newEC = await SwitchConnection.ReadBytesAbsoluteAsync(boxOffset, 8, token).ConfigureAwait(false);
             if (!newEC.SequenceEqual(oldEC))
             {
-                Log("Trade started! Waiting for completion...");
+                Log("Trade started!");
                 SetTradeState(TradeState.Trading);
                 return PokeTradeResult.Success;
             }
@@ -531,7 +531,7 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
             waitCounter = 0;
 
             detail.IsProcessing = true;
-            Log($"Starting the trade request process...");
+            Log($"Entering X-Menu and selecting Link Trade...");
             SetTradeState(TradeState.Idle);
             SetTradeState(TradeState.Starting);
             Hub.Config.Stream.StartTrade(this, detail, Hub);
@@ -870,7 +870,7 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
                 Hub.Config.Stream.EndEnterCode(this);
 
                 // Wait until we're in the trade box
-                Log("Initializing box entry with discovered partner...");
+                Log("Selecting Pokémon in B1S1 for trade.");
                 SetTradeState(TradeState.PartnerFound);
                 int boxCheckAttempts = 0;
                 while (!await IsOnMenu(MenuState.InBox, token).ConfigureAwait(false))
@@ -978,7 +978,7 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
                 return PokeTradeResult.TradeEvolveNotAllowed;
             }
 
-            Log($"Confirming trade {currentTradeIndex + 1}/{totalBatchTrades}.");
+            Log($"Confirming batch trade {currentTradeIndex + 1}/{totalBatchTrades}.");
             SetTradeState(TradeState.Confirming);
 
             var tradeResult = await ConfirmAndStartTrading(poke, checksumBeforeBatchTrade, token).ConfigureAwait(false);
@@ -1195,7 +1195,7 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
         var toSend = poke.TradeData;
         if (toSend.Species != 0)
         {
-            Log("Preparing Pokemon for trade...");
+            Log("Injected requested Pokémon into B1S1. ");
             SetTradeState(TradeState.EnteringCode);
             var offset = await GetBoxStartOffset(token).ConfigureAwait(false);
             await SetBoxPokemonAbsolute(offset, toSend, token, sav).ConfigureAwait(false);
@@ -1339,7 +1339,7 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
         Hub.Config.Stream.EndEnterCode(this);
 
         // Wait until we're in the trade box
-        Log("Initializing box entry with discovered partner...");
+        Log("Selecting Pokémon in B1S1...");
         SetTradeState(TradeState.EnteringCode);
         int boxCheckAttempts = 0;
         while (!await IsOnMenu(MenuState.InBox, token).ConfigureAwait(false))
@@ -1482,7 +1482,7 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
             return PokeTradeResult.TradeEvolveNotAllowed;
         }
 
-        Log("Confirming trade.");
+        Log("Selecting \"Trade it.\" Now waiting for trade animation to begin...");
         SetTradeState(TradeState.Confirming);
         var tradeResult = await ConfirmAndStartTrading(poke, checksumBeforeTrade, token).ConfigureAwait(false);
         if (tradeResult != PokeTradeResult.Success)
@@ -1516,7 +1516,7 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
             return PokeTradeResult.TrainerTooSlow;
         }
 
-        Log($"Trade complete! Received {(Species)received.Species}.");
+        Log($"Trade complete! Received {(Species)received.Species}. Now waiting for trade animation to complete...");
         SetTradeState(TradeState.Completed);
 
         poke.TradeFinished(this, received);
