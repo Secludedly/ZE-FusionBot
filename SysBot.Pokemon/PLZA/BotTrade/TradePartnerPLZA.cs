@@ -9,7 +9,9 @@ public sealed class TradePartnerPLZA(TradePartnerStatusPLZA info)
     public const int MaxByteLengthStringObject = 26;
     public int Game { get; } = info.Game;
     public int Gender { get; } = info.Gender;
-    public int Language { get; } = info.Language;
+    public byte Language { get; } = (byte)info.Language;
+    public string GenderString => TrainerDisplayHelper.GetGenderString(Gender);
+    public string LanguageString => TrainerDisplayHelper.GetLanguageString(Language);
     public string SID7 { get; } = info.DisplaySID.ToString("D4");
     public string TID7 { get; } = info.DisplayTID.ToString("D6");
     public string TrainerName { get; } = info.OT;
@@ -30,7 +32,7 @@ public sealed class TradeMyStatusPLZA
 
     public int Gender => Data[0x05];
 
-    public int Language => Data[0x07];
+    public byte Language => Data[0x07];
 
     public string OT => StringConverter8.GetString(Data.AsSpan(0x10, 0x1A));
 }
@@ -49,7 +51,27 @@ public sealed class TradePartnerStatusPLZA
 
     public int Gender => Data[0x04];
 
-    public int Language => Data[0x05];
+    public byte Language => Data[0x05];
 
     public string OT => StringConverter8.GetString(Data.AsSpan(0x08, 0x1A));
+}
+
+public static class TrainerDisplayHelper
+{
+    public static string GetGenderString(int gender) => gender switch
+    {
+        0 => "Male",
+        1 => "Female",
+        _ => $"Unknown ({gender})"
+    };
+
+    public static string GetLanguageString(int language)
+    {
+        byte langByte = (byte)language;
+
+        if (Enum.IsDefined(typeof(LanguageID), langByte))
+            return ((LanguageID)langByte).ToString();
+
+        return $"Unknown ({language})";
+    }
 }

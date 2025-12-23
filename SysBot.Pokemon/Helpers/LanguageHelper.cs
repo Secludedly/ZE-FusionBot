@@ -27,14 +27,14 @@ public static class LanguageHelper
                 {
                     "japanese" or "jpn" or "日本語" => (byte)LanguageID.Japanese,
                     "english" or "eng" => (byte)LanguageID.English,
-                    "french" or "fre" or "fra" => (byte)LanguageID.French,
-                    "italian" or "ita" => (byte)LanguageID.Italian,
-                    "german" or "ger" or "deu" => (byte)LanguageID.German,
-                    "spanish" or "spa" or "esp" => (byte)LanguageID.Spanish,
+                    "french" or "fre" or "fra" or "français" => (byte)LanguageID.French,
+                    "italian" or "ita" or "italiano" => (byte)LanguageID.Italian,
+                    "german" or "ger" or "deu" or "deutsch" => (byte)LanguageID.German,
+                    "spanish" or "spa" or "esp" or "español" => (byte)LanguageID.Spanish,
                     "spanish-latam" or "spanishl" or "es-419" or "latam" => (byte)LanguageID.SpanishL,
                     "korean" or "kor" or "한국어" => (byte)LanguageID.Korean,
-                    "chinese" or "chs" or "中文" => (byte)LanguageID.ChineseS,
-                    "cht" => (byte)LanguageID.ChineseT,
+                    "chinese" or "chs" or "中文" or "简体中文" => (byte)LanguageID.ChineseS,
+                    "cht" or "chineset" or "繁體中文" => (byte)LanguageID.ChineseT,
                     _ => 0
                 };
 
