@@ -937,11 +937,11 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
 
                     if (retryCounts[i] == 1)
                     {
-                        Log($"Waiting for trade animation to finish before continuing to trade {i + 1}...");
+                        Log($"Trade animation detected for trade {i + 1}/{totalBatchTrades}. Waiting before continuing...");
                     }
                     else
                     {
-                        Log($"Trainer slow on entering trade {i + 1}, retrying...");
+                        Log($"Trainer slow on entering trade {i + 1}/{totalBatchTrades}, retrying...");
                     }
 
                     await Task.Delay(2_000, token).ConfigureAwait(false);
@@ -965,6 +965,12 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
                 UpdateCountsAndExport(poke, received, poke.TradeData);
 
                 completedTrades++;
+
+                // Log animation wait message after each successful trade except the last
+                if (i + 1 < totalBatchTrades)
+                {
+                    Log($"Waiting for trade animation to finish before continuing to trade {i + 2}...");
+                }
 
                 // Inject next Pokémon during animation
                 if (i + 1 < totalBatchTrades)

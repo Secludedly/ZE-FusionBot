@@ -282,6 +282,13 @@ public sealed partial class SysCord<T> where T : PKM, new()
         if (!SysCordSettings.Settings.BotEmbedStatus)
             return;
 
+        // Check if client is connected before attempting to announce
+        if (_client == null || _client.ConnectionState != ConnectionState.Connected)
+        {
+            LogUtil.LogInfo("SysCord", "Cannot announce bot status: Discord client is not connected");
+            return;
+        }
+
         var botName = string.IsNullOrEmpty(SysCordSettings.HubConfig.BotName) ? "SysBot" : SysCordSettings.HubConfig.BotName;
         var fullStatusMessage = $"**Status**: {botName} is {status}!";
         var thumbnailUrl = status == "Online"
@@ -300,6 +307,13 @@ public sealed partial class SysCord<T> where T : PKM, new()
         {
             try
             {
+                // Check connection state before each channel operation
+                if (_client.ConnectionState != ConnectionState.Connected)
+                {
+                    LogUtil.LogInfo("SysCord", "Discord client disconnected during status announcement, aborting");
+                    return;
+                }
+
                 ITextChannel? textChannel = _client.GetChannel(channelId) as ITextChannel;
                 if (textChannel == null)
                 {
@@ -353,6 +367,11 @@ public sealed partial class SysCord<T> where T : PKM, new()
                 {
                     LogUtil.LogInfo("SysCord", $"Channel {channelId} is not a text channel or could not be found");
                 }
+            }
+            catch (ObjectDisposedException)
+            {
+                LogUtil.LogInfo("SysCord", "Discord client was disposed during status announcement, aborting");
+                return;
             }
             catch (Exception ex)
             {

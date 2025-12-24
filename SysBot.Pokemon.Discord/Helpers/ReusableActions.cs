@@ -5,6 +5,7 @@ using PKHeX.Core;
 using SysBot.Base;
 using SysBot.Pokemon.Helpers;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -19,6 +20,10 @@ public static class ReusableActions
 
     // Global rate limiter for Discord DM sends to prevent opening DMs too fast
     private static readonly SemaphoreSlim _dmRateLimiter = new(1, 1);
+    private static readonly ConcurrentDictionary<ulong, IDMChannel> _dmChannels = new();
+    private static DateTime _lastDmTime = DateTime.MinValue;
+    private const int MinDmDelayMs = 2000; // Minimum 2 seconds between DMs to respect Discord rate limits
+
 
     public static async Task EchoAndReply(this ISocketMessageChannel channel, string msg)
     {
@@ -159,6 +164,29 @@ public static class ReusableActions
         return str.Split(separator, StringSplitOptions.RemoveEmptyEntries);
     }
 
+    private static async Task<IDMChannel?> GetOrCreateDMAsync(IUser user)
+    {
+        try
+        {
+            if (_dmChannels.TryGetValue(user.Id, out var channel))
+                return channel;
+
+            var dm = await user.CreateDMChannelAsync().ConfigureAwait(false);
+            _dmChannels[user.Id] = dm;
+            return dm;
+        }
+        catch (ObjectDisposedException)
+        {
+            LogUtil.LogError("Discord client is disposed. Cannot create DM channel.", "GetOrCreateDMAsync");
+            return null;
+        }
+        catch (Exception ex)
+        {
+            LogUtil.LogError($"Failed to create DM channel: {ex.Message}", "GetOrCreateDMAsync");
+            return null;
+        }
+    }
+
     public static async Task RepostPKMAsShowdownAsync(this ISocketMessageChannel channel, IAttachment att, SocketUserMessage userMessage)
     {
         if (!EntityDetection.IsSizePlausible(att.Size))
@@ -229,6 +257,18 @@ public static class ReusableActions
                     await Task.Delay(500);
                     break; // Success, exit retry loop
                 }
+                catch (ObjectDisposedException)
+                {
+                    LogUtil.LogError("Discord client is disposed. Cannot send file.", "SendPKMAsync");
+                    return;
+                }
+                catch (HttpException ex) when (ex.HttpCode == System.Net.HttpStatusCode.TooManyRequests)
+                {
+                    LogUtil.LogInfo($"Discord rate limit encountered, retrying in {delayMs}ms (attempt {retryCount + 1}/{maxRetries})", "SendPKMAsync");
+                    await Task.Delay(delayMs);
+                    delayMs *= 2;
+                    retryCount++;
+                }
                 catch (HttpException ex) when (ex.HttpCode == System.Net.HttpStatusCode.InternalServerError)
                 {
                     retryCount++;
@@ -262,52 +302,95 @@ public static class ReusableActions
 
     public static async Task SendPKMAsync(this IUser user, PKM pkm, string msg = "")
     {
-        // Create a unique filename for each Pokémon
-        var uniqueId = Guid.NewGuid().ToString("N").Substring(0, 8);
+        var uniqueId = Guid.NewGuid().ToString("N")[..8];
         var fileName = $"{uniqueId}_{PathUtil.CleanFileName(pkm.FileName)}";
-        var tmp = Path.Combine(Path.GetTempPath(), fileName);
+        var tmpPath = Path.Combine(Path.GetTempPath(), fileName);
 
         try
         {
-            // Write the file
-            await File.WriteAllBytesAsync(tmp, pkm.DecryptedPartyData);
+            await File.WriteAllBytesAsync(tmpPath, pkm.DecryptedPartyData).ConfigureAwait(false);
 
-            // Use global rate limiter to prevent opening DMs too fast
-            await _dmRateLimiter.WaitAsync();
+            // Ensure we don't open DMs too fast - enforce minimum delay between DMs
+            await _dmRateLimiter.WaitAsync().ConfigureAwait(false);
+
             try
             {
-                // Retry logic for handling rate limits and transient errors
-                const int maxRetries = 5;
-                int retryCount = 0;
-                int delayMs = 1000; // Start with 1 second delay
+                // Enforce minimum delay between DM operations
+                var timeSinceLastDm = DateTime.Now - _lastDmTime;
+                if (timeSinceLastDm.TotalMilliseconds < MinDmDelayMs)
+                {
+                    var remainingDelay = MinDmDelayMs - (int)timeSinceLastDm.TotalMilliseconds;
+                    await Task.Delay(remainingDelay).ConfigureAwait(false);
+                }
 
-                while (retryCount < maxRetries)
+                var dm = await GetOrCreateDMAsync(user).ConfigureAwait(false);
+                if (dm == null)
+                {
+                    LogUtil.LogError($"Could not create DM channel for user {user.Username} ({user.Id}). Skipping send.", "SendPKMAsync");
+                    return;
+                }
+
+                const int maxRetries = 3;
+                int delayMs = 2500; // Increased from 1500ms
+
+                for (int attempt = 1; attempt <= maxRetries; attempt++)
                 {
                     try
                     {
-                        // Send the file and WAIT for it to complete
-                        await user.SendFileAsync(tmp, msg);
-
-                        // Add a delay to ensure Discord processes each file separately
-                        // This delay happens INSIDE the rate limiter to prevent concurrent DM sends
-                        await Task.Delay(1000);
-                        break; // Success, exit retry loop
+                        await dm.SendFileAsync(tmpPath, msg).ConfigureAwait(false);
+                        _lastDmTime = DateTime.Now; // Update last DM time on success
+                        await Task.Delay(750).ConfigureAwait(false); // Increased from 500ms for safer pacing
+                        break; // success
                     }
-                    catch (HttpException ex) when (ex.HttpCode == System.Net.HttpStatusCode.InternalServerError ||
-                                                   (ex.DiscordCode.HasValue && (int)ex.DiscordCode.Value == 40003))
+                    catch (ObjectDisposedException)
                     {
-                        retryCount++;
-                        if (retryCount >= maxRetries)
+                        LogUtil.LogError("Discord client is disposed. Cannot send DM.", "SendPKMAsync");
+                        return;
+                    }
+                    catch (HttpException ex) when (ex.DiscordCode.HasValue && ex.DiscordCode.Value == (DiscordErrorCode)40003)
+                    {
+                        // ❌ 40003 = Opening DMs too fast
+                        LogUtil.LogError($"Opening DMs too fast! Waiting 5 seconds before retry. User: {user.Username} ({user.Id})", "SendPKMAsync");
+
+                        // Remove cached DM channel to force recreation with proper delay
+                        _dmChannels.TryRemove(user.Id, out _);
+
+                        if (attempt < maxRetries)
                         {
-                            LogUtil.LogError($"Failed to send DM to user {user.Username} after {maxRetries} attempts: {ex.Message}", "SendPKMAsync");
+                            await Task.Delay(5000).ConfigureAwait(false); // Wait 5 seconds for error 40003
+                            continue;
+                        }
+                        break; // Give up after max retries
+                    }
+                    catch (HttpException ex) when (ex.DiscordCode == DiscordErrorCode.CannotSendMessageToUser)
+                    {
+                        // User has DMs disabled or bot is blocked
+                        LogUtil.LogError($"Cannot send messages to user {user.Username} ({user.Id}). DMs may be disabled.", "SendPKMAsync");
+                        break;
+                    }
+                    catch (HttpException ex) when (ex.HttpCode == System.Net.HttpStatusCode.TooManyRequests)
+                    {
+                        if (attempt == maxRetries)
+                        {
+                            LogUtil.LogError($"Rate limited when DMing {user.Username} after {maxRetries} attempts", "SendPKMAsync");
+                            break;
+                        }
+
+                        LogUtil.LogInfo($"Rate limited sending DM to {user.Username}, waiting {delayMs}ms (attempt {attempt}/{maxRetries})", "SendPKMAsync");
+                        await Task.Delay(delayMs).ConfigureAwait(false);
+                        delayMs *= 2; // Exponential backoff
+                    }
+                    catch (HttpException ex)
+                    {
+                        if (attempt == maxRetries)
+                        {
+                            LogUtil.LogError($"Failed to DM {user.Username} after {maxRetries} attempts: {ex.Message}", "SendPKMAsync");
                             throw;
                         }
 
-                        var errorType = (ex.DiscordCode.HasValue && (int)ex.DiscordCode.Value == 40003) ? "rate limit" : "server error";
-                        LogUtil.LogInfo($"Discord {errorType} encountered, retrying in {delayMs}ms (attempt {retryCount}/{maxRetries})", "SendPKMAsync");
-
-                        await Task.Delay(delayMs);
-                        delayMs *= 2; // Exponential backoff
+                        LogUtil.LogInfo($"Discord error sending DM to {user.Username}, retrying in {delayMs}ms (attempt {attempt}/{maxRetries})", "SendPKMAsync");
+                        await Task.Delay(delayMs).ConfigureAwait(false);
+                        delayMs *= 2;
                     }
                 }
             }
@@ -318,16 +401,7 @@ public static class ReusableActions
         }
         finally
         {
-            // Make sure we attempt to delete the temp file even if an exception occurs
-            try
-            {
-                if (File.Exists(tmp))
-                    File.Delete(tmp);
-            }
-            catch (Exception ex)
-            {
-                LogUtil.LogError($"Error deleting temporary file: {ex.Message}", "SendPKMAsync");
-            }
+            try { if (File.Exists(tmpPath)) File.Delete(tmpPath); } catch { }
         }
     }
 

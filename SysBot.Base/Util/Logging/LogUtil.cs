@@ -56,6 +56,7 @@ public static class LogUtil
                 MaxArchiveFiles = LogConfig.MaxArchiveFiles,
                 Encoding = Encoding.Unicode,
                 WriteBom = true,
+                Layout = "${date:format=MM-dd-yyyy h\\:mm\\:ss.ffff tt}|${level:uppercase=true}|${logger}|${message}${onexception:inner=${newline}${exception:format=tostring}}"
             };
             config.AddRule(LogLevel.Debug, LogLevel.Fatal, masterLogFile);
         }
@@ -106,7 +107,7 @@ public static class LogUtil
                 MaxArchiveFiles = LogConfig.MaxArchiveFiles,
                 Encoding = Encoding.Unicode,
                 WriteBom = true,
-                Layout = "${longdate}|${level:uppercase=true}|${logger}|${message}${onexception:inner=${newline}${exception:format=tostring}}"
+                Layout = "${date:format=MM-dd-yyyy h\\:mm\\:ss.ffff tt}|${level:uppercase=true}|${logger}|${message}${onexception:inner=${newline}${exception:format=tostring}}"
             };
 
             config.AddTarget(botLogTarget);

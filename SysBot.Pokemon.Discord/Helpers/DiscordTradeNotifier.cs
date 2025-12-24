@@ -84,44 +84,58 @@ public class DiscordTradeNotifier<T> : IPokeTradeNotifier<T>, IDisposable
             if (!_isTradeActive)
                 return;
 
-            // Check the current position using the unique trade ID
-            var position = Hub.Queues.Info.CheckPosition(_traderID, _uniqueTradeID, PokeRoutineType.LinkTrade);
-            if (!position.InQueue)
-                return;
-
-            var currentPosition = position.Position < 1 ? 1 : position.Position;
-
-            // Store the latest position for future reference
-            _lastReportedPosition = currentPosition;
-
-            var botct = Hub.Bots.Count;
-
-            // Only send ONE notification when the user is truly up next (position 1 or ready to be processed)
-            if (position.InQueue && position.Detail != null)
+            try
             {
-                // Only notify when position is 1 (truly up next) and we haven't sent the notification yet
-                if (currentPosition == 1 && _initialUpdateSent && !_almostUpNotificationSent)
+                // Check the current position using the unique trade ID
+                var position = Hub.Queues.Info.CheckPosition(_traderID, _uniqueTradeID, PokeRoutineType.LinkTrade);
+                if (!position.InQueue)
+                    return;
+
+                var currentPosition = position.Position < 1 ? 1 : position.Position;
+
+                // Store the latest position for future reference
+                _lastReportedPosition = currentPosition;
+
+                var botct = Hub.Bots.Count;
+
+                // Only send ONE notification when the user is truly up next (position 1 or ready to be processed)
+                if (position.InQueue && position.Detail != null)
                 {
-                    // Send notification that they're up next - only sent ONCE
-                    _almostUpNotificationSent = true;
-
-                    var batchInfo = TotalBatchTrades > 1 ? $"\n\n**Important:** This is a batch trade with {TotalBatchTrades} Pokémon. Please stay in the trade until all are completed!" : "";
-
-                    var upNextEmbed = new EmbedBuilder
+                    // Only notify when position is 1 (truly up next) and we haven't sent the notification yet
+                    if (currentPosition == 1 && _initialUpdateSent && !_almostUpNotificationSent)
                     {
-                        Color = Color.Gold,
-                        Title = "🎯 You're Up Next!",
-                        Description = $"Your trade will begin very soon. Please be ready!{batchInfo}",
-                        Footer = new EmbedFooterBuilder
-                        {
-                            Text = "Get ready to connect!"
-                        },
-                        Timestamp = DateTimeOffset.Now
-                    }.Build();
+                        // Send notification that they're up next - only sent ONCE
+                        _almostUpNotificationSent = true;
 
-                    await Trader.SendMessageAsync(embed: upNextEmbed).ConfigureAwait(false);
+                        var batchInfo = TotalBatchTrades > 1 ? $"\n\n**Important:** This is a batch trade with {TotalBatchTrades} Pokémon. Please stay in the trade until all are completed!" : "";
+
+                        var upNextEmbed = new EmbedBuilder
+                        {
+                            Color = Color.Gold,
+                            Title = "🎯 You're Up Next!",
+                            Description = $"Your trade will begin very soon. Please be ready!{batchInfo}",
+                            Footer = new EmbedFooterBuilder
+                            {
+                                Text = "Get ready to connect!"
+                            },
+                            Timestamp = DateTimeOffset.Now
+                        }.Build();
+
+                        await Trader.SendMessageAsync(embed: upNextEmbed).ConfigureAwait(false);
+                    }
+                    // No other periodic updates - this prevents Discord spam
                 }
-                // No other periodic updates - this prevents Discord spam
+            }
+            catch (ObjectDisposedException)
+            {
+                // Discord client was disposed, stop periodic updates
+                Base.LogUtil.LogError("Discord client disposed during periodic update. Stopping updates.", "StartPeriodicUpdates");
+                StopPeriodicUpdates();
+            }
+            catch (Exception ex)
+            {
+                // Log any other errors but don't crash
+                Base.LogUtil.LogError($"Unexpected error in periodic trade update: {ex.Message}", "StartPeriodicUpdates");
             }
         },
         null,
@@ -138,35 +152,46 @@ public class DiscordTradeNotifier<T> : IPokeTradeNotifier<T>, IDisposable
 
     public async Task SendInitialQueueUpdate()
     {
-        var position = Hub.Queues.Info.CheckPosition(_traderID, _uniqueTradeID, PokeRoutineType.LinkTrade);
-        var currentPosition = position.Position < 1 ? 1 : position.Position;
-        var botct = Hub.Bots.Count;
-        var currentETA = currentPosition > botct ? Hub.Config.Queues.EstimateDelay(currentPosition, botct) : 0;
-
-        _lastReportedPosition = currentPosition;
-
-        var batchDescription = TotalBatchTrades > 1
-            ? $"Your batch trade request ({TotalBatchTrades} Pokémon) has been queued.\n\n⚠️ **Important Instructions:**\n• Stay in the trade for all {TotalBatchTrades} trades\n• Have all {TotalBatchTrades} Pokémon ready to trade\n• Do not exit until you see the completion message\n\n**Queue Position**: {currentPosition}"
-            : $"Your trade request has been queued.\n**Queue Position**: {currentPosition}";
-
-        var initialEmbed = new EmbedBuilder
+        try
         {
-            Color = Color.Green,
-            Title = TotalBatchTrades > 1 ? "🎁 Batch Trade Request Queued" : "Trade Request Queued",
-            Description = batchDescription,
-            Footer = new EmbedFooterBuilder
+            var position = Hub.Queues.Info.CheckPosition(_traderID, _uniqueTradeID, PokeRoutineType.LinkTrade);
+            var currentPosition = position.Position < 1 ? 1 : position.Position;
+            var botct = Hub.Bots.Count;
+            var currentETA = currentPosition > botct ? Hub.Config.Queues.EstimateDelay(currentPosition, botct) : 0;
+
+            _lastReportedPosition = currentPosition;
+
+            var batchDescription = TotalBatchTrades > 1
+                ? $"Your batch trade request ({TotalBatchTrades} Pokémon) has been queued.\n\n⚠️ **Important Instructions:**\n• Stay in the trade for all {TotalBatchTrades} trades\n• Have all {TotalBatchTrades} Pokémon ready to trade\n• Do not exit until you see the completion message\n\n**Queue Position**: {currentPosition}"
+                : $"Your trade request has been queued.\n**Queue Position**: {currentPosition}";
+
+            var initialEmbed = new EmbedBuilder
             {
-                Text = $"Estimated wait time: {(currentETA > 0 ? $"{currentETA} minutes" : "Less than a minute")}"
-            },
-            Timestamp = DateTimeOffset.Now
-        }.Build();
+                Color = Color.Green,
+                Title = TotalBatchTrades > 1 ? "🎁 Batch Trade Request Queued" : "Trade Request Queued",
+                Description = batchDescription,
+                Footer = new EmbedFooterBuilder
+                {
+                    Text = $"Estimated wait time: {(currentETA > 0 ? $"{currentETA} minutes" : "Less than a minute")}"
+                },
+                Timestamp = DateTimeOffset.Now
+            }.Build();
 
-        await Trader.SendMessageAsync(embed: initialEmbed).ConfigureAwait(false);
+            await Trader.SendMessageAsync(embed: initialEmbed).ConfigureAwait(false);
 
-        _initialUpdateSent = true;
+            _initialUpdateSent = true;
 
-        // Start sending periodic updates about queue position
-        StartPeriodicUpdates();
+            // Start sending periodic updates about queue position
+            StartPeriodicUpdates();
+        }
+        catch (ObjectDisposedException)
+        {
+            Base.LogUtil.LogError("Discord client disposed when sending initial queue update.", "SendInitialQueueUpdate");
+        }
+        catch (Exception ex)
+        {
+            Base.LogUtil.LogError($"Unexpected error sending initial queue update: {ex.Message}", "SendInitialQueueUpdate");
+        }
     }
 
     public void TradeInitialize(PokeRoutineExecutor<T> routine, PokeTradeDetail<T> info)
