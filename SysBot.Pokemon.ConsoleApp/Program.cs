@@ -1,5 +1,6 @@
 using PKHeX.Core;
 using SysBot.Base;
+using SysBot.Pokemon.Discord.Helpers;
 using SysBot.Pokemon.Z3;
 using System;
 using System.IO;
@@ -59,6 +60,9 @@ public static class BotContainer
 {
     public static void RunBots(ProgramConfig prog)
     {
+        // Set the current game mode for BatchCommandNormalizer
+        BatchCommandNormalizer.CurrentGameMode = prog.Mode;
+
         IPokeBotRunner env = GetRunner(prog);
         foreach (var bot in prog.Bots)
         {

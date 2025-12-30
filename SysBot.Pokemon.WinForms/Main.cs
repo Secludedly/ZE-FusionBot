@@ -4,6 +4,7 @@ using PKHeX.Core;
 using SysBot.Base;
 using SysBot.Pokemon.WinForms;
 using SysBot.Pokemon.Discord;
+using SysBot.Pokemon.Discord.Helpers;
 using SysBot.Pokemon.Helpers;
 using SysBot.Pokemon.WinForms.Controls;
 using SysBot.Pokemon.WinForms.Properties;
@@ -263,6 +264,9 @@ namespace SysBot.Pokemon.WinForms
                     .Select(g => g.First())
                     .ToArray();
 
+                // Set the current game mode for BatchCommandNormalizer
+                BatchCommandNormalizer.CurrentGameMode = Config.Mode;
+
                 RunningEnvironment = GetRunner(Config);
 
                 foreach (var bot in Config.Bots)
@@ -283,6 +287,10 @@ namespace SysBot.Pokemon.WinForms
             {
                 // config.json shits
                 Config = new ProgramConfig();
+
+                // Set the current game mode for BatchCommandNormalizer
+                BatchCommandNormalizer.CurrentGameMode = Config.Mode;
+
                 RunningEnvironment = GetRunner(Config); // What mode is this bitch on?
                 Config.Hub.Folder.CreateDefaults(Program.WorkingDirectory); // Hubbabubba
             }
