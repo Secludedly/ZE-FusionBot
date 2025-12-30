@@ -370,7 +370,8 @@
 - **Gen 2–8 Locations:** [Imgur](https://i.imgur.com/v02WMmL.jpeg)  
 - **PLA Locations:** [Pastebin](https://pastebin.com/3pTsquW1)  
 - **BDSP Locations:** [Pastebin](https://pastebin.com/Fk77w1NR)  
-- **SV Locations:** [Pastebin](https://pastebin.com/UNE9brU7)  
+- **SV Locations:** [Pastebin](https://pastebin.com/UNE9brU7)
+- **PLZA Locations:** [Pastebin](https://pastebin.com/p3n3D9yZ)  
 
 > 🔹 Currently, `Met Location:` only supports **numeric IDs**. See above references for valid values per generation.
 
