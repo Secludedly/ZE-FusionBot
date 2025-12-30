@@ -12,9 +12,9 @@
 <p align="center">
   <i>A community-driven and inspired SysBot.NET project with the most beautiful GUI that unites code from everyone, supporting LGPE, SWSH, BDSP, PLA, SV, and PLZA!</i>
 </p>
-<h2 align="center">
+<h3 align="center">
   Visit <a href="https://FreeMons.Org">FreeMons.Org</a> to join Zeraora's Emporium!
-</h2>
+</h3>
 <p align="center">
     <img src="https://visitor-badge.laobi.icu/badge?page_id=Secludedly.ZE-FusionBot" alt="Visitors">
 </p>
@@ -32,6 +32,74 @@
 ## 🚀 Introduction
 
 `ZE FusionBot` is a powerful and open-source SysBot.NET fork, initially tailored for the Discord server [Zeraora's Emporium](https://FreeMons.Org). While originally built for internal server use, it has transformed into a beautiful, community-powered GUI with dozens of integrated forks and unique enhancements, catering to every Nintendo Switch Pokémon game.
+
+---
+<p align="center">
+    <img src="https://i.imgur.com/zJF8VmN.gif" style="max-width: 100%; height: auto;">
+</p>
+
+## 🧬 Community Roots & Inspirations
+
+> **ZE FusionBot is a fusion by design — built from years of shared ideas, forks, experiments, and respect for the SysBot.NET ecosystem.**
+
+ZE FusionBot was created, inspired, and upgraded through time, in pieces, through a collaboration of multiple developers of all skill levels with bright ideas and a hobby. There's many I know, and many I don't know, but I have respect and appreciation for them all. If they didn't inspire or help, simply diving into their code and learning C# over the years through their contributions helped me get to this point to continue to refine ZE FusionBot and is also what allowed this project to grow into one of - if not *the best* SysBot program to date, in large to **[@hexbyt3's](https://github.com/hexbyt3)** **[PokeBot](https://github.com/hexbyt3/PokeBot)**, another contender as *the best* SysBot.
+
+The projects below represent **the strongest influences** in the SysBot.NET space and the inspiration behind calling this a **Fusion** bot.
+
+<details>
+<summary><strong>🧬 Click to view credits & inspirations</strong></summary><br />
+
+### 🧬 Foundational Projects
+
+- **[SysBot.NET](https://github.com/kwsch/SysBot.NET)**  
+  Created by **[@kwsch](https://github.com/kwsch)** — also the creator of PKHeX.  
+  *The origin of everything.*
+
+- **[ForkBot.NET](https://github.com/Koi-3088/ForkBot.NET)**  
+  Developed by **[@Koi-3088](https://github.com/Koi-3088)**.  
+  One of the earliest and most influential forks. TradeCord will never be forgotten.
+  Somewhat of a friend for a while, but it's been many years, yet his talent had me learn so much.
+
+- **[SysBot.NET (berichan fork)](https://github.com/berichan/SysBot.NET)**  
+  An insightful and clever fork by **[@berichan](https://github.com/berichan)** that helped shape many later ideas.
+  Many years ago, I'd take and modify beri's work to learn more about C#.
+
+- **[SysBot.NET (Lusamine fork)](https://github.com/Lusamine/SysBot.NET)**  
+  A respected fork that stayed close to the original vision, maintained by **[@Lusamine](https://github.com/Lusamine)**.
+
+- **[SysBot.NET (santacrab fork)](https://github.com/santacrab2/SysBot.NET)**  
+  A long-followed fork by **[@santacrab2](https://github.com/santacrab2)** — a brilliant developer and dear local friend.
+
+---
+
+### 🔧 Evolutionary & Community-Driven Bots
+
+- **[MergeBot](https://github.com/Paschar1/MergeBot)**  
+  Originally created by **[@bakakaito](https://github.com/bakakaito)** (now offline), possibly preserved by **[@Paschar1](https://github.com/Paschar1)**.  
+  One of the first major user-driven evolutions of SysBot.
+
+- **[PokeBot](https://github.com/hexbyt3/PokeBot)**  
+  Created by **[@hexbyt3](https://github.com/hexbyt3)**, a brilliant friend of mine — and the **primary foundation of ZE FusionBot**.  
+  Much of FusionBot’s structure, philosophy, and stability originates here, alongside deep collaboration and shared ideas between repos.
+
+---
+
+### 🚀 Additional Inspirations
+
+- **[SysBot.NET (easyworld fork)](https://github.com/easyworld/SysBot.NET)** — by **[@easyworld](https://github.com/easyworld)**
+A fork I've followed for some time that's given me inspiration in the past
+- **[ManuBot.NET](https://github.com/Manu098vm/ManuBot.NET)** — by **[@Manu098vm](https://github.com/Manu098vm)**
+A fork I've been following for update inspiration with great C# knowledge
+- **[ManuBot.NET (9B1td0 fork)](https://github.com/9B1td0/ManuBot.NET)** — by **[@9B1td0](https://github.com/9B1td0)**
+I believe this is a fork of ManuBot.NET but seems almost collaborated with the original.
+- **[DudeBot.NET](https://github.com/Havokx89/DudeBot.NET)** — by **[@Havokx89](https://github.com/Havokx89)**
+A fun and fused iteration combining a lot of ZE FusionBot that I follow for various integration ideas.
+- **[ZenBot.NET](https://github.com/Omni-KingZeno/ZenBot.NET)** — by **[@Omni-KingZeno](https://github.com/Omni-KingZeno)**
+A fork of ManuBot.NET that I follow and quite enjoy getting inspiration from. Plus, great bot name and username. I'm a DBtard.
+- **[TradeBot](https://github.com/jonklee99/Tradebot)** — by **[@jonklee99](https://github.com/jonklee99)** with **[@joseph11024](https://github.com/joseph11024)**
+Created by a good friend that tends to use their own ideas that I've happily borrowed from before.
+
+</details>
 
 ---
 
