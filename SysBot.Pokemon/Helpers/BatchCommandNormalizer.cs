@@ -76,7 +76,8 @@ namespace SysBot.Pokemon.Discord.Helpers
                 { "HT", ProcessHyperTrain },
                 { "MetLevel", ProcessMetLevel },
                 { "Markings", ProcessMarkings },
-                { "StatNature", ProcessStatNature }
+                { "StatNature", ProcessStatNature },
+                { "Nickname", ProcessNickname }
             };
 
         //////////////////////////////////// NEW COMMAND DICTIONARIES //////////////////////////////////////
@@ -204,6 +205,33 @@ namespace SysBot.Pokemon.Discord.Helpers
     { "Ribbon", 6 }
     };
 
+        // Random nickname suggestions
+        private static readonly string[] SuggestedNicknames =
+        {
+            "Ace", "Atlas", "Foot Hat", "Hurt Daddy", "Bolt", "Bruno", "Buddy", "Caesar", "Captain", "Champ", "Baller", "Dingdoodler",
+            "Charlie", "Chase", "Chief", "Chip", "Enrique", "Charmin", "Cosmo", "Dash", "Derpendoodle", "Duke", "Echo", "Flash", "Frost",
+            "Gizmo", "Gordo", "Gus", "Hank", "Hunter", "Killswitch", "Badonkadonk", "Ferginfluff", "Corn", "The Herps", "Buff Balls",
+            "Max", "Milo", "Drinky Moo", "Pole Dancer", "Mocha", "Nala", "Neo", "Nova", "Oscar", "Peanut", "Willikers", "Hogmilk", "Jingafunk",
+            "Pixel", "Prince", "Rocket", "Rocky", "Schmiggins", "Shadow", "Slapstick", "Adrenaline", "Colonoscopy", "Contagious", "Bladder Pump",
+            "Spike", "Punk", "Humphrey Tot", "Storm", "Tank", "Titan", "Ziggy", "Fluffinfarts", "Dorito Poo", "Trumpzilla", "Jeebus Crust", 
+            "Angel", "Athena", "Aurora", "Bella", "Chloe", "Coco", "Daisy", "Diva", "Duchess", "Ellie", "Milkshake", "No Bueno", "Jim Socks",
+            "Emma", "Ginger", "Grace", "Hazel", "Honey", "Ivy", "Jade", "Jasmine", "Kira", "Lady", "Yungblud", "Nipsy Hunk", "Metalcore",
+            "Lexi", "Lily", "Jugginflute", "Napalm Poots", "Just Jim", "Frederic", "Ferguson", "Link", "Lucy", "Luna", "Lux", "McMonkey", "Mia",
+            "Mist", "Molly", "Noodles", "Pearl", "Dish Soap", "Listerine", "Smelly Feet", "Sedation", "Failure", "Ron", "Crystal", "Pizza Plower",
+            "Penny", "Pepper", "Phoebe", "Pixie", "Princess", "Queen", "Rose", "Ruby", "Sadie", "Sasha", "Wonka Sack", "Shmegma", "Toothpick Al",
+            "Sophie", "Star", "Stella", "Storm", "Soul", "Sugar", "Sunny", "Trixie", "Venom", "Violet", "Willow", "Zelda", "Hologram", "Jill Dill",
+            "Martin Bumps", "Timmy 3-Legs", "Yugi Moto", "Farm Fresh", "Almond Milk", "Asia Nips", "Zoolander", "Carnage", "Banana Tater", "Plums",
+            "Testinut", "Consuella", "Stop it, Mom", "Urologist", "Jackson", "Meat Beater", "That Smell", "Anchorman", "Kip", "Hop", "Fried Nugget",
+            "Ringading", "Fruity Carl", "Alpaca Tim", "Hernandez", "Touch it", "Jive Turkey", "Sticky Sock", "Haggard", "Orphan", "Larry Cables",
+            "Tom Petty", "Biffingort", "Invisible", "Diabetes", "Buelfork", "Spork Ninja", "Hayley", "Terrance", "Ted Turner", "Elon Musket",
+            "Arnold Jiff", "Brenda", "Man Cow Pig", "Firework", "Disaster", "Gully", "OK Karen", "Nancy Grace", "Papi Chulo", "Glamour", "Uber",
+            "Jigsaw", "General Mill", "I No Like", "Dustin", "Illicit", "Bandido", "Skrillex", "Dadoony", "Donna", "Flank", "Dollop Dan",
+            "Kaiou", "Simon", "Geo", "Sai", "Ralph", "Flububba", "Rancid", "Empty", "Spongy Hat", "Geraldo", "Camel Toes", "Son Goku", "Broccoli",
+            "Pride", "Charlie", "Chuck", "Smackafats", "Flubber", "Bag", "Wrench", "Tool", "Hatebreed", "Cocoa", "Shane", "Shannon", "Sophie",
+            "Corruption", "Tonga", "Grace", "Blasphemy", "NutriGrain", "The Clamp", "Radiance", "Chimera", "Flounder", "Juice Me", "Will Ferrell",
+            "Ali", "Fenix", "Phoenix", "Vile", "Old Spice", "Brady", "Soultaker", "Ham Jacket", "Hollow Point", "Desire"
+        };
+
         private static readonly HashSet<string> ValidNatures = new(StringComparer.OrdinalIgnoreCase)
 {
     "Hardy", "Lonely", "Brave", "Adamant", "Naughty", "Bold", "Docile", "Relaxed",
@@ -243,6 +271,17 @@ namespace SysBot.Pokemon.Discord.Helpers
             var lines = input.Split('\n');
             var processed = new List<string>();
             bool hasCharacteristic = false;
+            bool hasExistingNickname = false;
+
+            // Check if first line has a nickname in parentheses (e.g., "Pikachu (Nick)")
+            if (lines.Length > 0)
+            {
+                var firstLine = lines[0].Trim();
+                if (firstLine.Contains('(') && firstLine.Contains(')'))
+                {
+                    hasExistingNickname = true;
+                }
+            }
 
             for (int i = 0; i < lines.Length; i++)
             {
@@ -279,6 +318,12 @@ namespace SysBot.Pokemon.Discord.Helpers
 
                 if (BatchCommandAliasMap.TryGetValue(key, out var normalizedKey))
                     key = normalizedKey;
+
+                // Skip "Nickname: Suggest" if Pokemon already has a nickname in species line
+                if (hasExistingNickname &&
+                    key.Equals("Nickname", StringComparison.OrdinalIgnoreCase) &&
+                    value.Equals("Suggest", StringComparison.OrdinalIgnoreCase))
+                    continue;
 
                 // characteristic overrides IVs
                 if (hasCharacteristic &&
@@ -406,6 +451,26 @@ namespace SysBot.Pokemon.Discord.Helpers
             return $".StatNature={matchedNature}";
         }
 
+        // Nickname: Suggest → Nickname: [Random]
+        // Returns a random nickname from the suggestions dictionary
+        private static string ProcessNickname(string val)
+        {
+            if (string.IsNullOrWhiteSpace(val))
+                return string.Empty;
+
+            var trimmed = val.Trim();
+
+            // If user says "Suggest", return a random nickname from dictionary
+            if (trimmed.Equals("Suggest", StringComparison.OrdinalIgnoreCase))
+            {
+                string randomNickname = SuggestedNicknames[Rng.Next(SuggestedNicknames.Length)];
+                return $"Nickname: {randomNickname}";
+            }
+
+            // Otherwise, pass through the nickname as-is
+            return $"Nickname: {trimmed}";
+        }
+
         // .Moves= → Moves:
         // Only accepted options are "Random" for randomized moves
         private static string ProcessMoves(string val) =>
@@ -498,6 +563,7 @@ namespace SysBot.Pokemon.Discord.Helpers
 
         // .HT_[STAT]= → HT:
         // "HT: HP / Atk / Def" to enable Hyper Training for those stats only
+        // Does not work for PLZA
         private static readonly string[] StatKeys = { "HP", "ATK", "DEF", "SPA", "SPD", "SPE" };
 
         private static string ProcessHyperTrain(string val)
