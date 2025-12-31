@@ -85,8 +85,8 @@ public static class ReusableActions
         if (pkm.IsEgg)
             lines.Add("\nPokémon is an egg");
 
-        // Adjust shiny info
-        if (pkm.IsShiny)
+        // Adjust shiny info (only for SWSH)
+        if (pkm.IsShiny && pkm.Version is GameVersion.SW or GameVersion.SH)
         {
             int shinyIndex = lines.FindIndex(x => x.Contains("Shiny: Yes"));
             if (shinyIndex >= 0)
