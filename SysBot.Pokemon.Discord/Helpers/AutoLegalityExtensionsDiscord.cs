@@ -8,6 +8,7 @@ using SysBot.Pokemon.Discord.Helpers;
 using SysBot.Pokemon.Discord.Helpers.TradeModule;
 using SysBot.Pokemon.Helpers;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
@@ -16,7 +17,7 @@ namespace SysBot.Pokemon.Discord;
 
 public static class AutoLegalityExtensionsDiscord
 {
-    public static async Task ReplyWithLegalizedSetAsync(this ISocketMessageChannel channel, ITrainerInfo sav, ShowdownSet set)
+    public static async Task ReplyWithLegalizedSetAsync(this ISocketMessageChannel channel, ITrainerInfo sav, ShowdownSet set, Dictionary<string, bool>? userHTPreferences = null)
     {
         if (set.Species <= 0)
         {
@@ -71,7 +72,8 @@ public static class AutoLegalityExtensionsDiscord
                             set.Nature,
                             set.Shiny,
                             sav,
-                            template
+                            template,
+                            userHTPreferences
                         );
                     }
                     else
@@ -116,19 +118,21 @@ public static class AutoLegalityExtensionsDiscord
     public static Task ReplyWithLegalizedSetAsync(this ISocketMessageChannel channel, string content, byte gen)
     {
         content = BatchCommandNormalizer.NormalizeBatchCommands(content);
+        var userHTPreferences = ParseHyperTrainingCommandsPublic(content);
         content = ReusableActions.StripCodeBlock(content);
         var set = new ShowdownSet(content);
         var sav = AutoLegalityWrapper.GetTrainerInfo(gen);
-        return channel.ReplyWithLegalizedSetAsync(sav, set);
+        return channel.ReplyWithLegalizedSetAsync(sav, set, userHTPreferences);
     }
 
     public static Task ReplyWithLegalizedSetAsync<T>(this ISocketMessageChannel channel, string content) where T : PKM, new()
     {
         content = BatchCommandNormalizer.NormalizeBatchCommands(content);
+        var userHTPreferences = ParseHyperTrainingCommandsPublic(content);
         content = ReusableActions.StripCodeBlock(content);
         var set = new ShowdownSet(content);
         var sav = AutoLegalityWrapper.GetTrainerInfo<T>();
-        return channel.ReplyWithLegalizedSetAsync(sav, set);
+        return channel.ReplyWithLegalizedSetAsync(sav, set, userHTPreferences);
     }
 
     public static async Task ReplyWithLegalizedSetAsync(this ISocketMessageChannel channel, IAttachment att)
@@ -158,5 +162,51 @@ public static class AutoLegalityExtensionsDiscord
 
         var msg = $"Here's your legalized PKM for {download.SanitizedFileName}!\n{ReusableActions.GetFormattedShowdownText(legal)}";
         await channel.SendPKMAsync(legal, msg).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Checks if the normalized content contains hypertrain-related batch commands.
+    /// Returns a dictionary of which stats were specified and their values.
+    /// If null, no HT commands were specified.
+    /// If dictionary contains "ALL" key with value 0, HyperTrainFlags=0 was specified (no HT at all).
+    /// </summary>
+    public static Dictionary<string, bool>? ParseHyperTrainingCommandsPublic(string content)
+    {
+        var htFlags = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+
+        // Check for .HyperTrainFlags=0 which means disable all hypertraining
+        if (content.Contains(".HyperTrainFlags=0", StringComparison.OrdinalIgnoreCase))
+        {
+            htFlags["ALL"] = false;
+            return htFlags;
+        }
+
+        // Check for individual HT flags
+        if (content.Contains(".HT_HP=", StringComparison.OrdinalIgnoreCase))
+        {
+            htFlags["HP"] = !content.Contains(".HT_HP=False", StringComparison.OrdinalIgnoreCase);
+        }
+        if (content.Contains(".HT_ATK=", StringComparison.OrdinalIgnoreCase))
+        {
+            htFlags["ATK"] = !content.Contains(".HT_ATK=False", StringComparison.OrdinalIgnoreCase);
+        }
+        if (content.Contains(".HT_DEF=", StringComparison.OrdinalIgnoreCase))
+        {
+            htFlags["DEF"] = !content.Contains(".HT_DEF=False", StringComparison.OrdinalIgnoreCase);
+        }
+        if (content.Contains(".HT_SPA=", StringComparison.OrdinalIgnoreCase))
+        {
+            htFlags["SPA"] = !content.Contains(".HT_SPA=False", StringComparison.OrdinalIgnoreCase);
+        }
+        if (content.Contains(".HT_SPD=", StringComparison.OrdinalIgnoreCase))
+        {
+            htFlags["SPD"] = !content.Contains(".HT_SPD=False", StringComparison.OrdinalIgnoreCase);
+        }
+        if (content.Contains(".HT_SPE=", StringComparison.OrdinalIgnoreCase))
+        {
+            htFlags["SPE"] = !content.Contains(".HT_SPE=False", StringComparison.OrdinalIgnoreCase);
+        }
+
+        return htFlags.Count > 0 ? htFlags : null;
     }
 }

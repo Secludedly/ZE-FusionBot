@@ -1224,6 +1224,10 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
                 // Normalize content and parse Showdown set
                 // IMPORTANT: ShowdownSet is IMMUTABLE — never try to modify Nature/IVs/etc on it
                 content = BatchCommandNormalizer.NormalizeBatchCommands(content);
+
+                // Parse hypertraining preferences before stripping code blocks
+                var userHTPreferences = AutoLegalityExtensionsDiscord.ParseHyperTrainingCommandsPublic(content);
+
                 content = ReusableActions.StripCodeBlock(content);
                 var set = new ShowdownSet(content);
 
@@ -1310,7 +1314,8 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
                         set.Nature,
                         set.Shiny,
                         sav,
-                        template
+                        template,
+                        userHTPreferences
                     );
                 }
 

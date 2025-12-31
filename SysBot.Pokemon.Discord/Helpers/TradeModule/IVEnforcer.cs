@@ -1,6 +1,7 @@
 using PKHeX.Core;
 using SysBot.Base;
 using System;
+using System.Collections.Generic;
 using System.Security.Cryptography;
 
 namespace SysBot.Pokemon.Discord.Helpers.TradeModule
@@ -19,6 +20,7 @@ namespace SysBot.Pokemon.Discord.Helpers.TradeModule
             bool isShiny,
             ITrainerInfo trainerSav,
             IBattleTemplate template,
+            Dictionary<string, bool>? userHTPreferences = null,
             int maxPidAttempts = DEFAULT_PID_ATTEMPTS)
         {
             // IVEnforcer only supports ZA Pokémon
@@ -63,8 +65,12 @@ namespace SysBot.Pokemon.Discord.Helpers.TradeModule
             pk.SetIVs(ivs);
 
             // -----------------------------
-            // 2) Clear ALL hypertrain flags - we want actual IVs, not faked ones
+            // 2) Apply HyperTraining based on user preferences
             // -----------------------------
+            // Check if user wants to disable ALL hypertraining
+            bool disableAllHT = userHTPreferences?.ContainsKey("ALL") == true && !userHTPreferences["ALL"];
+
+            // Clear ALL hypertrain flags first
             if (pk is IHyperTrain ht)
             {
                 ht.HT_HP = false;
@@ -74,7 +80,30 @@ namespace SysBot.Pokemon.Discord.Helpers.TradeModule
                 ht.HT_SPA = false;
                 ht.HT_SPD = false;
             }
-            ApplyHyperTrainingIfNeeded(pk);
+
+            if (!disableAllHT)
+            {
+                // Apply automatic HT to all stats < 31 (default behavior)
+                ApplyHyperTrainingIfNeeded(pk);
+
+                // Override with user's specific preferences
+                if (userHTPreferences != null && pk is IHyperTrain htOverride)
+                {
+                    if (userHTPreferences.ContainsKey("HP"))
+                        htOverride.HT_HP = userHTPreferences["HP"];
+                    if (userHTPreferences.ContainsKey("ATK"))
+                        htOverride.HT_ATK = userHTPreferences["ATK"];
+                    if (userHTPreferences.ContainsKey("DEF"))
+                        htOverride.HT_DEF = userHTPreferences["DEF"];
+                    if (userHTPreferences.ContainsKey("SPE"))
+                        htOverride.HT_SPE = userHTPreferences["SPE"];
+                    if (userHTPreferences.ContainsKey("SPA"))
+                        htOverride.HT_SPA = userHTPreferences["SPA"];
+                    if (userHTPreferences.ContainsKey("SPD"))
+                        htOverride.HT_SPD = userHTPreferences["SPD"];
+                }
+            }
+
             pk.ResetPartyStats();
             pk.RefreshChecksum();
 
@@ -115,7 +144,7 @@ namespace SysBot.Pokemon.Discord.Helpers.TradeModule
                 // Reapply IVs after PID change
                 pk.SetIVs(ivs);
 
-                // Clear hypertrain flags again
+                // Clear hypertrain flags
                 if (pk is IHyperTrain htCheck)
                 {
                     htCheck.HT_HP = false;
@@ -125,7 +154,29 @@ namespace SysBot.Pokemon.Discord.Helpers.TradeModule
                     htCheck.HT_SPA = false;
                     htCheck.HT_SPD = false;
                 }
-                ApplyHyperTrainingIfNeeded(pk);
+
+                // Reapply HT based on preferences
+                if (!disableAllHT)
+                {
+                    ApplyHyperTrainingIfNeeded(pk);
+
+                    if (userHTPreferences != null && pk is IHyperTrain htReapply)
+                    {
+                        if (userHTPreferences.ContainsKey("HP"))
+                            htReapply.HT_HP = userHTPreferences["HP"];
+                        if (userHTPreferences.ContainsKey("ATK"))
+                            htReapply.HT_ATK = userHTPreferences["ATK"];
+                        if (userHTPreferences.ContainsKey("DEF"))
+                            htReapply.HT_DEF = userHTPreferences["DEF"];
+                        if (userHTPreferences.ContainsKey("SPE"))
+                            htReapply.HT_SPE = userHTPreferences["SPE"];
+                        if (userHTPreferences.ContainsKey("SPA"))
+                            htReapply.HT_SPA = userHTPreferences["SPA"];
+                        if (userHTPreferences.ContainsKey("SPD"))
+                            htReapply.HT_SPD = userHTPreferences["SPD"];
+                    }
+                }
+
                 pk.ResetPartyStats();
                 pk.RefreshChecksum();
 
@@ -156,7 +207,29 @@ namespace SysBot.Pokemon.Discord.Helpers.TradeModule
                         htFinal.HT_SPA = false;
                         htFinal.HT_SPD = false;
                     }
-                    ApplyHyperTrainingIfNeeded(pk);
+
+                    // Reapply HT based on preferences
+                    if (!disableAllHT)
+                    {
+                        ApplyHyperTrainingIfNeeded(pk);
+
+                        if (userHTPreferences != null && pk is IHyperTrain htFinalRestore)
+                        {
+                            if (userHTPreferences.ContainsKey("HP"))
+                                htFinalRestore.HT_HP = userHTPreferences["HP"];
+                            if (userHTPreferences.ContainsKey("ATK"))
+                                htFinalRestore.HT_ATK = userHTPreferences["ATK"];
+                            if (userHTPreferences.ContainsKey("DEF"))
+                                htFinalRestore.HT_DEF = userHTPreferences["DEF"];
+                            if (userHTPreferences.ContainsKey("SPE"))
+                                htFinalRestore.HT_SPE = userHTPreferences["SPE"];
+                            if (userHTPreferences.ContainsKey("SPA"))
+                                htFinalRestore.HT_SPA = userHTPreferences["SPA"];
+                            if (userHTPreferences.ContainsKey("SPD"))
+                                htFinalRestore.HT_SPD = userHTPreferences["SPD"];
+                        }
+                    }
+
                     pk.ResetPartyStats();
                     pk.RefreshChecksum();
                     return false;
@@ -172,16 +245,38 @@ namespace SysBot.Pokemon.Discord.Helpers.TradeModule
             pk.StatNature = pk.Nature;
             pk.SetIVs(ivs);
 
-            if (pk is IHyperTrain htRestore)
+            if (pk is IHyperTrain htOriginal)
             {
-                htRestore.HT_HP = false;
-                htRestore.HT_ATK = false;
-                htRestore.HT_DEF = false;
-                htRestore.HT_SPE = false;
-                htRestore.HT_SPA = false;
-                htRestore.HT_SPD = false;
+                htOriginal.HT_HP = false;
+                htOriginal.HT_ATK = false;
+                htOriginal.HT_DEF = false;
+                htOriginal.HT_SPE = false;
+                htOriginal.HT_SPA = false;
+                htOriginal.HT_SPD = false;
             }
-            ApplyHyperTrainingIfNeeded(pk);
+
+            // Reapply HT based on preferences
+            if (!disableAllHT)
+            {
+                ApplyHyperTrainingIfNeeded(pk);
+
+                if (userHTPreferences != null && pk is IHyperTrain htOriginalRestore)
+                {
+                    if (userHTPreferences.ContainsKey("HP"))
+                        htOriginalRestore.HT_HP = userHTPreferences["HP"];
+                    if (userHTPreferences.ContainsKey("ATK"))
+                        htOriginalRestore.HT_ATK = userHTPreferences["ATK"];
+                    if (userHTPreferences.ContainsKey("DEF"))
+                        htOriginalRestore.HT_DEF = userHTPreferences["DEF"];
+                    if (userHTPreferences.ContainsKey("SPE"))
+                        htOriginalRestore.HT_SPE = userHTPreferences["SPE"];
+                    if (userHTPreferences.ContainsKey("SPA"))
+                        htOriginalRestore.HT_SPA = userHTPreferences["SPA"];
+                    if (userHTPreferences.ContainsKey("SPD"))
+                        htOriginalRestore.HT_SPD = userHTPreferences["SPD"];
+                }
+            }
+
             pk.ResetPartyStats();
             pk.RefreshChecksum();
             return false;
