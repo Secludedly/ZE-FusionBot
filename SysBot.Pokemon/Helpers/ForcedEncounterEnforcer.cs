@@ -16,6 +16,10 @@ public static class ForcedEncounterEnforcer
         public string? Nickname { get; init; }
         public byte? Form { get; init; }
 
+        // Additional
+        public byte? MetLevel { get; init; }
+        public byte? Friendship { get; init; }
+
         // Determines if this Entry is IV-only (ignore everything else)
         public bool IVOnly => ForcedNature == null;
 
@@ -67,7 +71,8 @@ public static class ForcedEncounterEnforcer
     private static readonly Entry[] IVNatureEntries = new[]
     {
         new Entry { Species = Species.Darkrai, ForcedNature = Nature.Careful, FixedIVs = new[] { 31,31,18,26,31,21 } },
-        new Entry { Species = Species.Zygarde, Form = 2, ForcedNature = Nature.Quiet, FixedIVs = new[] { 31,31,15,31,28,19 } }
+        new Entry { Species = Species.Zygarde, MetLevel = 84, Form = 2, Friendship = 0, Location = 212, ForcedNature = Nature.Quiet, FixedIVs = new[] { 31,31,15,31,28,19 } },
+        new Entry { Species = Species.Zygarde, MetLevel = 84, Form = 1, Friendship = 0, Location = 212, ForcedNature = Nature.Quiet, FixedIVs = new[] { 31,31,15,31,28,19 } }
     };
 
     // Optional: full static entries with OT/Nickname/etc. (safety checks)
