@@ -91,7 +91,7 @@ public static class AutoLegalityWrapper
 
         // Seed the Trainer Database with enough fake save files so that we return a generation sensitive format when needed.  
         var fallback = GetDefaultTrainer(cfg);
-        for (byte generation = 1; generation <= GameUtil.GetGeneration(GameVersion.Gen9); generation++)
+        for (byte generation = 1; generation <= GameUtil.get_Generation(GameVersion.Gen9); generation++)
         {
             var versions = GameUtil.GetVersionsInGeneration(generation, GameVersion.Any);
             foreach (var version in versions)
