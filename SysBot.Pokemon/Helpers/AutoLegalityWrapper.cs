@@ -12,12 +12,14 @@ namespace SysBot.Pokemon;
 public static class AutoLegalityWrapper
 {
     private static bool Initialized;
+    private static LegalitySettings? ConfiguredSettings;
 
     public static void EnsureInitialized(LegalitySettings cfg)
     {
         if (Initialized)
             return;
         Initialized = true;
+        ConfiguredSettings = cfg; // Cache for later use
         InitializeAutoLegality(cfg);
     }
 
@@ -128,9 +130,10 @@ public static class AutoLegalityWrapper
             OT = fallback.OT,
             Generation = generation,
         };
-        var exist = TrainerSettings.GetSavedTrainerData(generation, version, fallback);
-        if (exist is SimpleTrainerInfo) // not anything from files; this assumes ALM returns SimpleTrainerInfo for non-user-provided fake templates.
-            TrainerSettings.Register(fallback);
+
+        // In NET10, ALM has internal defaults that override our configuration
+        // We need to register our fallback to ensure it's used instead of the "ALM" defaults
+        TrainerSettings.Register(fallback);
     }
 
     private static void InitializeCoreStrings()
@@ -171,23 +174,68 @@ public static class AutoLegalityWrapper
 
     public static ITrainerInfo GetTrainerInfo<T>() where T : PKM, new()
     {
-        if (typeof(T) == typeof(PB7))
-            return TrainerSettings.GetSavedTrainerData(GameVersion.GG);
-        if (typeof(T) == typeof(PK8))
-            return TrainerSettings.GetSavedTrainerData(GameVersion.SWSH);
-        if (typeof(T) == typeof(PB8))
-            return TrainerSettings.GetSavedTrainerData(GameVersion.BDSP);
-        if (typeof(T) == typeof(PA8))
-            return TrainerSettings.GetSavedTrainerData(GameVersion.PLA);
-        if (typeof(T) == typeof(PK9))
-            return TrainerSettings.GetSavedTrainerData(GameVersion.SV);
-        if (typeof(T) == typeof(PA9))
-            return TrainerSettings.GetSavedTrainerData(GameVersion.ZA);
+        ITrainerInfo trainerInfo;
 
-        throw new ArgumentException("Type does not have a recognized trainer fetch.", typeof(T).Name);
+        if (typeof(T) == typeof(PB7))
+            trainerInfo = TrainerSettings.GetSavedTrainerData(GameVersion.GG);
+        else if (typeof(T) == typeof(PK8))
+            trainerInfo = TrainerSettings.GetSavedTrainerData(GameVersion.SWSH);
+        else if (typeof(T) == typeof(PB8))
+            trainerInfo = TrainerSettings.GetSavedTrainerData(GameVersion.BDSP);
+        else if (typeof(T) == typeof(PA8))
+            trainerInfo = TrainerSettings.GetSavedTrainerData(GameVersion.PLA);
+        else if (typeof(T) == typeof(PK9))
+            trainerInfo = TrainerSettings.GetSavedTrainerData(GameVersion.SV);
+        else if (typeof(T) == typeof(PA9))
+            trainerInfo = TrainerSettings.GetSavedTrainerData(GameVersion.ZA);
+        else
+            throw new ArgumentException("Type does not have a recognized trainer fetch.", typeof(T).Name);
+
+        // NET10 Fix: Force override ALM's internal defaults with our configured values
+        return OverrideALMDefaults(trainerInfo);
     }
 
-    public static ITrainerInfo GetTrainerInfo(byte gen) => TrainerSettings.GetSavedTrainerData(gen);
+    public static ITrainerInfo GetTrainerInfo(byte gen)
+    {
+        var trainerInfo = TrainerSettings.GetSavedTrainerData(gen);
+        // NET10 Fix: Force override ALM's internal defaults with our configured values
+        return OverrideALMDefaults(trainerInfo);
+    }
+
+    /// <summary>
+    /// In NET10, ALM has internal "ALM" defaults that override our configuration.
+    /// This method intercepts retrieved trainer info and replaces ALM defaults with our configured values.
+    /// </summary>
+    private static ITrainerInfo OverrideALMDefaults(ITrainerInfo trainerInfo)
+    {
+        // Check if this is ALM's default trainer info
+        if (trainerInfo.OT != "ALM")
+            return trainerInfo; // Not ALM defaults, return as-is
+
+        // Ensure we have configured settings cached
+        if (ConfiguredSettings == null)
+            return trainerInfo; // No configured settings available, return as-is
+
+        // ALM defaults detected - replace with our configured values
+        var generation = trainerInfo.Generation;
+        var version = trainerInfo.Version;
+
+        var OT = ConfiguredSettings.GenerateOT;
+        if (OT.Length == 0)
+            OT = "Blank"; // Safety fallback
+
+        // Create a new SimpleTrainerInfo with our configured defaults
+        var configuredTrainer = new SimpleTrainerInfo(version)
+        {
+            Language = (byte)ConfiguredSettings.GenerateLanguage,
+            TID16 = ConfiguredSettings.GenerateTID16,
+            SID16 = ConfiguredSettings.GenerateSID16,
+            OT = OT,
+            Generation = generation,
+        };
+
+        return configuredTrainer;
+    }
 
     public static PKM GetLegal(this ITrainerInfo sav, IBattleTemplate set, out string res)
     {
@@ -203,12 +251,41 @@ public static class AutoLegalityWrapper
                 LegalizationResult.VersionMismatch => "VersionMismatch",
                 _ => "",
             };
-            return result.Created;
+
+            var pk = result.Created;
+
+            // NET10 Fix: Replace ALM defaults with configured defaults after generation
+            if (pk != null && ConfiguredSettings != null)
+            {
+                // Check if Pokemon has ALM defaults
+                if (pk.OriginalTrainerName == "ALM")
+                {
+                    var OT = ConfiguredSettings.GenerateOT;
+                    if (OT.Length == 0)
+                        OT = "Blank";
+
+                    // Replace with configured defaults
+                    pk.OriginalTrainerName = OT;
+                    pk.TrainerTID7 = (uint)((ConfiguredSettings.GenerateSID16 << 16) | ConfiguredSettings.GenerateTID16);
+                    pk.Language = (int)ConfiguredSettings.GenerateLanguage;
+
+                    // Recalculate PID for shiny Pokemon to maintain shiny status
+                    if (pk.IsShiny)
+                    {
+                        var shinyXor = pk.ShinyXor;
+                        pk.PID = (uint)((pk.TID16 ^ pk.SID16 ^ (pk.PID & 0xFFFF) ^ shinyXor) << 16) | (pk.PID & 0xFFFF);
+                    }
+
+                    pk.RefreshChecksum();
+                }
+            }
+
+            return pk;
         }
         else
         {
             res = "Timeout";
-            return null!; // Explicitly return null with suppression since the res parameter indicates the failure
+            return null!; // Explicitly return null
         }
     }
 

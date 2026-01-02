@@ -373,6 +373,13 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
         }
 
         TradeExtensions<T>.DittoTrade((T)pkm);
+
+        // Apply early AutoOT for cached trainer info
+        if (pkm is T dittoPk)
+        {
+            TryApplyEarlyAutoOT(dittoPk, Context.User.Id);
+        }
+
         var la = new LegalityAnalysis(pkm);
 
         if (pkm is not T pk || !la.Valid)
@@ -460,6 +467,12 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
         {
             await Helpers<T>.ReplyAndDeleteAsync(Context, $"{Context.User.Username}, the item you entered wasn't recognized.", 5);
             return;
+        }
+
+        // Apply early AutoOT for cached trainer info
+        if (pkm is T itemPk)
+        {
+            TryApplyEarlyAutoOT(itemPk, Context.User.Id);
         }
 
         var la = new LegalityAnalysis(pkm);
@@ -1106,10 +1119,14 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
 
                     if (raw is T tpk)
                     {
+                        // Apply early AutoOT to batch PKM files
+                        TryApplyEarlyAutoOT(tpk, Context.User.Id, ignoreAutoOT: false);
                         batchPokemonList.Add(tpk);
                     }
                     else if (EntityConverter.ConvertToType(raw, typeof(T), out _) is T converted)
                     {
+                        // Apply early AutoOT to batch PKM files
+                        TryApplyEarlyAutoOT(converted, Context.User.Id, ignoreAutoOT: false);
                         batchPokemonList.Add(converted);
                     }
                     else
@@ -1205,6 +1222,77 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
 
     #region Private Helper Methods
 
+    /// <summary>
+    /// Applies cached trainer info from TradeCodeStorage to a Pokemon if available.
+    /// This allows Pokemon to be injected with the user's correct trainer data immediately.
+    /// Respects the UseTradePartnerInfo setting - if disabled, Pokemon keep bot's configured defaults.
+    /// </summary>
+    private static void TryApplyEarlyAutoOT(T pk, ulong userID, bool ignoreAutoOT = false)
+    {
+        // Check if AutoOT is enabled and StoreTradeCodes is enabled
+        if (ignoreAutoOT ||
+            !SysCord<T>.Runner.Config.Legality.UseTradePartnerInfo ||
+            !SysCord<T>.Runner.Config.Trade.TradeConfiguration.StoreTradeCodes)
+            return;
+
+        var tradeCodeStorage = new TradeCodeStorage();
+        var cachedTrainerDetails = tradeCodeStorage.GetTradeDetails(userID);
+
+        if (cachedTrainerDetails == null || string.IsNullOrEmpty(cachedTrainerDetails.OT))
+            return;
+
+        // Check if Pokemon has default trainer info (ALM or configured defaults)
+        var legalitySettings = SysCord<T>.Runner.Config.Legality;
+        bool hasConfiguredDefaults = pk.OriginalTrainerName.Equals(legalitySettings.GenerateOT, StringComparison.OrdinalIgnoreCase) &&
+                                     pk.TID16 == legalitySettings.GenerateTID16 &&
+                                     pk.SID16 == legalitySettings.GenerateSID16;
+        bool hasALMDefaults = pk.OriginalTrainerName.Equals("ALM", StringComparison.OrdinalIgnoreCase);
+
+        if (!hasConfiguredDefaults && !hasALMDefaults)
+            return;
+
+        var originalPk = pk.Clone();
+
+        // Apply cached trainer info
+        pk.OriginalTrainerName = cachedTrainerDetails.OT;
+        pk.TrainerTID7 = (uint)cachedTrainerDetails.TID;
+        pk.TrainerSID7 = (uint)cachedTrainerDetails.SID;
+
+        if (cachedTrainerDetails.Gender.HasValue)
+            pk.OriginalTrainerGender = cachedTrainerDetails.Gender.Value;
+
+        // Only apply language for non-Mystery Gifts
+        if (!pk.FatefulEncounter && cachedTrainerDetails.Language.HasValue)
+            pk.Language = cachedTrainerDetails.Language.Value;
+
+        // Clear nickname if not already nicknamed
+        if (!pk.IsNicknamed)
+            pk.ClearNickname();
+
+        // Recalculate PID for shiny Pokemon
+        if (pk.IsShiny)
+        {
+            var shinyXor = pk.ShinyXor;
+            pk.PID = (uint)((pk.TID16 ^ pk.SID16 ^ (pk.PID & 0xFFFF) ^ shinyXor) << 16) | (pk.PID & 0xFFFF);
+        }
+
+        pk.RefreshChecksum();
+
+        // Validate legality with new trainer info
+        var la = new LegalityAnalysis(pk);
+        if (!la.Valid)
+        {
+            // If invalid, revert to original (will be updated later via ApplyAutoOT during trade)
+            pk.OriginalTrainerName = originalPk.OriginalTrainerName;
+            pk.TrainerTID7 = originalPk.TrainerTID7;
+            pk.TrainerSID7 = originalPk.TrainerSID7;
+            pk.OriginalTrainerGender = originalPk.OriginalTrainerGender;
+            pk.Language = originalPk.Language;
+            pk.PID = originalPk.PID;
+            pk.RefreshChecksum();
+        }
+    }
+
     private async Task ProcessTradeAsync(int code, string content, bool isHiddenTrade = false)
     {
         var userID = Context.User.Id;
@@ -1272,9 +1360,13 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
                 }
 
                 // --------------------------------------------------
+                // Early AutoOT: Apply cached trainer info immediately (PRE-QUEUE)
+                // --------------------------------------------------
+                TryApplyEarlyAutoOT(pk, userID, ignoreAutoOT);
+
+                // --------------------------------------------------
                 // Forced encounter Nature override (POST-ALM)
                 // --------------------------------------------------
-                // CRITICAL:
                 // - Never modify ShowdownSet
                 // - Never override Nature before ALM
                 // - This runs AFTER legality succeeds and is always safe
@@ -1396,6 +1488,11 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
         }
 
         pk.RefreshChecksum();
+
+        // --------------------------------------------------
+        // Early AutoOT: Apply cached trainer info to PKM files
+        // --------------------------------------------------
+        TryApplyEarlyAutoOT(pk, user.Id, ignoreAutoOT);
 
         // Queue the trade
         await Helpers<T>.AddTradeToQueueAsync(Context, code, user.Username, pk, sig, user,
