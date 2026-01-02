@@ -171,9 +171,38 @@ public static class ReusableActions
             if (_dmChannels.TryGetValue(user.Id, out var channel))
                 return channel;
 
+            // Enforce minimum delay before creating a new DM channel to respect Discord rate limits
+            var timeSinceLastDm = DateTime.Now - _lastDmTime;
+            if (timeSinceLastDm.TotalMilliseconds < MinDmDelayMs)
+            {
+                var remainingDelay = MinDmDelayMs - (int)timeSinceLastDm.TotalMilliseconds;
+                await Task.Delay(remainingDelay).ConfigureAwait(false);
+            }
+
             var dm = await user.CreateDMChannelAsync().ConfigureAwait(false);
             _dmChannels[user.Id] = dm;
+            _lastDmTime = DateTime.Now; // Update after creating DM channel
             return dm;
+        }
+        catch (HttpException ex) when (ex.DiscordCode.HasValue && ex.DiscordCode.Value == (DiscordErrorCode)40003)
+        {
+            // Error 40003 = Opening DMs too fast
+            LogUtil.LogError($"Opening DMs too fast when creating DM channel for user {user.Username} ({user.Id}). Waiting 5 seconds...", "GetOrCreateDMAsync");
+            await Task.Delay(5000).ConfigureAwait(false);
+
+            // Try one more time after the delay
+            try
+            {
+                var dm = await user.CreateDMChannelAsync().ConfigureAwait(false);
+                _dmChannels[user.Id] = dm;
+                _lastDmTime = DateTime.Now;
+                return dm;
+            }
+            catch (Exception retryEx)
+            {
+                LogUtil.LogError($"Failed to create DM channel after retry: {retryEx.Message}", "GetOrCreateDMAsync");
+                return null;
+            }
         }
         catch (ObjectDisposedException)
         {
@@ -315,14 +344,7 @@ public static class ReusableActions
 
             try
             {
-                // Enforce minimum delay between DM operations
-                var timeSinceLastDm = DateTime.Now - _lastDmTime;
-                if (timeSinceLastDm.TotalMilliseconds < MinDmDelayMs)
-                {
-                    var remainingDelay = MinDmDelayMs - (int)timeSinceLastDm.TotalMilliseconds;
-                    await Task.Delay(remainingDelay).ConfigureAwait(false);
-                }
-
+                // GetOrCreateDMAsync now handles rate limiting internally
                 var dm = await GetOrCreateDMAsync(user).ConfigureAwait(false);
                 if (dm == null)
                 {
