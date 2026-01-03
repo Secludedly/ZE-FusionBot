@@ -278,6 +278,18 @@ public static class AutoLegalityWrapper
 
                     pk.RefreshChecksum();
                 }
+
+                // CRITICAL FIX: Force shiny if requested but not generated
+                // ALM in NET10 sometimes fails to generate shiny Pokemon even when requested
+                // This affects SV, PLA, BDSP, SWSH, and LGPE - check and force shiny if needed
+                if (set.Shiny && !pk.IsShiny)
+                {
+                    // Pokemon should be shiny but isn't - force it to be shiny
+                    // Use Square shiny (XOR = 0) for SWSH/SV, regular shiny for others
+                    var desiredXor = pk is PK8 or PK9 ? 0 : 1;
+                    pk.PID = (uint)((pk.TID16 ^ pk.SID16 ^ (pk.PID & 0xFFFF) ^ desiredXor) << 16) | (pk.PID & 0xFFFF);
+                    pk.RefreshChecksum();
+                }
             }
 
             return pk;
