@@ -418,7 +418,7 @@ Created by a good friend that tends to use their own ideas that I've happily bor
 | `.MetDate=` | `Met Date:` | Supports flexible date formats. |
 | `.StatNature=` | `Stat Nature:` | Accepts a Nature keyword. |
 | `~=Version=` | `Game:` or `Version:` | Supports full game names or abbreviations. |
-| `.MetLocation=` | `Met Location:` | Only [numeric IDs](https://github.com/Secludedly/ZE-FusionBot?tab=readme-ov-file#-met-location-reference) currently supported. |
+| `.MetLocation=` | `Met Location:` | [Numeric IDs](https://github.com/Secludedly/ZE-FusionBot?tab=readme-ov-file#-met-location-reference) & [Location names](https://github.com/Secludedly/ZE-FusionBot/blob/f72fded7b30c1c6a03bd1cf22f3366f88ec9b257/SysBot.Pokemon/Helpers/BatchCommandNormalizer.cs#L780) supported. |
 | `.HyperTrainFlags=` | `HyperTrain:` | True / False. |
 | `.HT_[STAT]=` | `HT:` | Supports HP, Atk, Def, SpA, SpD, Spe. |
 | `.Moves=` | `Moves:` | “Random” generates random moves. |
@@ -431,6 +431,7 @@ Created by a good friend that tends to use their own ideas that I've happily bor
 | `.GV_[STAT]=` | `GVs:` | Supports HP, Atk, Def, SpA, SpD, Spe. |
 | `.Marking[type]=` | `Markings:` | Diamond, Heart, Square, Star, Triangle, Circle in Red or Blue `Markings: Diamond=Red / Circle=Blue` etc. |
 | `.Characteristic=` | `Characteristic:` | Type out a [characteristic](https://github.com/Secludedly/ZE-FusionBot?tab=readme-ov-file#-characteristic-reference). |
+| `.Nickname=` | `Nickname:` | Write "Suggest" for a random nickname pulled from code dictionary. |
 
 ---
 
