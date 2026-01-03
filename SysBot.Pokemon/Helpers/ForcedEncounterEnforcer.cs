@@ -50,29 +50,31 @@ public static class ForcedEncounterEnforcer
     // Categories of Entries
     // -----------------------------
 
-    // IV-only Pokémon (Zeraora → Groudon)
-    private static readonly Entry[] IVOnlyEntries = new[]
-    {
-        new Entry { Species = Species.Zeraora, FixedIVs = new[] { 31, 31, 19, 27, 31, 15 } },
-        new Entry { Species = Species.Latias, FixedIVs = new[] { 12, 7, 31, 16, 31, 31 } },
-        new Entry { Species = Species.Latios, FixedIVs = new[] { 31, 31, 31, 16, 16, 7 } },
-        new Entry { Species = Species.Kyogre, FixedIVs = new[] { 31, 31, 12, 22, 31, 28 } },
-        new Entry { Species = Species.Terrakion, FixedIVs = new[] { 31, 31, 16, 31, 12, 7 } },
-        new Entry { Species = Species.Rayquaza, FixedIVs = new[] { 31, 31, 29, 20, 31, 29 } },
-        new Entry { Species = Species.Virizion, FixedIVs = new[] { 16, 31, 12, 31, 31, 7 } },
-        new Entry { Species = Species.Cobalion, FixedIVs = new[] { 12, 31, 31, 31, 16, 7 } },
-        new Entry { Species = Species.Keldeo, FixedIVs = new[] { 7, 31, 31, 31, 16, 12 } },
-        new Entry { Species = Species.Heatran, FixedIVs = new[] { 31, 31, 28, 8, 31, 25 } },
-        new Entry { Species = Species.Meloetta, FixedIVs = new[] { 7, 31, 12, 31, 31, 16 } },
-        new Entry { Species = Species.Groudon, FixedIVs = new[] { 31, 31, 24, 25, 31, 18 } }
-    };
+    // IV-only Pokémon (none currently - all static encounters have forced natures in PLZA)
+    private static readonly Entry[] IVOnlyEntries = Array.Empty<Entry>();
 
-    // IV+Nature Pokémon (Darkrai, Zygarde)
+    // IV+Nature Pokémon - All PLZA static encounters with forced natures
     private static readonly Entry[] IVNatureEntries = new[]
     {
-        new Entry { Species = Species.Darkrai, ForcedNature = Nature.Careful, FixedIVs = new[] { 31,31,18,26,31,21 } },
-        new Entry { Species = Species.Zygarde, MetLevel = 84, Form = 2, Friendship = 0, Location = 212, ForcedNature = Nature.Quiet, FixedIVs = new[] { 31,31,15,31,28,19 } },
-        new Entry { Species = Species.Zygarde, MetLevel = 84, Form = 1, Friendship = 0, Location = 212, ForcedNature = Nature.Quiet, FixedIVs = new[] { 31,31,15,31,28,19 } }
+        // Legendary static encounters with both fixed IVs and forced natures
+        new Entry { Species = Species.Zeraora, ForcedNature = Nature.Brave, FixedIVs = new[] { 31, 31, 19, 27, 31, 15 } },
+        new Entry { Species = Species.Latias, ForcedNature = Nature.Quirky, FixedIVs = new[] { 12, 7, 31, 16, 31, 31 } },
+        new Entry { Species = Species.Latios, ForcedNature = Nature.Calm, FixedIVs = new[] { 31, 31, 31, 16, 16, 7 } },
+        new Entry { Species = Species.Kyogre, ForcedNature = Nature.Modest, FixedIVs = new[] { 31, 31, 12, 22, 31, 28 } },
+        new Entry { Species = Species.Terrakion, ForcedNature = Nature.Serious, FixedIVs = new[] { 31, 31, 16, 31, 12, 7 } },
+        new Entry { Species = Species.Rayquaza, ForcedNature = Nature.Brave, FixedIVs = new[] { 31, 31, 29, 20, 31, 29 } },
+        new Entry { Species = Species.Virizion, ForcedNature = Nature.Sassy, FixedIVs = new[] { 16, 31, 12, 31, 31, 7 } },
+        new Entry { Species = Species.Cobalion, ForcedNature = Nature.Impish, FixedIVs = new[] { 12, 31, 31, 31, 16, 7 } },
+        new Entry { Species = Species.Keldeo, ForcedNature = Nature.Docile, FixedIVs = new[] { 7, 31, 31, 31, 16, 12 } },
+        new Entry { Species = Species.Heatran, ForcedNature = Nature.Bold, FixedIVs = new[] { 31, 31, 28, 8, 31, 25 } },
+        new Entry { Species = Species.Meloetta, ForcedNature = Nature.Impish, FixedIVs = new[] { 7, 31, 12, 31, 31, 16 } },
+        new Entry { Species = Species.Groudon, ForcedNature = Nature.Impish, FixedIVs = new[] { 31, 31, 24, 25, 31, 18 } },
+        new Entry { Species = Species.Darkrai, ForcedNature = Nature.Careful, FixedIVs = new[] { 31, 31, 18, 26, 31, 21 } },
+
+        // Zygarde - All three forms (10%, 50%, Complete)
+        new Entry { Species = Species.Zygarde, MetLevel = 84, Form = 0, Friendship = 0, Location = 212, ForcedNature = Nature.Quiet, FixedIVs = new[] { 31,31,15,19,31,28 } },
+        new Entry { Species = Species.Zygarde, MetLevel = 84, Form = 1, Friendship = 0, Location = 212, ForcedNature = Nature.Quiet, FixedIVs = new[] { 31,31,15,19,31,28 } },
+        new Entry { Species = Species.Zygarde, MetLevel = 84, Form = 2, Friendship = 0, Location = 212, ForcedNature = Nature.Quiet, FixedIVs = new[] { 31,31,15,19,31,28 } }
     };
 
     // Optional: full static entries with OT/Nickname/etc. (safety checks)
@@ -80,7 +82,7 @@ public static class ForcedEncounterEnforcer
     {
         new Entry { Species = Species.Raichu, Form = 1, OT = "Griddella", Nickname = "Floffy", ForcedNature = Nature.Jolly, FixedIVs = new[] {20,20,20,20,20,20} },
         new Entry { Species = Species.Lucario, OT = "Korrina", ForcedNature = Nature.Hardy, FixedIVs = new[] {31,20,31,20,31,20} },
-        new Entry { Species = Species.Riolu, OT = "Bond", Nickname = "Riolouie", ForcedNature = Nature.Rash, FixedIVs = new[] {15,31,15,31,15,21} },
+        new Entry { Species = Species.Riolu, OT = "Bond", Nickname = "Riolouie", ForcedNature = Nature.Rash, FixedIVs = new[] {15,31,15,31,31,15} },
         new Entry { Species = Species.Floette, Form = 5, OT = "AZ", ForcedNature = Nature.Modest },
         new Entry { Species = Species.Spewpa, Location = 30029, ForcedNature = Nature.Naive },
         new Entry { Species = Species.Chespin, Location = 30030, ForcedNature = Nature.Impish, FixedIVs = new[] {31,31,31,15,15,15} },

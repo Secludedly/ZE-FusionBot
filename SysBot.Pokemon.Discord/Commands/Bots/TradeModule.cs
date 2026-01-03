@@ -1370,20 +1370,37 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
                 // - Never modify ShowdownSet
                 // - Never override Nature before ALM
                 // - This runs AFTER legality succeeds and is always safe
-                // - ZA-only enforcement
+                // - ZA-only enforcement with nature minting support
                 if (pk.Version == GameVersion.ZA && !pk.FatefulEncounter)
                 {
                     if (ForcedEncounterEnforcer.TryGetForcedNature(pk, out var forcedNature))
                     {
                         if (pk.Nature != forcedNature)
                         {
+                            // Store user's requested nature for stat nature (minting)
+                            Nature userRequestedNature = set.Nature;
+
                             pk.Nature = forcedNature;
-                            pk.StatNature = forcedNature;
+
+                            // Apply stat nature (minted if user requested different nature, otherwise same as forced nature)
+                            pk.StatNature = (userRequestedNature != Nature.Random && userRequestedNature != forcedNature)
+                                ? userRequestedNature
+                                : forcedNature;
+
                             pk.RefreshChecksum();
 
-                            LogUtil.LogInfo(
-                                $"{(Species)pk.Species}: User-requested Nature overridden to {forcedNature} (forced encounter rule)",
-                                nameof(TradeModule<T>));
+                            if (userRequestedNature != Nature.Random && userRequestedNature != forcedNature)
+                            {
+                                LogUtil.LogInfo(
+                                    $"{(Species)pk.Species}: Nature minted from {forcedNature} (actual) to {userRequestedNature} (stat nature) due to static encounter",
+                                    nameof(TradeModule<T>));
+                            }
+                            else
+                            {
+                                LogUtil.LogInfo(
+                                    $"{(Species)pk.Species}: User-requested Nature overridden to {forcedNature} (forced encounter rule)",
+                                    nameof(TradeModule<T>));
+                            }
                         }
                     }
                 }

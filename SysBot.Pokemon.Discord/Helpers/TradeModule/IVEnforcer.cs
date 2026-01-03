@@ -27,13 +27,27 @@ namespace SysBot.Pokemon.Discord.Helpers.TradeModule
             if (pk.Version != GameVersion.ZA)
                 throw new InvalidOperationException("IVEnforcer may only be used for ZA Pokémon.");
 
-            // Enforce forced encounters first
+            // Enforce forced encounters first - support nature minting
+            Nature userRequestedNature = desiredNature; // Store user's requested nature for stat nature (minting)
+            bool isMinted = false;
+
             if (ForcedEncounterEnforcer.TryGetForcedNature(pk, out var forcedNature))
             {
-                LogUtil.LogInfo(
-                    $"{(Species)pk.Species}: Nature forced to {forcedNature} due to static encounter",
-                    nameof(IVEnforcer));
-                desiredNature = forcedNature; // Ignore whatever user requested
+                // Apply forced nature as the actual nature, but keep user's requested nature as stat nature (minted)
+                if (desiredNature != Nature.Random && desiredNature != forcedNature)
+                {
+                    isMinted = true;
+                    LogUtil.LogInfo(
+                        $"{(Species)pk.Species}: Nature minted from {forcedNature} (actual) to {desiredNature} (stat nature) due to static encounter",
+                        nameof(IVEnforcer));
+                }
+                else
+                {
+                    LogUtil.LogInfo(
+                        $"{(Species)pk.Species}: Nature forced to {forcedNature} due to static encounter",
+                        nameof(IVEnforcer));
+                }
+                desiredNature = forcedNature; // Use forced nature for PID generation
             }
 
             // Skip ALL enforcement if the Pokémon is a Fateful Encounter, even if from ZA
@@ -139,7 +153,9 @@ namespace SysBot.Pokemon.Discord.Helpers.TradeModule
 
                 pk.PID = candidate;
                 pk.Nature = (Nature)candNature;
-                pk.StatNature = pk.Nature;
+
+                // Apply stat nature (minted if forced nature was applied, otherwise same as nature)
+                pk.StatNature = isMinted ? userRequestedNature : pk.Nature;
 
                 // Reapply IVs after PID change
                 pk.SetIVs(ivs);
@@ -242,7 +258,10 @@ namespace SysBot.Pokemon.Discord.Helpers.TradeModule
             // -----------------------------
             pk.PID = originalPid;
             pk.Nature = originalNature;
-            pk.StatNature = pk.Nature;
+
+            // Apply stat nature (minted if forced nature was applied, otherwise same as nature)
+            pk.StatNature = isMinted ? userRequestedNature : pk.Nature;
+
             pk.SetIVs(ivs);
 
             if (pk is IHyperTrain htOriginal)

@@ -10,9 +10,11 @@ namespace SysBot.Pokemon.Discord.Helpers.TradeModule
     {
         /// <summary>
         /// Forces the PKM to have the desired nature (and shiny if requested), keeping IVs intact.
+        /// Supports nature minting: if a forced nature is required, applies it as the actual nature
+        /// while preserving the user's desired nature as the stat nature (minted appearance).
         /// </summary>
         /// <param name="pkm">The PKM to modify</param>
-        /// <param name="desiredNature">The Nature to force</param>
+        /// <param name="desiredNature">The Nature to force (or stat nature if minted)</param>
         /// <param name="isShiny">Whether the PKM should be shiny</param>
         /// <param name="maxAttempts">How many random PIDs to try</param>
         public static void ForceNature(PKM pkm, Nature desiredNature, bool isShiny = false, int maxAttempts = 2_000_000)
@@ -27,14 +29,28 @@ namespace SysBot.Pokemon.Discord.Helpers.TradeModule
                 return;
 
             // -----------------------------
-            // FORCE static encounter nature
+            // FORCE static encounter nature with minting support
             // -----------------------------
+            Nature userRequestedNature = desiredNature; // Store user's requested nature for stat nature (minting)
+            bool isMinted = false;
+
             if (ForcedEncounterEnforcer.TryGetForcedNature(pkm, out var forcedNature))
             {
-                desiredNature = forcedNature; // Ignore whatever the user requested
-                LogUtil.LogInfo(
-                    $"{(Species)pkm.Species}: Nature forced to {forcedNature} due to static encounter",
-                    nameof(NatureEnforcer));
+                // Apply forced nature as the actual nature, but keep user's requested nature as stat nature (minted)
+                if (desiredNature != Nature.Random && desiredNature != forcedNature)
+                {
+                    isMinted = true;
+                    LogUtil.LogInfo(
+                        $"{(Species)pkm.Species}: Nature minted from {forcedNature} (actual) to {desiredNature} (stat nature) due to static encounter",
+                        nameof(NatureEnforcer));
+                }
+                else
+                {
+                    LogUtil.LogInfo(
+                        $"{(Species)pkm.Species}: Nature forced to {forcedNature} due to static encounter",
+                        nameof(NatureEnforcer));
+                }
+                desiredNature = forcedNature; // Use forced nature for PID generation
             }
 
             if (desiredNature == Nature.Random && !isShiny)
@@ -42,7 +58,7 @@ namespace SysBot.Pokemon.Discord.Helpers.TradeModule
 
             if (pkm.Nature == desiredNature && (!isShiny || pkm.IsShiny))
             {
-                pkm.StatNature = pkm.Nature;
+                pkm.StatNature = isMinted ? userRequestedNature : pkm.Nature;
                 pkm.RefreshChecksum();
                 return;
             }
@@ -81,7 +97,9 @@ namespace SysBot.Pokemon.Discord.Helpers.TradeModule
             // Apply PID & nature
             pkm.PID = newPid;
             pkm.Nature = (Nature)(newPid % 25u);
-            pkm.StatNature = pkm.Nature;
+
+            // Apply stat nature (minted if forced nature was applied, otherwise same as nature)
+            pkm.StatNature = isMinted ? userRequestedNature : pkm.Nature;
 
             // Restore IVs
             pkm.IV_HP = iv_hp;
