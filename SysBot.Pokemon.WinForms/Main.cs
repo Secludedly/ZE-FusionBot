@@ -407,7 +407,7 @@ namespace SysBot.Pokemon.WinForms
                     string? dirPath = Path.GetDirectoryName(exePath);
                     if (!string.IsNullOrEmpty(dirPath))
                     {
-                        string portInfoPath = Path.Combine(dirPath, $"MergeBot_{Environment.ProcessId}.port");
+                        string portInfoPath = Path.Combine(dirPath, $"ZE_FusionBot_{Environment.ProcessId}.port");
                         if (File.Exists(portInfoPath))
                             File.Delete(portInfoPath);
                     }

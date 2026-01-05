@@ -25,7 +25,7 @@ public static class RestartManager
     private static CancellationTokenSource? _restartCts;
     private static Main? _mainForm;
     private static int _tcpPort;
-    
+
     // Consolidated file paths
     private static string WorkingDirectory => Path.GetDirectoryName(Application.ExecutablePath) ?? Environment.CurrentDirectory;
     private static string ScheduleConfigPath => Path.Combine(WorkingDirectory, "restart_schedule.json");
@@ -56,10 +56,10 @@ public static class RestartManager
     {
         _mainForm = mainForm ?? throw new ArgumentNullException(nameof(mainForm));
         _tcpPort = tcpPort;
-        
+
         CheckPostRestartStartup();
         InitializeScheduledRestarts();
-        
+
         LogUtil.LogInfo("RestartManager", "RestartManager initialized successfully");
     }
 
@@ -73,7 +73,7 @@ public static class RestartManager
             _restartCts = null;
             _currentState = RestartState.Idle;
         }
-        
+
         LogUtil.LogInfo("RestartManager", "RestartManager shutdown completed");
     }
     #endregion
@@ -211,13 +211,13 @@ public static class RestartManager
     {
         var now = DateTime.Now;
         var today = now.Date.Add(scheduledTime);
-        
+
         // If today's time has passed, schedule for tomorrow
         if (today <= now)
         {
             today = today.AddDays(1);
         }
-        
+
         return today;
     }
 
@@ -234,7 +234,7 @@ public static class RestartManager
             }
 
             LogUtil.LogInfo("RestartManager", "Executing scheduled restart");
-            
+
             // Start the restart process asynchronously
             _ = Task.Run(async () =>
             {
@@ -315,7 +315,7 @@ public static class RestartManager
         }
 
         var result = new RestartResult { Reason = reason };
-        
+
         try
         {
             LogUtil.LogInfo("RestartManager", $"Starting {reason.ToString().ToLower()} restart process");
@@ -324,7 +324,7 @@ public static class RestartManager
             SetState(RestartState.DiscoveringInstances);
             var instances = DiscoverAllInstances();
             result.TotalInstances = instances.Count;
-            
+
             LogUtil.LogInfo("RestartManager", $"Found {instances.Count} instances to restart");
 
             // Phase 2: Idle all bots
@@ -356,7 +356,7 @@ public static class RestartManager
             // Record successful restart
             RecordRestartDate();
             result.Success = true;
-            
+
             LogUtil.LogInfo("RestartManager", $"{reason} restart completed successfully");
         }
         catch (Exception ex)
@@ -460,13 +460,13 @@ public static class RestartManager
     {
         await ExecuteCommandOnAllInstancesAsync(instances, BotControlCommand.Idle, "idle");
     }
-    
+
     private static async Task ExecuteCommandOnAllInstancesAsync(List<InstanceInfo> instances, BotControlCommand command, string commandName)
     {
         var tasks = instances.Select(instance => ExecuteCommandOnInstanceAsync(instance, command, commandName));
         await Task.WhenAll(tasks);
     }
-    
+
     private static async Task ExecuteCommandOnInstanceAsync(InstanceInfo instance, BotControlCommand command, string commandName)
     {
         try
@@ -494,7 +494,7 @@ public static class RestartManager
             LogUtil.LogError("RestartManager", $"Error {commandName}ing instance {instance.ProcessId} on port {instance.Port}: {ex.Message}");
         }
     }
-    
+
     private static void ExecuteLocalCommand(BotControlCommand command)
     {
         _mainForm!.BeginInvoke((System.Windows.Forms.MethodInvoker)(() =>
@@ -546,7 +546,7 @@ public static class RestartManager
             return false;
         }
     }
-    
+
     private static async Task<bool> CheckInstanceBotsIdleAsync(InstanceInfo instance)
     {
         try
@@ -565,24 +565,29 @@ public static class RestartManager
             return false;
         }
     }
-    
+
     private static bool CheckLocalBotsIdle()
     {
-        var flpBotsField = _mainForm!.GetType().GetField("FLP_Bots",
+        // Access _botsForm field to get BotPanel
+        var botsFormField = _mainForm!.GetType().GetField("_botsForm",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            
-        if (flpBotsField?.GetValue(_mainForm) is FlowLayoutPanel flpBots)
+
+        if (botsFormField?.GetValue(_mainForm) is Form botsForm)
         {
-            var controllers = flpBots.Controls.OfType<BotController>().ToList();
-            return controllers.All(c =>
+            var botPanelProperty = botsForm.GetType().GetProperty("BotPanel");
+            if (botPanelProperty?.GetValue(botsForm) is FlowLayoutPanel flpBots)
             {
-                var state = c.ReadBotState();
-                return state == "IDLE" || state == "STOPPED";
-            });
+                var controllers = flpBots.Controls.OfType<BotController>().ToList();
+                return controllers.All(c =>
+                {
+                    var state = c.ReadBotState();
+                    return state == "IDLE" || state == "STOPPED";
+                });
+            }
         }
         return true;
     }
-    
+
     private static async Task<bool> CheckRemoteBotsIdleAsync(int port)
     {
         return await Task.Run(() =>
@@ -590,7 +595,7 @@ public static class RestartManager
             var botsResponse = BotServer.QueryRemote(port, "LISTBOTS");
             if (!botsResponse.StartsWith("{") || !botsResponse.Contains("Bots"))
                 return true;
-                
+
             try
             {
                 var botsData = JsonSerializer.Deserialize<Dictionary<string, List<Dictionary<string, object>>>>(botsResponse);
@@ -635,7 +640,7 @@ public static class RestartManager
             try
             {
                 LogUtil.LogInfo("RestartManager", $"Restarting slave instance on port {slave.Port}...");
-                
+
                 // First ensure all bots are stopped on this instance
                 var stopResponse = BotServer.QueryRemote(slave.Port, "STOPALL");
                 LogUtil.LogInfo("RestartManager", $"Stop command sent to port {slave.Port}: {stopResponse}");
@@ -652,7 +657,7 @@ public static class RestartManager
                     if (terminated)
                     {
                         LogUtil.LogInfo("RestartManager", $"Process {slave.ProcessId} terminated successfully");
-                        
+
                         // Wait for instance to come back online
                         var backOnline = await WaitForInstanceOnlineAsync(slave.Port, 60);
                         if (backOnline)
@@ -688,34 +693,34 @@ public static class RestartManager
     private static async Task RestartMasterInstanceAsync(RestartResult result)
     {
         LogUtil.LogInfo("RestartManager", "Preparing to restart master instance");
-        
+
         // Save current process IDs before restart
         SavePreRestartProcessIds();
-        
+
         // Create restart flag for post-restart detection
         File.WriteAllText(RestartFlagPath, DateTime.Now.ToString());
-        
+
         result.MasterRestarting = true;
-        
+
         // Give a moment for any pending operations
         await Task.Delay(2000);
-        
+
         // Restart the application
         _mainForm!.BeginInvoke((System.Windows.Forms.MethodInvoker)(() =>
         {
             Application.Restart();
         }));
     }
-    
+
     private static void SavePreRestartProcessIds()
     {
         try
         {
             var pids = new List<int>();
-            
+
             // Add current process ID
             pids.Add(Environment.ProcessId);
-            
+
             // Add all PokeBot process IDs
             var processes = Process.GetProcessesByName("ZE_FusionBot");
             foreach (var process in processes)
@@ -726,7 +731,7 @@ public static class RestartManager
                 }
                 catch { }
             }
-            
+
             var json = JsonSerializer.Serialize(pids);
             File.WriteAllText(PreRestartPidsPath, json);
             LogUtil.LogInfo("RestartManager", $"Saved {pids.Count} process IDs before restart");
@@ -810,7 +815,7 @@ public static class RestartManager
 
             LogUtil.LogInfo("RestartManager", "Post-restart startup detected. Initiating startup sequence...");
             File.Delete(RestartFlagPath);
-            
+
             // Kill any lingering old processes
             KillOldProcesses();
 
@@ -822,32 +827,32 @@ public static class RestartManager
             LogUtil.LogError("RestartManager", $"Error in post-restart startup: {ex.Message}");
         }
     }
-    
+
     private static void KillOldProcesses()
     {
         try
         {
             if (!File.Exists(PreRestartPidsPath))
                 return;
-                
+
             var json = File.ReadAllText(PreRestartPidsPath);
             var oldPids = JsonSerializer.Deserialize<List<int>>(json);
             File.Delete(PreRestartPidsPath); // Clean up the file
-            
+
             if (oldPids == null || oldPids.Count == 0)
                 return;
-                
+
             LogUtil.LogInfo("RestartManager", $"Checking for {oldPids.Count} old process IDs to clean up");
-            
+
             var currentPid = Environment.ProcessId;
             var killedCount = 0;
-            
+
             foreach (var pid in oldPids)
             {
                 // Don't kill the current process
                 if (pid == currentPid)
                     continue;
-                    
+
                 try
                 {
                     var process = Process.GetProcessById(pid);
@@ -868,7 +873,7 @@ public static class RestartManager
                     LogUtil.LogError("RestartManager", $"Failed to kill old process {pid}: {ex.Message}");
                 }
             }
-            
+
             if (killedCount > 0)
             {
                 LogUtil.LogInfo("RestartManager", $"Killed {killedCount} lingering old processes");
@@ -881,21 +886,21 @@ public static class RestartManager
             LogUtil.LogError("RestartManager", $"Error killing old processes: {ex.Message}");
         }
     }
-    
+
     private static async Task ExecutePostRestartSequenceAsync()
     {
         await Task.Delay(5000); // Give system time to stabilize
-        
+
         const int maxAttempts = 12;
         for (int attempt = 0; attempt < maxAttempts; attempt++)
         {
             try
             {
                 LogUtil.LogInfo("RestartManager", $"Post-restart startup attempt {attempt + 1}/{maxAttempts}");
-                
+
                 // Start all bots
                 await StartAllBotsAsync();
-                
+
                 LogUtil.LogInfo("RestartManager", "Post-restart startup sequence completed successfully");
                 break;
             }
@@ -907,19 +912,19 @@ public static class RestartManager
             }
         }
     }
-    
+
     private static async Task StartAllBotsAsync()
     {
         // Start local bots
         ExecuteLocalCommand(BotControlCommand.Start);
         LogUtil.LogInfo("RestartManager", "Start command sent to local bots");
-        
+
         // Start remote instances
         var instances = GetAllRunningInstances();
         if (instances.Count > 0)
         {
             LogUtil.LogInfo("RestartManager", $"Found {instances.Count} remote instances. Sending start commands...");
-            
+
             var tasks = instances.Select(async instance =>
             {
                 try
@@ -932,7 +937,7 @@ public static class RestartManager
                     LogUtil.LogError("RestartManager", $"Failed to send start command to port {instance.Port}: {ex.Message}");
                 }
             });
-            
+
             await Task.WhenAll(tasks);
         }
     }
@@ -944,7 +949,7 @@ public static class RestartManager
         try
         {
             var processes = Process.GetProcessesByName("ZE_FusionBot")
-                .Where(p => p.Id != Environment.ProcessId); 
+                .Where(p => p.Id != Environment.ProcessId);
 
             foreach (var process in processes)
             {
