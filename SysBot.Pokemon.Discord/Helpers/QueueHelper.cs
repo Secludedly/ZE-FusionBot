@@ -527,7 +527,7 @@ public static class QueueHelper<T> where T : PKM, new()
         return filePath;
     }
 
-    private static async Task<(string, DiscordColor)> PrepareEmbedDetails(T pk)
+    public static async Task<(string, DiscordColor)> PrepareEmbedDetails(T pk)
     {
         string embedImageUrl;
         string speciesImageUrl;
@@ -707,7 +707,7 @@ public static class QueueHelper<T> where T : PKM, new()
         }
     }
 
-    private static async Task ScheduleFileDeletion(string filePath, int delayInMilliseconds)
+    public static async Task ScheduleFileDeletion(string filePath, int delayInMilliseconds)
     {
         await Task.Delay(delayInMilliseconds);
         DeleteFile(filePath);

@@ -1,20 +1,22 @@
 using Discord;
 using Discord.Commands;
+using Discord.Interactions;
+using Discord.Net;
+using Discord.Rest;
 using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
 using PKHeX.Core;
 using SysBot.Base;
+using SysBot.Pokemon.Discord.Helpers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using SysBot.Pokemon.Discord.Helpers;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using static Discord.GatewayIntents;
 using static SysBot.Pokemon.DiscordSettings;
-using Discord.Net;
 
 namespace SysBot.Pokemon.Discord;
 
@@ -34,6 +36,7 @@ public sealed partial class SysCord<T> where T : PKM, new()
     private readonly Dictionary<ulong, ulong> _announcementMessageIds = [];
     private readonly DiscordSocketClient _client;
     private readonly CommandService _commands;
+    private readonly InteractionService _interactions;
     private readonly HashSet<ITradeBot> _connectedBots = [];
     private readonly object _botConnectionLock = new object();
 
@@ -101,7 +104,6 @@ public sealed partial class SysCord<T> where T : PKM, new()
                             shouldHandleStop = true;
                         }
                     }
-
                     if (shouldHandleStop)
                     {
                         await HandleBotStop();
@@ -153,16 +155,23 @@ public sealed partial class SysCord<T> where T : PKM, new()
             // Again, log level:
             LogLevel = LogSeverity.Info,
 
-            DefaultRunMode = RunMode.Async,
+            DefaultRunMode = global::Discord.Commands.RunMode.Async,
 
             // There's a few more properties you can set,
             // for example, case-insensitive commands.
             CaseSensitiveCommands = false,
         });
 
+        _interactions = new InteractionService(_client, new InteractionServiceConfig
+        {
+            LogLevel = LogSeverity.Info,
+            DefaultRunMode = global::Discord.Interactions.RunMode.Async,
+        });
+
         // Subscribe the logging handler to both the client and the CommandService.
         _client.Log += Log;
         _commands.Log += Log;
+        _interactions.Log += Log;
 
         // Setup your DI container.
         _services = ConfigureServices();
@@ -384,7 +393,9 @@ public sealed partial class SysCord<T> where T : PKM, new()
     {
         try
         {
-            await AnnounceBotStatus("Online", EmbedColorOption.Green);
+            // Small delay to let Discord stabilize before announcing
+            await Task.Delay(1000).ConfigureAwait(false);
+            await AnnounceBotStatus("Online", EmbedColorOption.Green).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -396,7 +407,7 @@ public sealed partial class SysCord<T> where T : PKM, new()
     {
         try
         {
-            await AnnounceBotStatus("Offline", EmbedColorOption.Red);
+            await AnnounceBotStatus("Offline", EmbedColorOption.Red).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -459,9 +470,54 @@ public sealed partial class SysCord<T> where T : PKM, new()
                 await _commands.RemoveModuleAsync(module).ConfigureAwait(false);
         }
 
+        // Initialize Slash Commands (Interaction Modules)
+        await _interactions.AddModulesAsync(assembly, _services).ConfigureAwait(false);
+        foreach (var t in assembly.DefinedTypes.Where(z => z.IsSubclassOf(typeof(InteractionModuleBase<SocketInteractionContext>)) && z.IsGenericType))
+        {
+            var genModule = t.MakeGenericType(typeof(T));
+            await _interactions.AddModuleAsync(genModule, _services).ConfigureAwait(false);
+        }
+
         // Subscribe a handler to see if a message invokes a command.
         _client.Ready += LoadLoggingAndEcho;
+        _client.Ready += RegisterSlashCommandsAsync;
         _client.MessageReceived += HandleMessageAsync;
+        _client.InteractionCreated += HandleInteractionAsync;
+    }
+
+    private async Task RegisterSlashCommandsAsync()
+    {
+        try
+        {
+            // Register slash commands globally (available in all servers)
+            await _interactions.RegisterCommandsGloballyAsync().ConfigureAwait(false);
+            await Log(new LogMessage(LogSeverity.Info, "Interactions", "Slash commands registered globally!")).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            await Log(new LogMessage(LogSeverity.Error, "Interactions", $"Failed to register slash commands: {ex.Message}", ex)).ConfigureAwait(false);
+        }
+    }
+
+    private async Task HandleInteractionAsync(SocketInteraction interaction)
+    {
+        try
+        {
+            var context = new SocketInteractionContext(_client, interaction);
+            await _interactions.ExecuteCommandAsync(context, _services).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            await Log(new LogMessage(LogSeverity.Error, "Interactions", $"Error handling interaction: {ex.Message}", ex)).ConfigureAwait(false);
+
+            if (interaction.Type == InteractionType.ApplicationCommand)
+            {
+                if (interaction.HasResponded)
+                    await interaction.FollowupAsync("An error occurred while processing the command.", ephemeral: true).ConfigureAwait(false);
+                else
+                    await interaction.RespondAsync("An error occurred while processing the command.", ephemeral: true).ConfigureAwait(false);
+            }
+        }
     }
 
     public async Task MainAsync(string apiToken, CancellationToken token)

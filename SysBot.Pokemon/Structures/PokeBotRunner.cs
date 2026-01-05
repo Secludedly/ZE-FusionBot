@@ -34,6 +34,8 @@ public interface IPokeBotRunner
 
     bool SupportsRoutine(PokeRoutineType pokeRoutineType);
 
+    event EventHandler BotStarted;
+
     event EventHandler BotStopped;
 }
 
@@ -42,6 +44,8 @@ public abstract class PokeBotRunner<T> : RecoverableBotRunner<PokeBotState>, IPo
     public readonly PokeTradeHub<T> Hub;
 
     private readonly BotFactory<T> Factory;
+
+    public event EventHandler BotStarted;
 
     public event EventHandler BotStopped;
 
@@ -91,6 +95,9 @@ public abstract class PokeBotRunner<T> : RecoverableBotRunner<PokeBotState>, IPo
 
         if (!Hub.Config.SkipConsoleBotCreation)
             base.StartAll();
+
+        // Raise the BotStarted event after starting all bots
+        BotStarted?.Invoke(this, EventArgs.Empty);
     }
 
     public override void InitializeStart()
