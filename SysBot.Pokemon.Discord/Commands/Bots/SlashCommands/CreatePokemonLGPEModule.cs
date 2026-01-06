@@ -36,7 +36,13 @@ public class CreatePokemonLGPEModule<T> : InteractionModuleBase<SocketInteractio
 
         [Summary("nature", "Pokemon nature (optional)")]
         [Autocomplete(typeof(NatureAutocompleteHandler))]
-        string? nature = null
+        string? nature = null,
+
+        [Summary("ivs", "Custom IVs (optional) - Format: 31/31/31/31/31/31 (HP/Atk/Def/SpA/SpD/Spe)")]
+        string? ivs = null,
+
+        [Summary("evs", "Custom EVs (optional) - Format: 252/252/4/0/0/0 (HP/Atk/Def/SpA/SpD/Spe)")]
+        string? evs = null
     )
     {
         if (Context.Guild == null)
@@ -57,6 +63,8 @@ public class CreatePokemonLGPEModule<T> : InteractionModuleBase<SocketInteractio
                 ball,
                 level,
                 nature,
+                ivs,
+                evs,
                 string.Empty, // No special features
                 null
             ).ConfigureAwait(false);

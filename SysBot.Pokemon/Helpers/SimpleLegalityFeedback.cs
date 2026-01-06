@@ -72,7 +72,7 @@ public static class SimpleLegalityFeedback
         return sb.ToString();
     }
 
-    private static string GetCategoryIcon(CheckIdentifier identifier) => identifier switch
+    public static string GetCategoryIcon(CheckIdentifier identifier) => identifier switch
     {
         CheckIdentifier.CurrentMove => "🎯",
         CheckIdentifier.Ability => "⚡",
@@ -90,7 +90,7 @@ public static class SimpleLegalityFeedback
         CheckIdentifier.CurrentMove => "Moves",
         CheckIdentifier.RelearnMove => "Relearn Moves",
         CheckIdentifier.Ability => "Ability",
-        CheckIdentifier.Ball => "Poké Ball",
+        CheckIdentifier.Ball => "Ball",
         CheckIdentifier.Level => "Level",
         CheckIdentifier.Shiny => "Shiny Status",
         CheckIdentifier.Form => "Form",
