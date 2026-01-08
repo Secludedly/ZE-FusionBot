@@ -98,6 +98,9 @@ A fun and fused iteration combining a lot of ZE FusionBot that I follow for vari
 A fork of ManuBot.NET that I follow and quite enjoy getting inspiration from. Plus, great bot name and username. I'm a DBtard.
 - **[TradeBot](https://github.com/jonklee99/Tradebot)** — by **[@jonklee99](https://github.com/jonklee99)** with **[@joseph11024](https://github.com/joseph11024)**
 Created by a good friend that tends to use their own ideas that I've happily borrowed from before.
+- **[ZE-FusionBot (Taku1991 fork)](https://github.com/Taku1991/ZE-FusionBot)** — by **[@Taku1991](https://github.com/Taku1991)**.  
+An independently evolved fork that shares ideas, structure, and inspiration within the ZE FusionBot ecosystem that I myself have proudly borrowed from.
+
 
 </details>
 
@@ -432,6 +435,31 @@ Created by a good friend that tends to use their own ideas that I've happily bor
 | `.Marking[type]=` | `Markings:` | Diamond, Heart, Square, Star, Triangle, Circle in Red or Blue `Markings: Diamond=Red / Circle=Blue` etc. |
 | `.Characteristic=` | `Characteristic:` | Type out a [characteristic](https://github.com/Secludedly/ZE-FusionBot?tab=readme-ov-file#-characteristic-reference). |
 | `.Nickname=` | `Nickname:` | Write "Suggest" for a random nickname pulled from code dictionary. |
+
+---
+
+## 🧭 Slash Command Support
+
+ZE FusionBot supports **modern Discord Slash Commands** for fast, clean Pokémon creation across all supported games.  
+These commands integrate directly with the bot’s legality pipeline and AutoOT logic.
+
+### 🎮 Available Slash Commands
+
+| Slash Command | Game |
+|--------------|------|
+| `/create-sv` | Scarlet / Violet |
+| `/create-swsh` | Sword / Shield |
+| `/create-bdsp` | Brilliant Diamond / Shining Pearl |
+| `/create-pla` | Legends: Arceus |
+| `/create-plza` | Legends: Z-A |
+| `/create-lgpe` | Let’s Go Pikachu / Eevee |
+
+### 🔹 Notes
+- Slash commands provide **guided Pokémon creation** without needing manual Showdown formatting.
+- Fully compatible with **Auto-Legalization**, **AutoOT**, and **language handling**.
+- Ideal for newer users or servers that want a **clean, modern interaction flow**.
+
+> Text commands and batch systems remain fully supported — slash commands simply add another powerful option.
 
 ---
 
