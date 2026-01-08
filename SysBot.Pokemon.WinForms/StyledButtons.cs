@@ -226,14 +226,38 @@ public class FancyButton : Button
         using var brush = new SolidBrush(Color.FromArgb(20, 19, 57));
         g.FillRectangle(brush, fillRect);
 
-        // 3) Draw the button text centered
-        TextRenderer.DrawText(
-            g,
-            Text,
-            Font,
-            ClientRectangle,
-            ForeColor,
-            TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis
-        );
+        // 3) Draw the button image if set (for icon buttons)
+        Image? imageToRender = Image ?? BackgroundImage;
+        if (imageToRender != null)
+        {
+            try
+            {
+                int padding = 4;
+                Rectangle imageRect = new Rectangle(
+                    borderThickness + padding,
+                    borderThickness + padding,
+                    Width - (2 * borderThickness) - (2 * padding),
+                    Height - (2 * borderThickness) - (2 * padding)
+                );
+                g.DrawImage(imageToRender, imageRect);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error drawing button image: {ex.Message}");
+            }
+        }
+
+        // Draw text if present (even if image is shown, in case we want both)
+        if (!string.IsNullOrEmpty(Text))
+        {
+            TextRenderer.DrawText(
+                g,
+                Text,
+                Font,
+                ClientRectangle,
+                ForeColor,
+                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis
+            );
+        }
     }
 }

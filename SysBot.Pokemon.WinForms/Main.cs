@@ -317,6 +317,9 @@ namespace SysBot.Pokemon.WinForms
             _botsForm.RebootStopButton.Click += B_RebootStop_Click; // Reboot and Stop button
             _botsForm.UpdateButton.Click += Updater_Click;          // Update button
             _botsForm.AddBotButton.Click += B_New_Click;            // Add button
+            _botsForm.PKHeXButton.Click += B_PKHeX_Click;           // PKHeX button
+            _botsForm.SwitchRemoteButton.Click += B_SwitchRemote_Click; // Switch Remote button
+            _botsForm.SysDVRButton.Click += B_SysDVR_Click;         // SysDVR button
 
             lblTitle.Text = Text; // Set the title label text to the form's text
 
@@ -531,6 +534,24 @@ namespace SysBot.Pokemon.WinForms
                 return;
             }
             System.Media.SystemSounds.Asterisk.Play(); // Play a sound to indicate the bot was added successfully
+        }
+
+        // Launch PKHeX when the PKHeX button is clicked
+        private void B_PKHeX_Click(object? sender, EventArgs e)
+        {
+            PKHeXLauncher.Launch(Config.Hub.Folder.PKHeXDirectory);
+        }
+
+        // Launch Switch Remote for PC when the button is clicked
+        private void B_SwitchRemote_Click(object? sender, EventArgs e)
+        {
+            SwitchRemoteLauncher.Launch(Config.Hub.Folder.SwitchRemoteForPC);
+        }
+
+        // Launch SysDVR when the button is clicked
+        private void B_SysDVR_Click(object? sender, EventArgs e)
+        {
+            SysDVRLauncher.Launch();
         }
 
         // Update handling
