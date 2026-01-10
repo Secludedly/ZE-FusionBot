@@ -27,6 +27,10 @@ namespace SysBot.Pokemon.Discord.Helpers.TradeModule
             if (pk.Version != GameVersion.ZA)
                 throw new InvalidOperationException("IVEnforcer may only be used for ZA Pokémon.");
 
+            // Check if user explicitly requested a different StatNature via batch command (.StatNature=)
+            // If pk.StatNature differs from pk.Nature, it means user wants manual nature minting
+            Nature? explicitStatNature = (pk.StatNature != pk.Nature) ? pk.StatNature : null;
+
             // Enforce forced encounters first - support nature minting
             Nature userRequestedNature = desiredNature; // Store user's requested nature for stat nature (minting)
             bool isMinted = false;
@@ -154,8 +158,11 @@ namespace SysBot.Pokemon.Discord.Helpers.TradeModule
                 pk.PID = candidate;
                 pk.Nature = (Nature)candNature;
 
-                // Apply stat nature (minted if forced nature was applied, otherwise same as nature)
-                pk.StatNature = isMinted ? userRequestedNature : pk.Nature;
+                // Apply stat nature:
+                // 1. If user explicitly requested a StatNature via batch command, use that
+                // 2. Else if minted (forced nature), use user's requested nature
+                // 3. Else use the actual nature
+                pk.StatNature = explicitStatNature ?? (isMinted ? userRequestedNature : pk.Nature);
 
                 // Reapply IVs after PID change
                 pk.SetIVs(ivs);
@@ -259,8 +266,11 @@ namespace SysBot.Pokemon.Discord.Helpers.TradeModule
             pk.PID = originalPid;
             pk.Nature = originalNature;
 
-            // Apply stat nature (minted if forced nature was applied, otherwise same as nature)
-            pk.StatNature = isMinted ? userRequestedNature : pk.Nature;
+            // Apply stat nature:
+            // 1. If user explicitly requested a StatNature via batch command, use that
+            // 2. Else if minted (forced nature), use user's requested nature
+            // 3. Else use the actual nature
+            pk.StatNature = explicitStatNature ?? (isMinted ? userRequestedNature : pk.Nature);
 
             pk.SetIVs(ivs);
 

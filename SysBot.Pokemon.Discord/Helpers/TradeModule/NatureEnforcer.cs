@@ -28,6 +28,10 @@ namespace SysBot.Pokemon.Discord.Helpers.TradeModule
             if (pkm.FatefulEncounter)
                 return;
 
+            // Check if user explicitly requested a different StatNature via batch command (.StatNature=)
+            // If pkm.StatNature differs from pkm.Nature, it means user wants manual nature minting
+            Nature? explicitStatNature = (pkm.StatNature != pkm.Nature) ? pkm.StatNature : null;
+
             // -----------------------------
             // FORCE static encounter nature with minting support
             // -----------------------------
@@ -58,7 +62,11 @@ namespace SysBot.Pokemon.Discord.Helpers.TradeModule
 
             if (pkm.Nature == desiredNature && (!isShiny || pkm.IsShiny))
             {
-                pkm.StatNature = isMinted ? userRequestedNature : pkm.Nature;
+                // Apply stat nature:
+                // 1. If user explicitly requested a StatNature via batch command, use that
+                // 2. Else if minted (forced nature), use user's requested nature
+                // 3. Else use the actual nature
+                pkm.StatNature = explicitStatNature ?? (isMinted ? userRequestedNature : pkm.Nature);
                 pkm.RefreshChecksum();
                 return;
             }
@@ -98,8 +106,11 @@ namespace SysBot.Pokemon.Discord.Helpers.TradeModule
             pkm.PID = newPid;
             pkm.Nature = (Nature)(newPid % 25u);
 
-            // Apply stat nature (minted if forced nature was applied, otherwise same as nature)
-            pkm.StatNature = isMinted ? userRequestedNature : pkm.Nature;
+            // Apply stat nature:
+            // 1. If user explicitly requested a StatNature via batch command, use that
+            // 2. Else if minted (forced nature), use user's requested nature
+            // 3. Else use the actual nature
+            pkm.StatNature = explicitStatNature ?? (isMinted ? userRequestedNature : pkm.Nature);
 
             // Restore IVs
             pkm.IV_HP = iv_hp;
