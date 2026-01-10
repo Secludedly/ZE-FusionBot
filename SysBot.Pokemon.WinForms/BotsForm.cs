@@ -130,7 +130,7 @@ namespace SysBot.Pokemon.WinForms
 
             _B_Reload.Click += (_, _) => RestartApplication();
 
-            _B_PKHeX = new FancyButton { Text = "", Location = new Point(590, 55), Size = new Size(32, 32) };
+            _B_PKHeX = new FancyButton { Text = "", Location = new Point(610, 7), Size = new Size(32, 32) };
             _B_PKHeX.GlowColor = Color.White;
 
             // Try multiple paths to find the PKHeX icon
@@ -176,7 +176,7 @@ namespace SysBot.Pokemon.WinForms
             _toolTips.ReshowDelay = 1000;
             _toolTips.ShowAlways = true;
 
-            _B_SwitchRemote = new FancyButton { Text = "", Location = new Point(620, 55), Size = new Size(32, 32) };
+            _B_SwitchRemote = new FancyButton { Text = "", Location = new Point(640, 7), Size = new Size(32, 32) };
             _B_SwitchRemote.GlowColor = Color.White;
 
             // Try multiple paths to find the SwitchRemote icon
@@ -222,7 +222,7 @@ namespace SysBot.Pokemon.WinForms
             _toolTips.ReshowDelay = 1000;
             _toolTips.ShowAlways = true;
 
-            _B_SysDVR = new FancyButton { Text = "", Location = new Point(650, 55), Size = new Size(32, 32) };
+            _B_SysDVR = new FancyButton { Text = "", Location = new Point(670, 7), Size = new Size(32, 32) };
             _B_SysDVR.GlowColor = Color.White;
 
             // Try multiple paths to find the SysDVR icon
