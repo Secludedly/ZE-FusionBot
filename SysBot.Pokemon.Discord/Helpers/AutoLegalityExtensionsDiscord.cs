@@ -35,6 +35,7 @@ public static class AutoLegalityExtensionsDiscord
 
             PKM pkm;
             string result;
+            IBattleTemplate? template = null;
 
             if (isEggRequest)
             {
@@ -48,64 +49,66 @@ public static class AutoLegalityExtensionsDiscord
             else
             {
                 // Generate normally
-                var template = AutoLegalityWrapper.GetTemplate(set);
+                template = AutoLegalityWrapper.GetTemplate(set);
                 pkm = sav.GetLegal(template, out result);
-
-                if (pkm == null)
-                {
-                    await channel.SendMessageAsync("Failed to generate Pokémon from your set.").ConfigureAwait(false);
-                    return;
-                }
-
-                // -----------------------------
-                // Enforce requested IVs, Nature, and Shiny (Z-A only)
-                // -----------------------------
-                // IVEnforcer and NatureEnforcer are only for Z-A (PA9) Pokemon
-                // For other games, the normal legalization process already handles nature/shiny
-                if (pkm is PA9)
-                {
-                    if (set.IVs != null && set.IVs.Count() == 6)
-                    {
-                        IVEnforcer.ApplyRequestedIVsAndForceNature(
-                            pkm,
-                            set.IVs.ToArray(),
-                            set.Nature,
-                            set.Shiny,
-                            sav,
-                            template,
-                            userHTPreferences
-                        );
-                    }
-                    else
-                    {
-                        // Even if no IVs requested, enforce nature/shiny only for Z-A
-                        NatureEnforcer.ForceNature(pkm, set.Nature, set.Shiny);
-                    }
-                }
-
-                var la = new LegalityAnalysis(pkm);
-                var spec = GameInfo.Strings.Species[set.Species];
-
-                if (!la.Valid)
-                {
-                    var reason = result switch
-                    {
-                        "Timeout" => $"That {spec} set took too long to generate.",
-                        "VersionMismatch" => "Request refused: PKHeX and Auto-Legality Mod version mismatch.",
-                        _ => $"I wasn't able to create a {spec} from that set."
-                    };
-
-                    var imsg = $"Oops! {reason}";
-                    if (result == "Failed")
-                        imsg += $"\n{AutoLegalityWrapper.GetLegalizationHint(set, sav, pkm)}";
-
-                    await channel.SendMessageAsync(imsg).ConfigureAwait(false);
-                    return;
-                }
-
-                var msg = $"Here's your ({result}) legalized PKM & Showdown Set for {spec} ({la.EncounterOriginal.Name})!";
-                await channel.SendPKMAsync(pkm, msg + $"\n{ReusableActions.GetFormattedShowdownText(pkm)}").ConfigureAwait(false);
             }
+
+            if (pkm == null)
+            {
+                await channel.SendMessageAsync("Failed to generate Pokémon from your set.").ConfigureAwait(false);
+                return;
+            }
+
+            // -----------------------------
+            // Enforce requested IVs, Nature, and Shiny (Z-A only, non-eggs)
+            // -----------------------------
+            // IVEnforcer and NatureEnforcer are only for Z-A (PA9) Pokemon
+            // For other games, the normal legalization process already handles nature/shiny
+            if (!isEggRequest && pkm is PA9 && template != null)
+            {
+                if (set.IVs != null && set.IVs.Count() == 6)
+                {
+                    IVEnforcer.ApplyRequestedIVsAndForceNature(
+                        pkm,
+                        set.IVs.ToArray(),
+                        set.Nature,
+                        set.Shiny,
+                        sav,
+                        template,
+                        userHTPreferences
+                    );
+                }
+                else
+                {
+                    // Even if no IVs requested, enforce nature/shiny only for Z-A
+                    NatureEnforcer.ForceNature(pkm, set.Nature, set.Shiny);
+                }
+            }
+
+            var la = new LegalityAnalysis(pkm);
+            var spec = GameInfo.Strings.Species[set.Species];
+
+            if (!la.Valid)
+            {
+                var reason = result switch
+                {
+                    "Timeout" => $"That {spec} set took too long to generate.",
+                    "VersionMismatch" => "Request refused: PKHeX and Auto-Legality Mod version mismatch.",
+                    _ => $"I wasn't able to create a {spec} from that set."
+                };
+
+                var imsg = $"Oops! {reason}";
+                if (result == "Failed" && !isEggRequest)
+                    imsg += $"\n{AutoLegalityWrapper.GetLegalizationHint(set, sav, pkm)}";
+
+                await channel.SendMessageAsync(imsg).ConfigureAwait(false);
+                return;
+            }
+
+            var msg = isEggRequest
+                ? $"Here's your ({result}) legalized egg for {spec}!"
+                : $"Here's your ({result}) legalized PKM & Showdown Set for {spec} ({la.EncounterOriginal.Name})!";
+            await channel.SendPKMAsync(pkm, msg + $"\n{ReusableActions.GetFormattedShowdownText(pkm)}").ConfigureAwait(false);
         }
         catch (Exception ex)
         {

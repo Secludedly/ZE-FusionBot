@@ -242,7 +242,11 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
 
                 // ***** FORCE NATURE *****
                 // This will reroll PID until PID%25 == requested nature and keep IV/EVs consistent.
-                NatureEnforcer.ForceNature(pkm, set.Nature, set.Shiny);
+                // NatureEnforcer is only supported for Z-A (PA9) Pokémon
+                if (pkm.Version == GameVersion.ZA)
+                {
+                    NatureEnforcer.ForceNature(pkm, set.Nature, set.Shiny);
+                }
 
                 // Convert to bot runtime type
                 pkm = EntityConverter.ConvertToType(pkm, typeof(T), out _) ?? pkm;
