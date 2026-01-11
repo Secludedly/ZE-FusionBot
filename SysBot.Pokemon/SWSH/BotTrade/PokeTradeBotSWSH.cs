@@ -1723,7 +1723,19 @@ public class PokeTradeBotSWSH(PokeTradeHub<PK8> hub, PokeBotState config) : Poke
             cln.OriginalTrainerGender = data[6];
             cln.TrainerTID7 = tidsid % 1_000_000;
             cln.TrainerSID7 = tidsid / 1_000_000;
-            cln.Language = data[5];
+
+            // Only override language if Pokemon has default/config language
+            // If user explicitly requested a different language, preserve it
+            var configLanguage = (int)legalitySettings.GenerateLanguage;
+            if (toSend.Language != configLanguage && toSend.Language >= 1 && toSend.Language <= 12)
+            {
+                cln.Language = toSend.Language; // Preserve explicitly requested language
+            }
+            else
+            {
+                cln.Language = data[5]; // Use trade partner's language
+            }
+
             cln.OriginalTrainerName = trainerName;
         }
 

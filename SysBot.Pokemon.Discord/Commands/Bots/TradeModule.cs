@@ -1231,7 +1231,7 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
     /// This allows Pokemon to be injected with the user's correct trainer data immediately.
     /// Respects the UseTradePartnerInfo setting - if disabled, Pokemon keep bot's configured defaults.
     /// </summary>
-    private static void TryApplyEarlyAutoOT(T pk, ulong userID, bool ignoreAutoOT = false)
+    private static void TryApplyEarlyAutoOT(T pk, ulong userID, bool ignoreAutoOT = false, bool hasExplicitLanguage = false)
     {
         // Check if AutoOT is enabled and StoreTradeCodes is enabled
         if (ignoreAutoOT ||
@@ -1265,8 +1265,8 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
         if (cachedTrainerDetails.Gender.HasValue)
             pk.OriginalTrainerGender = cachedTrainerDetails.Gender.Value;
 
-        // Only apply language for non-Mystery Gifts
-        if (!pk.FatefulEncounter && cachedTrainerDetails.Language.HasValue)
+        // Only apply language for non-Mystery Gifts AND if user didn't explicitly request a language
+        if (!pk.FatefulEncounter && !hasExplicitLanguage && cachedTrainerDetails.Language.HasValue)
             pk.Language = cachedTrainerDetails.Language.Value;
 
         // Clear nickname if not already nicknamed
@@ -1291,7 +1291,15 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
             pk.TrainerTID7 = originalPk.TrainerTID7;
             pk.TrainerSID7 = originalPk.TrainerSID7;
             pk.OriginalTrainerGender = originalPk.OriginalTrainerGender;
-            pk.Language = originalPk.Language;
+
+            // CRITICAL: Never revert language if user explicitly requested it
+            // Language should always be preserved regardless of AutoOT logic
+            if (!hasExplicitLanguage)
+            {
+                pk.Language = originalPk.Language;
+            }
+            // If user explicitly requested a language, keep it even if legality fails with cached trainer
+
             pk.PID = originalPk.PID;
             pk.RefreshChecksum();
         }
@@ -1337,36 +1345,19 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
                     return;
                 }
 
-                // Get AutoLegality trainer/save info and template
+                // Use the Pokemon that was already generated with the correct language/settings
+                var pk = processed.Pokemon;
+
+                // Get trainer info and template for later use (without regenerating Pokemon)
                 var sav = AutoLegalityWrapper.GetTrainerInfo<T>();
                 var template = AutoLegalityWrapper.GetTemplate(set);
-
-                // Generate the legal Pokémon (ALM)
-                // NOTE: If ALM fails here, the request is fundamentally illegal — do NOT try to "fix" it
-                var pkm = sav.GetLegal(template, out var result);
-                if (pkm == null)
-                {
-                    await Helpers<T>.ReplyAndDeleteAsync(
-                        Context,
-                        $"Failed to generate Pokémon from your set.\n" +
-                        $"Try `{Prefix}convert` instead, or remove some conflicting information.",
-                        8);
-                    return;
-                }
-
-                // Convert to the bot's runtime type (T)
-                var pk = (T)(object)pkm;
-                if (pk == null)
-                {
-                    await Helpers<T>.ReplyAndDeleteAsync(Context,
-                        "Failed to convert Pokémon to correct runtime type.", 5);
-                    return;
-                }
 
                 // --------------------------------------------------
                 // Early AutoOT: Apply cached trainer info immediately (PRE-QUEUE)
                 // --------------------------------------------------
-                TryApplyEarlyAutoOT(pk, userID, ignoreAutoOT);
+                // Check if user explicitly requested a language
+                bool hasExplicitLanguage = content.Contains("Language:", StringComparison.OrdinalIgnoreCase);
+                TryApplyEarlyAutoOT(pk, userID, ignoreAutoOT, hasExplicitLanguage);
 
                 // --------------------------------------------------
                 // Forced encounter Nature override (POST-ALM)

@@ -890,7 +890,31 @@ public class PokeTradeBotLGPE(PokeTradeHub<PB7> Hub, PokeBotState Config) : Poke
 #pragma warning restore CS8601 // Possible null reference assignment.
             cln.SetDisplayTID((uint)tradeDetails.TID);
             cln.SetDisplaySID((uint)tradeDetails.SID);
-            cln.Language = (int)LanguageID.English; // Set the appropriate language ID
+
+            // Only override language if Pokemon has default/config language
+            // If user explicitly requested a different language, preserve it
+            var configLanguage = (int)Hub.Config.Legality.GenerateLanguage;
+            if (tradeDetails.Language.HasValue && tradeDetails.Language.Value >= 1 && tradeDetails.Language.Value <= 12)
+            {
+                // Use cached trade partner's language if available and valid
+                if (toSend.Language != configLanguage && toSend.Language >= 1 && toSend.Language <= 12)
+                {
+                    cln.Language = toSend.Language; // Preserve explicitly requested language
+                }
+                else
+                {
+                    cln.Language = tradeDetails.Language.Value; // Use cached language
+                }
+            }
+            else if (toSend.Language != configLanguage && toSend.Language >= 1 && toSend.Language <= 12)
+            {
+                cln.Language = toSend.Language; // Preserve explicitly requested language
+            }
+            else
+            {
+                cln.Language = (int)LanguageID.English; // Default to English
+            }
+
             ClearOTTrash(cln, tradeDetails);
 
             if (!toSend.IsNicknamed)

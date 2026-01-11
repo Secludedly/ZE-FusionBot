@@ -126,7 +126,25 @@ public static class Helpers<T> where T : PKM, new()
     {
         bool isEgg = TradeExtensions<T>.IsEggCheck(content);
 
-        if (!ShowdownParsing.TryParseAnyLanguage(content, out ShowdownSet? set) || set == null || set.Species == 0)
+        // CRITICAL FIX: Extract language BEFORE parsing ShowdownSet
+        // If we let PKHeX see "Language: German", it includes it in the template
+        // and ALM fails to find encounters with that language
+        byte finalLanguage = LanguageHelper.GetFinalLanguage(
+            content, null,
+            (byte)Info.Hub.Config.Legality.GenerateLanguage,
+            TradeExtensions<T>.DetectShowdownLanguage
+        );
+
+        // Remove Language: line from content before parsing
+        // This prevents PKHeX from including it in the template
+        var contentLines = content.Split('\n');
+        var filteredLines = contentLines.Where(line =>
+            !line.TrimStart().StartsWith("Language:", StringComparison.OrdinalIgnoreCase)
+        ).ToArray();
+        var contentWithoutLanguage = string.Join('\n', filteredLines);
+
+        // Now parse the ShowdownSet without the Language line
+        if (!ShowdownParsing.TryParseAnyLanguage(contentWithoutLanguage, out ShowdownSet? set) || set == null || set.Species == 0)
         {
             return Task.FromResult(new ProcessedPokemonResult<T>
             {
@@ -135,19 +153,26 @@ public static class Helpers<T> where T : PKM, new()
             });
         }
 
-        byte finalLanguage = LanguageHelper.GetFinalLanguage(
-            content, set,
-            (byte)Info.Hub.Config.Legality.GenerateLanguage,
-            TradeExtensions<T>.DetectShowdownLanguage
-        );
-
         var template = AutoLegalityWrapper.GetTemplate(set);
 
         // Filter out batch commands (.) and filters (~) from invalid lines - these are handled by ALM
+        // Also filter out custom fields like Language: and Alpha: which are ALM-specific
         var actualInvalidLines = set.InvalidLines.Where(line =>
         {
             var text = line.Value?.Trim();
-            return !string.IsNullOrEmpty(text) && !text.StartsWith('.') && !text.StartsWith('~');
+            if (string.IsNullOrEmpty(text))
+                return false;
+
+            // Skip batch commands and filters
+            if (text.StartsWith('.') || text.StartsWith('~'))
+                return false;
+
+            // Skip custom ALM fields
+            if (text.StartsWith("Language:", StringComparison.OrdinalIgnoreCase) ||
+                text.StartsWith("Alpha:", StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            return true;
         }).ToList();
 
         if (actualInvalidLines.Count != 0)
@@ -159,7 +184,31 @@ public static class Helpers<T> where T : PKM, new()
             });
         }
 
-        var sav = LanguageHelper.GetTrainerInfoWithLanguage<T>((LanguageID)finalLanguage);
+        // DON'T use language-specific trainer! It causes encounter errors.
+        // Generate with normal trainer (English), then set language after generation.
+        var sav = AutoLegalityWrapper.GetTrainerInfo<T>();
+
+        // Fix for Asian languages: Truncate OT to 6 characters max
+        // Japanese, Korean, ChineseS, ChineseT only support 6 character OT names
+        if (finalLanguage == (byte)LanguageID.Japanese ||
+            finalLanguage == (byte)LanguageID.Korean ||
+            finalLanguage == (byte)LanguageID.ChineseS ||
+            finalLanguage == (byte)LanguageID.ChineseT)
+        {
+            if (sav.OT.Length > 6)
+            {
+                // Create a new trainer with truncated OT
+                var truncatedOT = sav.OT.Substring(0, 6);
+                sav = new SimpleTrainerInfo(sav.Version)
+                {
+                    OT = truncatedOT,
+                    TID16 = sav.TID16,
+                    SID16 = sav.SID16,
+                    Language = sav.Language,
+                    Generation = sav.Generation
+                };
+            }
+        }
 
         PKM pkm;
         string result;
@@ -270,12 +319,69 @@ public static class Helpers<T> where T : PKM, new()
         if (pk.WasEgg && !pk.IsEgg)
             pk.EggMetDate = pk.MetDate;
 
-        pk.Language = finalLanguage;
+        // Validate language is supported for this game version
+        // SpanishL (11) isn't supported in some games, fall back to Spanish (7)
+        var validatedLanguage = ValidateLanguageForGame(pk, finalLanguage);
+        pk.Language = validatedLanguage;
+
+        // CRITICAL: Asian languages only support 6-character OT names
+        // Replace English OT with Asian characters for Asian languages
+        if (validatedLanguage == (int)LanguageID.Japanese ||
+            validatedLanguage == (int)LanguageID.Korean ||
+            validatedLanguage == (int)LanguageID.ChineseS ||
+            validatedLanguage == (int)LanguageID.ChineseT)
+        {
+            if (pk.OriginalTrainerName.Length > 6)
+            {
+                // Use proper Asian characters instead of truncating English text
+                var asianOT = "王犬米";
+
+                // Properly set OT and clear trash bytes
+                pk.OriginalTrainerName = asianOT;
+
+                // Clear OT trash bytes to ensure legality
+                // Get the OT as bytes, properly sized for the format
+                Span<byte> trash = stackalloc byte[pk.TrashCharCountTrainer * 2];
+                int length = pk.SetString(trash, asianOT.AsSpan(), pk.TrashCharCountTrainer, StringConverterOption.ClearZero);
+                pk.OriginalTrainerTrash.Clear();
+                trash[..length].CopyTo(pk.OriginalTrainerTrash);
+
+                // Refresh checksum after modifying OT
+                pk.RefreshChecksum();
+            }
+        }
 
         if (!set.Nickname.Equals(pk.Nickname) && string.IsNullOrEmpty(set.Nickname))
             _ = pk.ClearNickname();
 
         pk.ResetPartyStats();
+    }
+
+    private static int ValidateLanguageForGame(PKM pk, byte requestedLanguage)
+    {
+        // SpanishL (11) support varies by game
+        if (requestedLanguage == (byte)LanguageID.SpanishL)
+        {
+            // Check if this game supports SpanishL
+            bool supportsSpanishL = pk switch
+            {
+                PB7 => false,  // Let's Go - does not support SpanishL properly
+                PK8 => false,  // Sword/Shield - does not support SpanishL properly
+                PB8 => false, // BDSP - does not support SpanishL properly
+                PA8 => false, // Legends Arceus - does not support SpanishL properly
+                PK9 => false,  // Scarlet/Violet - does not support SpanishL properly
+                PA9 => true,  // Legends Z-A - Supports SpanishL
+                _ => false
+            };
+
+            if (!supportsSpanishL)
+            {
+                // Fall back to Spanish (7) if SpanishL is used in any game other than Legends Z-A
+                return (int)LanguageID.Spanish;
+            }
+        }
+
+        return requestedLanguage;
     }
 
     public static string GetFailureReason(string result, string speciesName)

@@ -57,17 +57,15 @@ public static class LanguageHelper
         return detectedLanguage;
     }
 
+    // NOTE: This method is no longer used. We generate Pokemon with the normal trainer
+    // and set the language AFTER generation to avoid encounter matching issues.
+    // Kept for reference only.
+    /*
     public static ITrainerInfo GetTrainerInfoWithLanguage<T>(LanguageID language) where T : PKM, new()
     {
-        return typeof(T) switch
-        {
-            Type t when t == typeof(PK8) => TrainerSettings.GetSavedTrainerData(GameVersion.SWSH, language),
-            Type t when t == typeof(PB8) => TrainerSettings.GetSavedTrainerData(GameVersion.BDSP, language),
-            Type t when t == typeof(PA8) => TrainerSettings.GetSavedTrainerData(GameVersion.PLA, language),
-            Type t when t == typeof(PK9) => TrainerSettings.GetSavedTrainerData(GameVersion.SV, language),
-            Type t when t == typeof(PA9) => TrainerSettings.GetSavedTrainerData(GameVersion.ZA, language),
-            Type t when t == typeof(PB7) => TrainerSettings.GetSavedTrainerData(GameVersion.GE, language),
-            _ => throw new ArgumentException("Type does not have a recognized trainer fetch.", typeof(T).Name)
-        };
+        // This approach caused "No valid matching encounter" errors
+        // because ALM couldn't find encounters with language-specific trainers
+        return AutoLegalityWrapper.GetTrainerInfo<T>();
     }
+    */
 }

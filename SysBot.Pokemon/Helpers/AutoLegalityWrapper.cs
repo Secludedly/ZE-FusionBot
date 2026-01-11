@@ -237,6 +237,7 @@ public static class AutoLegalityWrapper
         return configuredTrainer;
     }
 
+
     public static PKM GetLegal(this ITrainerInfo sav, IBattleTemplate set, out string res)
     {
         var task = Task.Run(() => sav.GetLegalFromSet(set));

@@ -1431,7 +1431,19 @@ public class PokeTradeBotLA(PokeTradeHub<PA8> Hub, PokeBotState Config) : PokeRo
             cln.OriginalTrainerGender = tradePartner.Gender;
             cln.TrainerTID7 = uint.Parse(tradePartner.TID7);
             cln.TrainerSID7 = uint.Parse(tradePartner.SID7);
-            cln.Language = tradePartner.Language;
+
+            // Only override language if Pokemon has default/config language
+            // If user explicitly requested a different language, preserve it
+            var configLanguage = (int)legalitySettings.GenerateLanguage;
+            if (toSend.Language != configLanguage && toSend.Language >= 1 && toSend.Language <= 12)
+            {
+                cln.Language = toSend.Language; // Preserve explicitly requested language
+            }
+            else
+            {
+                cln.Language = tradePartner.Language; // Use trade partner's language
+            }
+
             cln.OriginalTrainerName = tradePartner.TrainerName;
         }
 

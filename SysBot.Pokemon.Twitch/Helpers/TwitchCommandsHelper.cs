@@ -3,6 +3,7 @@ using PKHeX.Core.AutoMod;
 using SysBot.Base;
 using SysBot.Pokemon.Helpers;
 using System;
+using System.Linq;
 
 namespace SysBot.Pokemon.Twitch
 {
@@ -30,9 +31,28 @@ namespace SysBot.Pokemon.Twitch
                 return false;
             }
 
-            if (set.InvalidLines.Count != 0)
+            // Filter out batch commands, filters, and custom ALM fields from invalid lines
+            var actualInvalidLines = set.InvalidLines.Where(line =>
             {
-                msg = $"Skipping trade, @{username}: Unable to parse Showdown Set:\n{string.Join("\n", set.InvalidLines)}";
+                var text = line.Value?.Trim();
+                if (string.IsNullOrEmpty(text))
+                    return false;
+
+                // Skip batch commands and filters
+                if (text.StartsWith('.') || text.StartsWith('~'))
+                    return false;
+
+                // Skip custom ALM fields
+                if (text.StartsWith("Language:", StringComparison.OrdinalIgnoreCase) ||
+                    text.StartsWith("Alpha:", StringComparison.OrdinalIgnoreCase))
+                    return false;
+
+                return true;
+            }).ToList();
+
+            if (actualInvalidLines.Count != 0)
+            {
+                msg = $"Skipping trade, @{username}: Unable to parse Showdown Set:\n{string.Join("\n", actualInvalidLines.Select(l => l.Value))}";
                 return false;
             }
 

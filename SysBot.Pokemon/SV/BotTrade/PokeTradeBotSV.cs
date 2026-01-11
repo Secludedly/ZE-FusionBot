@@ -253,7 +253,19 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
             cln.OriginalTrainerGender = (byte)tradePartner.Gender;
             cln.TrainerTID7 = (uint)Math.Abs(tradePartner.DisplayTID);
             cln.TrainerSID7 = (uint)Math.Abs(tradePartner.DisplaySID);
-            cln.Language = tradePartner.Language;
+
+            // Only override language if Pokemon has default/config language
+            // If user explicitly requested a different language, preserve it
+            var configLanguage = (int)legalitySettings.GenerateLanguage;
+            if (toSend.Language != configLanguage && toSend.Language >= 1 && toSend.Language <= 12)
+            {
+                cln.Language = toSend.Language; // Preserve explicitly requested language
+            }
+            else
+            {
+                cln.Language = tradePartner.Language; // Use trade partner's language
+            }
+
             cln.OriginalTrainerName = tradePartner.OT;
         }
 
@@ -958,7 +970,20 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
                 {
                     if (Hub.Config.Legality.UseTradePartnerInfo && !poke.IgnoreAutoOT && cachedTradePartnerInfo != null)
                     {
+                        // Preserve explicitly requested language through AutoOT
+                        var originalLanguage = toSend.Language;
+                        var configLanguage = (int)Hub.Config.Legality.GenerateLanguage;
+                        bool hasExplicitLanguage = originalLanguage != configLanguage && originalLanguage >= 1 && originalLanguage <= 12;
+
                         toSend = await ApplyAutoOT(toSend, cachedTradePartnerInfo, sav, token);
+
+                        // Restore explicitly requested language if it was changed by AutoOT
+                        if (hasExplicitLanguage && toSend.Language != originalLanguage)
+                        {
+                            toSend.Language = originalLanguage;
+                            toSend.RefreshChecksum();
+                        }
+
                         tradesToProcess[currentTradeIndex] = toSend; // Update the list
                     }
                     await SetBoxPokemonAbsolute(BoxStartOffset, toSend, token, sav).ConfigureAwait(false);
@@ -1104,7 +1129,20 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
                 // Apply AutoOT for first trade if needed
                 if (Hub.Config.Legality.UseTradePartnerInfo && !poke.IgnoreAutoOT)
                 {
+                    // Preserve explicitly requested language through AutoOT
+                    var originalLanguage = toSend.Language;
+                    var configLanguage = (int)Hub.Config.Legality.GenerateLanguage;
+                    bool hasExplicitLanguage = originalLanguage != configLanguage && originalLanguage >= 1 && originalLanguage <= 12;
+
                     toSend = await ApplyAutoOT(toSend, tradePartnerFullInfo, sav, token).ConfigureAwait(false);
+
+                    // Restore explicitly requested language if it was changed by AutoOT
+                    if (hasExplicitLanguage && toSend.Language != originalLanguage)
+                    {
+                        toSend.Language = originalLanguage;
+                        toSend.RefreshChecksum();
+                    }
+
                     poke.TradeData = toSend;
                     if (toSend.Species != 0)
                         await SetBoxPokemonAbsolute(BoxStartOffset, toSend, token, sav).ConfigureAwait(false);
@@ -1496,7 +1534,19 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
         }
         if (Hub.Config.Legality.UseTradePartnerInfo && !poke.IgnoreAutoOT)
         {
+            // Preserve explicitly requested language through AutoOT
+            var originalLanguage = toSend.Language;
+            var configLanguage = (int)Hub.Config.Legality.GenerateLanguage;
+            bool hasExplicitLanguage = originalLanguage != configLanguage && originalLanguage >= 1 && originalLanguage <= 12;
+
             toSend = await ApplyAutoOT(toSend, tradePartnerFullInfo, sav, token);
+
+            // Restore explicitly requested language if it was changed by AutoOT
+            if (hasExplicitLanguage && toSend.Language != originalLanguage)
+            {
+                toSend.Language = originalLanguage;
+                toSend.RefreshChecksum();
+            }
         }
         // Wait for user input...
         var offered = await ReadUntilPresent(TradePartnerOfferedOffset, 25_000, 1_000, BoxFormatSlotSize, token).ConfigureAwait(false);
