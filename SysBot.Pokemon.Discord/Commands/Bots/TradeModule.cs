@@ -1,6 +1,6 @@
 using Discord;
-using Discord.Net;
 using Discord.Commands;
+using Discord.Net;
 using Discord.WebSocket;
 using PKHeX.Core;
 using PKHeX.Core.AutoMod;
@@ -17,11 +17,13 @@ using SysBot.Pokemon.Helpers;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
 using System.Reflection;
+using System.Runtime.Intrinsics.X86;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -1360,7 +1362,7 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
                 TryApplyEarlyAutoOT(pk, userID, ignoreAutoOT, hasExplicitLanguage);
 
                 // --------------------------------------------------
-                // Forced encounter Nature override (POST-ALM)
+                // Forced encounter Nature override
                 // --------------------------------------------------
                 // - Never modify ShowdownSet
                 // - Never override Nature before ALM
@@ -1372,30 +1374,43 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
                     {
                         if (pk.Nature != forcedNature)
                         {
+                            // Check if a user explicitly set a different Stat Nature via batch command (.StatNature= / Stat Nature:).
+                            // If Stat Nature differs from Nature, preserve it as the explicit user request.
+                            bool hasExplicitStatNature = pk.StatNature != pk.Nature;
+                            Nature explicitStatNature = hasExplicitStatNature ? pk.StatNature : Nature.Random;
+
                             // Store user's requested nature for stat nature (minting)
                             Nature userRequestedNature = set.Nature;
 
                             pk.Nature = forcedNature;
 
-                            // Apply stat nature (minted if user requested different nature, otherwise same as forced nature)
-                            pk.StatNature = (userRequestedNature != Nature.Random && userRequestedNature != forcedNature)
-                                ? userRequestedNature
-                                : forcedNature;
-
-                            pk.RefreshChecksum();
-
-                            if (userRequestedNature != Nature.Random && userRequestedNature != forcedNature)
+                          // Priority for Stat Nature:
+                          // 1.If user explicitly set Stat Nature via batch command(.StatNature = / Stat Nature:), use that.
+                          // 2.However, if a user requested a different nature than a forced one, mint it(use requested as Stat Nature).
+                          // 3.Otherwise, use forced nature as Stat Nature.
+                            if (hasExplicitStatNature)
                             {
+                                pk.StatNature = explicitStatNature;
+                                LogUtil.LogInfo(
+                                    $"{(Species)pk.Species}: Nature forced to {forcedNature} with explicit StatNature {explicitStatNature} (static encounter)",
+                                    nameof(TradeModule<T>));
+                            }
+                            else if (userRequestedNature != Nature.Random && userRequestedNature != forcedNature)
+                            {
+                                pk.StatNature = userRequestedNature;
                                 LogUtil.LogInfo(
                                     $"{(Species)pk.Species}: Nature minted from {forcedNature} (actual) to {userRequestedNature} (stat nature) due to static encounter",
                                     nameof(TradeModule<T>));
                             }
                             else
                             {
+                                pk.StatNature = forcedNature;
                                 LogUtil.LogInfo(
                                     $"{(Species)pk.Species}: User-requested Nature overridden to {forcedNature} (forced encounter rule)",
                                     nameof(TradeModule<T>));
                             }
+
+                            pk.RefreshChecksum();
                         }
                     }
                 }

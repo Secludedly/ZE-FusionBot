@@ -1,7 +1,11 @@
 using Discord;
 using Discord.Commands;
 using PKHeX.Core;
+using PKHeX.Core.AutoMod;
+using SysBot.Base;
 using SysBot.Pokemon.Discord.Helpers;
+using SysBot.Pokemon.Discord.Helpers.TradeModule;
+using SysBot.Pokemon.Helpers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -24,11 +28,158 @@ public static class BatchHelpers<T> where T : PKM, new()
         tradeContent = ReusableActions.StripCodeBlock(tradeContent);
         tradeContent = BatchCommandNormalizer.NormalizeBatchCommands(tradeContent);
 
+        // Parse hypertraining preferences before processing
+        var userHTPreferences = AutoLegalityExtensionsDiscord.ParseHyperTrainingCommandsPublic(tradeContent);
+
         var result = await Helpers<T>.ProcessShowdownSetAsync(tradeContent);
 
         if (result.Pokemon != null)
         {
-            return (result.Pokemon, null, result.ShowdownSet, null);
+            var pk = result.Pokemon;
+            var set = result.ShowdownSet;
+
+            // Apply the same post-processing that single trades use
+            if (set != null)
+            {
+                // Get trainer info and template for IVEnforcer
+                var sav = AutoLegalityWrapper.GetTrainerInfo<T>();
+                var template = AutoLegalityWrapper.GetTemplate(set);
+
+                // --------------------------------------------------
+                // Forced encounter Nature override
+                // Same logic as ProcessTradeAsync lines 1362-1414
+                // --------------------------------------------------
+                if (pk.Version == GameVersion.ZA && !pk.FatefulEncounter)
+                {
+                    if (ForcedEncounterEnforcer.TryGetForcedNature(pk, out var forcedNature))
+                    {
+                        if (pk.Nature != forcedNature)
+                        {
+                            // Check if user explicitly set a different StatNature via batch command (.StatNature=)
+                            bool hasExplicitStatNature = pk.StatNature != pk.Nature;
+                            Nature explicitStatNature = hasExplicitStatNature ? pk.StatNature : Nature.Random;
+
+                            // Store user's requested nature for stat nature (minting)
+                            Nature userRequestedNature = set.Nature;
+
+                            pk.Nature = forcedNature;
+
+                            // Priority for Stat Nature:
+                            // 1.If user explicitly set Stat Nature via batch command(.StatNature = / Stat Nature:), use that.
+                            // 2.However, if a user requested a different nature than a forced one, mint it(use requested as Stat Nature).
+                            // 3.Otherwise, use forced nature as Stat Nature.
+                            if (hasExplicitStatNature)
+                            {
+                                pk.StatNature = explicitStatNature;
+                                LogUtil.LogInfo(
+                                    $"{(Species)pk.Species}: Nature forced to {forcedNature} with explicit StatNature {explicitStatNature} (static encounter - batch trade)",
+                                    nameof(BatchHelpers<T>));
+                            }
+                            else if (userRequestedNature != Nature.Random && userRequestedNature != forcedNature)
+                            {
+                                pk.StatNature = userRequestedNature;
+                                LogUtil.LogInfo(
+                                    $"{(Species)pk.Species}: Nature minted from {forcedNature} (actual) to {userRequestedNature} (stat nature) due to static encounter (batch trade)",
+                                    nameof(BatchHelpers<T>));
+                            }
+                            else
+                            {
+                                pk.StatNature = forcedNature;
+                                LogUtil.LogInfo(
+                                    $"{(Species)pk.Species}: User-requested Nature overridden to {forcedNature} (forced encounter rule - batch trade)",
+                                    nameof(BatchHelpers<T>));
+                            }
+
+                            pk.RefreshChecksum();
+                        }
+                    }
+                }
+
+                // -----------------------------
+                // Apply Nature enforcement for non-ZA games
+                // For non-ZA games, manually set Nature if it doesn't match
+                // -----------------------------
+                if (pk.Version != GameVersion.ZA)
+                {
+                    // For non-ZA games, check if the generated Nature matches the requested Nature
+                    // If not, manually set it (no PID rerolling needed for non-ZA)
+                    if (set.Nature != Nature.Random && pk.Nature != set.Nature)
+                    {
+                        // Check if user explicitly set Stat Nature
+                        bool hasExplicitStatNature = pk.StatNature != pk.Nature;
+                        Nature explicitStatNature = hasExplicitStatNature ? pk.StatNature : Nature.Random;
+
+                        pk.Nature = set.Nature;
+
+                        // Preserve explicit Stat Nature if user set it, otherwise match the nature
+                        if (hasExplicitStatNature)
+                        {
+                            pk.StatNature = explicitStatNature;
+                        }
+                        else
+                        {
+                            pk.StatNature = set.Nature;
+                        }
+
+                        pk.RefreshChecksum();
+                    }
+                }
+
+                // -----------------------------
+                // Apply IVs, HyperTraining, Nature, Shiny for ZA games
+                // Same logic as ProcessTradeAsync lines 1407-1424
+                // -----------------------------
+                if (pk.Version == GameVersion.ZA)
+                {
+                    // Capture explicit StatNature BEFORE IVEnforcer runs
+                    bool hasExplicitStatNature = pk.StatNature != pk.Nature;
+                    Nature explicitStatNature = hasExplicitStatNature ? pk.StatNature : Nature.Random;
+
+                    // Always pass full IV array if present; otherwise default logic applies inside IVEnforcer
+                    int[] requestedIVs =
+                        set.IVs != null && set.IVs.Count() == 6
+                            ? set.IVs.ToArray()
+                            : Array.Empty<int>();
+
+                    IVEnforcer.ApplyRequestedIVsAndForceNature(
+                        pk,
+                        requestedIVs,
+                        set.Nature,
+                        set.Shiny,
+                        sav,
+                        template,
+                        userHTPreferences
+                    );
+
+                    // Verify that Nature was set correctly after IVEnforcer
+                    // Safety check in case IVEnforcer didn't apply the Nature for some reason
+                    if (set.Nature != Nature.Random && pk.Nature != set.Nature)
+                    {
+                        LogUtil.LogInfo(
+                            $"{(Species)pk.Species}: IVEnforcer did not apply requested Nature {set.Nature}, current Nature is {pk.Nature}. Forcing Nature manually.",
+                            nameof(BatchHelpers<T>));
+
+                        // Fallback: Use NatureEnforcer directly for non-forced-encounter Pokemon
+                        if (!ForcedEncounterEnforcer.TryGetForcedNature(pk, out _))
+                        {
+                            NatureEnforcer.ForceNature(pk, set.Nature, set.Shiny);
+                        }
+                    }
+
+                    // Restore explicit Stat Nature if user set it
+                    // IVEnforcer should preserve it, but double-check as a safety measure
+                    if (hasExplicitStatNature && pk.StatNature != explicitStatNature)
+                    {
+                        LogUtil.LogInfo(
+                            $"{(Species)pk.Species}: Restoring explicit StatNature {explicitStatNature} (was changed to {pk.StatNature})",
+                            nameof(BatchHelpers<T>));
+                        pk.StatNature = explicitStatNature;
+                        pk.RefreshChecksum();
+                    }
+                }
+            }
+
+            return (pk, null, result.ShowdownSet, null);
         }
 
         return (null, result.Error, result.ShowdownSet, result.LegalizationHint);

@@ -29,7 +29,9 @@ namespace SysBot.Pokemon.Discord.Helpers.TradeModule
 
             // Check if user explicitly requested a different StatNature via batch command (.StatNature=)
             // If pk.StatNature differs from pk.Nature, it means user wants manual nature minting
-            Nature? explicitStatNature = (pk.StatNature != pk.Nature) ? pk.StatNature : null;
+            // IMPORTANT: Capture this BEFORE any modifications
+            bool hasExplicitStatNature = pk.StatNature != pk.Nature;
+            Nature explicitStatNature = hasExplicitStatNature ? pk.StatNature : Nature.Random;
 
             // Enforce forced encounters first - support nature minting
             Nature userRequestedNature = desiredNature; // Store user's requested nature for stat nature (minting)
@@ -37,8 +39,17 @@ namespace SysBot.Pokemon.Discord.Helpers.TradeModule
 
             if (ForcedEncounterEnforcer.TryGetForcedNature(pk, out var forcedNature))
             {
-                // Apply forced nature as the actual nature, but keep user's requested nature as stat nature (minted)
-                if (desiredNature != Nature.Random && desiredNature != forcedNature)
+                // Priority for StatNature when forced nature exists:
+                // 1. If user explicitly set StatNature via batch command, use that (no minting message)
+                // 2. Else if user requested a different nature than forced, mint it (log minting)
+                // 3. Else use forced nature as stat nature
+                if (hasExplicitStatNature)
+                {
+                    LogUtil.LogInfo(
+                        $"{(Species)pk.Species}: Nature forced to {forcedNature} with explicit StatNature {explicitStatNature} (static encounter)",
+                        nameof(IVEnforcer));
+                }
+                else if (desiredNature != Nature.Random && desiredNature != forcedNature)
                 {
                     isMinted = true;
                     LogUtil.LogInfo(
@@ -162,7 +173,7 @@ namespace SysBot.Pokemon.Discord.Helpers.TradeModule
                 // 1. If user explicitly requested a StatNature via batch command, use that
                 // 2. Else if minted (forced nature), use user's requested nature
                 // 3. Else use the actual nature
-                pk.StatNature = explicitStatNature ?? (isMinted ? userRequestedNature : pk.Nature);
+                pk.StatNature = hasExplicitStatNature ? explicitStatNature : (isMinted ? userRequestedNature : pk.Nature);
 
                 // Reapply IVs after PID change
                 pk.SetIVs(ivs);
@@ -266,11 +277,11 @@ namespace SysBot.Pokemon.Discord.Helpers.TradeModule
             pk.PID = originalPid;
             pk.Nature = originalNature;
 
-            // Apply stat nature:
-            // 1. If user explicitly requested a StatNature via batch command, use that
-            // 2. Else if minted (forced nature), use user's requested nature
-            // 3. Else use the actual nature
-            pk.StatNature = explicitStatNature ?? (isMinted ? userRequestedNature : pk.Nature);
+            // Priority for Stat Nature:
+            // 1.If user explicitly set Stat Nature via batch command(.StatNature = / Stat Nature:), use that.
+            // 2.However, if a user requested a different nature than a forced one, mint it(use requested as Stat Nature).
+            // 3.Otherwise, use forced nature as Stat Nature.
+            pk.StatNature = hasExplicitStatNature ? explicitStatNature : (isMinted ? userRequestedNature : pk.Nature);
 
             pk.SetIVs(ivs);
 
