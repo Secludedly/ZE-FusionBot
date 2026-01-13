@@ -1,6 +1,7 @@
 using Discord;
 using Discord.Commands;
 using PKHeX.Core;
+using SysBot.Pokemon.Discord.Helpers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,8 +18,12 @@ public static class BatchHelpers<T> where T : PKM, new()
         return [.. content.Split(delimiters, StringSplitOptions.RemoveEmptyEntries).Select(trade => trade.Trim())];
     }
 
-    public static async Task<(T? Pokemon, string? Error, ShowdownSet? Set, string? LegalizationHint)> ProcessSingleTradeForBatch(string tradeContent)
+    public static async Task<(T? Pokemon, string? Error, ShowdownSet? Set, string? LegalizationHint)>
+        ProcessSingleTradeForBatch(string tradeContent)
     {
+        tradeContent = ReusableActions.StripCodeBlock(tradeContent);
+        tradeContent = BatchCommandNormalizer.NormalizeBatchCommands(tradeContent);
+
         var result = await Helpers<T>.ProcessShowdownSetAsync(tradeContent);
 
         if (result.Pokemon != null)
