@@ -427,6 +427,191 @@ public static class Helpers<T> where T : PKM, new()
         _ = DeleteMessagesAfterDelayAsync(message, context.Message, 30);
     }
 
+    /// <summary>
+    /// Sends a detailed trade error log to configured Full Trade Error Log channels.
+    /// </summary>
+    public static async Task SendFullTradeErrorLogAsync(SocketCommandContext context, string errorReason, string userRequest, int tradeCode, string? legalizationHint = null)
+    {
+        var cfg = SysCordSettings.Settings.FullTradeErrorLogChannels;
+        if (cfg.List.Count == 0)
+            return;
+
+        var user = context.User;
+        var guild = (context.Channel as IGuildChannel)?.Guild;
+        var channel = context.Channel;
+
+        string serverName = guild?.Name ?? "Direct Message";
+        string channelName = channel is IGuildChannel guildChannel ? $"#{guildChannel.Name}" : "DM";
+        string channelId = channel.Id.ToString();
+
+        // Get game version from PKM type
+        string gameVersion = typeof(T).Name switch
+        {
+            "PA9" => "ZA",
+            "PK9" => "SV",
+            "PA8" => "LA",
+            "PB8" => "BDSP",
+            "PK8" => "SWSH",
+            "PB7" => "LGPE",
+            _ => "Unknown"
+        };
+
+        // Truncate user request if it's too long for embed field (Discord limit is 1024 characters per field)
+        string truncatedRequest = userRequest.Length > 950
+            ? userRequest.Substring(0, 947) + "..."
+            : userRequest;
+
+        var embedBuilder = new EmbedBuilder()
+            .WithTitle("**DETAILED TRADE ERROR LOGS**")
+            .WithColor(Color.Gold)
+            .WithCurrentTimestamp()
+            .AddField("**Connected User**", $"{user.Username} ({user.Id})", inline: false)
+            .AddField("**Link Trade Code**", tradeCode.ToString("0000 0000"), inline: false)
+            .AddField("**Server of Request**", serverName, inline: false)
+            .AddField("**Channel of Request**", $"{channelName} ({channelId})", inline: false)
+            .AddField("**Game Version of Bot**", gameVersion, inline: false)
+            .AddField("**Reason for Error**", errorReason, inline: false);
+
+        // Add legalization hint if available
+        if (!string.IsNullOrEmpty(legalizationHint))
+        {
+            embedBuilder.AddField("**Hint**", legalizationHint, inline: false);
+        }
+
+        // Check if we should include Known Trainer Details
+        var hub = SysCord<T>.Runner.Hub;
+        bool storeTradeCodesEnabled = hub.Config.Trade.TradeConfiguration.StoreTradeCodes;
+
+        if (storeTradeCodesEnabled)
+        {
+            var tradeCodeStorage = new TradeCodeStorage();
+            var tradeDetails = tradeCodeStorage.GetTradeDetails(user.Id);
+
+            if (tradeDetails != null && !string.IsNullOrEmpty(tradeDetails.OT))
+            {
+                string trainerDetails = $"**OT:** {tradeDetails.OT}\n**TID:** {tradeDetails.TID}\n**SID:** {tradeDetails.SID}";
+                embedBuilder.AddField("**Known Trainer Details**", trainerDetails, inline: false);
+            }
+        }
+
+        embedBuilder.AddField("**User's Request**", $"```\n{truncatedRequest}\n```", inline: false);
+
+        var embed = embedBuilder.Build();
+
+        // Send to all configured Full Trade Error Log channels
+        foreach (var logChannel in cfg)
+        {
+            try
+            {
+                if (context.Client.GetChannel(logChannel.ID) is ISocketMessageChannel msgChannel)
+                {
+                    await msgChannel.SendMessageAsync(embed: embed).ConfigureAwait(false);
+                }
+            }
+            catch (Exception ex)
+            {
+                LogUtil.LogError($"Failed to send Full Trade Error Log to channel {logChannel.ID}: {ex.Message}", nameof(Helpers<T>));
+            }
+        }
+    }
+
+    /// <summary>
+    /// Sends a detailed batch trade error log to configured Full Trade Error Log channels.
+    /// </summary>
+    public static async Task SendFullBatchTradeErrorLogAsync(SocketCommandContext context, List<BatchTradeError> errors, int tradeCode, int totalTrades)
+    {
+        var cfg = SysCordSettings.Settings.FullTradeErrorLogChannels;
+        if (cfg.List.Count == 0)
+            return;
+
+        var user = context.User;
+        var guild = (context.Channel as IGuildChannel)?.Guild;
+        var channel = context.Channel;
+
+        string serverName = guild?.Name ?? "Direct Message";
+        string channelName = channel is IGuildChannel guildChannel ? $"#{guildChannel.Name}" : "DM";
+        string channelId = channel.Id.ToString();
+
+        // Get game version from PKM type
+        string gameVersion = typeof(T).Name switch
+        {
+            "PA9" => "ZA",
+            "PK9" => "SV",
+            "PA8" => "LA",
+            "PB8" => "BDSP",
+            "PK8" => "SWSH",
+            "PB7" => "LGPE",
+            _ => "Unknown"
+        };
+
+        // Build error summary
+        var errorSummary = new System.Text.StringBuilder();
+        errorSummary.AppendLine($"**{errors.Count} out of {totalTrades} Pokémon failed:**\n");
+
+        foreach (var error in errors.Take(5)) // Limit to first 5 errors to avoid embed size limits
+        {
+            errorSummary.AppendLine($"**Trade #{error.TradeNumber}** - {error.SpeciesName}");
+            errorSummary.AppendLine($"Error: {error.ErrorMessage}");
+            if (!string.IsNullOrEmpty(error.LegalizationHint))
+            {
+                errorSummary.AppendLine($"Hint: {error.LegalizationHint}");
+            }
+            errorSummary.AppendLine();
+        }
+
+        if (errors.Count > 5)
+        {
+            errorSummary.AppendLine($"... and {errors.Count - 5} more errors.");
+        }
+
+        var embedBuilder = new EmbedBuilder()
+            .WithTitle("**DETAILED BATCH TRADE ERROR LOGS**")
+            .WithColor(Color.Gold)
+            .WithCurrentTimestamp()
+            .AddField("**Connected User**", $"{user.Username} ({user.Id})", inline: false)
+            .AddField("**Link Trade Code**", tradeCode.ToString("0000 0000"), inline: false)
+            .AddField("**Server of Request**", serverName, inline: false)
+            .AddField("**Channel of Request**", $"{channelName} ({channelId})", inline: false)
+            .AddField("**Game Version of Bot**", gameVersion, inline: false)
+            .AddField("**Reason for Error**", $"Batch trade validation failed: {errors.Count}/{totalTrades} Pokémon invalid", inline: false);
+
+        // Check if we should include Known Trainer Details
+        var hub = SysCord<T>.Runner.Hub;
+        bool storeTradeCodesEnabled = hub.Config.Trade.TradeConfiguration.StoreTradeCodes;
+
+        if (storeTradeCodesEnabled)
+        {
+            var tradeCodeStorage = new TradeCodeStorage();
+            var tradeDetails = tradeCodeStorage.GetTradeDetails(user.Id);
+
+            if (tradeDetails != null && !string.IsNullOrEmpty(tradeDetails.OT))
+            {
+                string trainerDetails = $"**OT:** {tradeDetails.OT}\n**TID:** {tradeDetails.TID}\n**SID:** {tradeDetails.SID}";
+                embedBuilder.AddField("**Known Trainer Details**", trainerDetails, inline: false);
+            }
+        }
+
+        embedBuilder.AddField("**Error Details**", errorSummary.ToString(), inline: false);
+
+        var embed = embedBuilder.Build();
+
+        // Send to all configured Full Trade Error Log channels
+        foreach (var logChannel in cfg)
+        {
+            try
+            {
+                if (context.Client.GetChannel(logChannel.ID) is ISocketMessageChannel msgChannel)
+                {
+                    await msgChannel.SendMessageAsync(embed: embed).ConfigureAwait(false);
+                }
+            }
+            catch (Exception ex)
+            {
+                LogUtil.LogError($"Failed to send Full Batch Trade Error Log to channel {logChannel.ID}: {ex.Message}", nameof(Helpers<T>));
+            }
+        }
+    }
+
     public static T? GetRequest(Download<PKM> dl)
     {
         if (!dl.Success)

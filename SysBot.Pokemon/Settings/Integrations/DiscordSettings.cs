@@ -175,6 +175,9 @@ public class DiscordSettings
     [Category(Channels), Description("Logger channels that will log trade start messages."), DisplayName("Trade Starting Embed Channels")]
     public RemoteControlAccessList TradeStartingChannels { get; set; } = new();
 
+    [Category(Channels), Description("Channel that will log detailed trade error information including user requests and failure reasons."), DisplayName("Full Trade Error Log Channel")]
+    public RemoteControlAccessList FullTradeErrorLogChannels { get; set; } = new();
+
     // Startup
     [Category(Users), Description("Users with these user IDs cannot use the bot."), DisplayName("User Blacklist")]
     public RemoteControlAccessList UserBlacklist { get; set; } = new();
