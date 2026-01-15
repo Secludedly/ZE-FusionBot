@@ -74,10 +74,10 @@ public static class ForcedEncounterEnforcer
         new Entry { Species = Species.Groudon, ForcedNature = Nature.Impish, FixedIVs = new[] { 31, 31, 24, 25, 31, 18 } },
         new Entry { Species = Species.Darkrai, ForcedNature = Nature.Careful, FixedIVs = new[] { 31, 31, 18, 26, 31, 21 } },
 
-        // Zygarde - All three forms (10%, 50%, Complete)
-        new Entry { Species = Species.Zygarde, MetLevel = 84, Form = 0, Friendship = 0, Location = 212, ForcedNature = Nature.Quiet, FixedIVs = new[] { 31,31,15,19,31,28 } },
-        new Entry { Species = Species.Zygarde, MetLevel = 84, Form = 1, Friendship = 0, Location = 212, ForcedNature = Nature.Quiet, FixedIVs = new[] { 31,31,15,19,31,28 } },
-        new Entry { Species = Species.Zygarde, MetLevel = 84, Form = 2, Friendship = 0, Location = 212, ForcedNature = Nature.Quiet, FixedIVs = new[] { 31,31,15,19,31,28 } }
+        // Zygarde - All gennable forms (10%, 50%)
+        // PKHeX form numbering as of Jan 2026: Form 2 = 10%, Form 3 = 50%, Form 4 = Complete
+        new Entry { Species = Species.Zygarde, MetLevel = 84, Form = 2, Friendship = 0, Location = 212, ForcedNature = Nature.Quiet, FixedIVs = new[] { 31,31,15,19,31,28 } },
+        new Entry { Species = Species.Zygarde, MetLevel = 84, Form = 3, Friendship = 0, Location = 212, ForcedNature = Nature.Quiet, FixedIVs = new[] { 31,31,15,19,31,28 } }
     };
 
     // Optional: full static entries with OT/Nickname/etc. (safety checks)
