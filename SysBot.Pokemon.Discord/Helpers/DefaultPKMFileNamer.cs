@@ -15,13 +15,15 @@ public sealed class DefaultPKMFileNamer : IFileNamer<PKM>
 
     private static string GetAbility(PKM pk)
     {
-        int abilityIndex = pk.Ability;
+        int abilityID = pk.Ability;
 
-        // You need to implement a method similar to Util.GetNaturesList for abilities
-        var abilityStrings = Util.GetAbilitiesList("en");
-        if ((uint)abilityIndex >= abilityStrings.Length)
-            abilityIndex = 0;
-        return abilityStrings[abilityIndex];
+        // Ability names are stored by ID, not index
+        var abilityName = GameInfo.Strings.Ability[abilityID];
+
+        if (string.IsNullOrEmpty(abilityName))
+            return "—";
+
+        return abilityName;
     }
 
     private static string GetConditionalTeraType(PKM pk)
@@ -46,11 +48,14 @@ public sealed class DefaultPKMFileNamer : IFileNamer<PKM>
 
     private static string GetNature(PKM pk)
     {
-        var nature = pk.Nature;
-        var strings = Util.GetNaturesList("en");
-        if ((uint)nature >= strings.Length)
+        int nature = (int)pk.Nature;
+
+        var natures = GameInfo.Strings.Natures;
+
+        if ((uint)nature >= (uint)natures.Count)
             nature = 0;
-        return strings[(uint)nature];
+
+        return natures[nature];
     }
 
     private static string GetRegular(PKM pk)
