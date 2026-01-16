@@ -554,7 +554,7 @@ This makes trading smoother by removing guesswork — your link code is always r
 ### 🏅 Medals & Milestones
 Every trade you complete is tracked by FusionBot, and your **trade count** shows up in the footer of the trade embed.  
 - For every **50 trades**, you earn a new medal 🥇.  
-- You can check your medals anytime with the `ml` command.  
+- You can check your medals anytime in your profile card with the `mi` command.  
 - It’s just for fun — a little **progression system** to show off your trading dedication.  
 
 Think of it like leveling up — the more you trade, the more medals you rack up, proving you’re a true master trader.  
