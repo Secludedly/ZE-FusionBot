@@ -262,14 +262,13 @@ public sealed class SwitchSocketAsync : SwitchSocket, ISwitchConnectionAsync
         }
 
         if (length == 0)
-        {
             return Array.Empty<byte>();
-        }
 
         await SendAsync(cmd, token).ConfigureAwait(false);
+
+        // Each byte is returned as two ASCII hex chars + newline
         var size = (length * 2) + 1;
 
-        // Ensure we don't request an invalid buffer size
         if (size <= 0)
         {
             LogError($"Calculated buffer size is invalid: {size} (length: {length})");
@@ -279,41 +278,67 @@ public sealed class SwitchSocketAsync : SwitchSocket, ISwitchConnectionAsync
         var buffer = ArrayPool<byte>.Shared.Rent(size);
         try
         {
-            // Validate buffer size before slicing
             if (buffer.Length < size)
             {
                 LogError($"Rented buffer is too small. Requested: {size}, Got: {buffer.Length}");
-                throw new InvalidOperationException($"Buffer pool returned insufficient buffer size. Requested: {size}, Got: {buffer.Length}");
+                throw new InvalidOperationException(
+                    $"Buffer pool returned insufficient buffer size. Requested: {size}, Got: {buffer.Length}");
             }
 
-            var mem = buffer.AsMemory()[..size];
+            var mem = buffer.AsMemory(0, size);
 
-            int bytesReceived = await Connection.ReceiveAsync(mem, token).ConfigureAwait(false);
-            if (bytesReceived != size)
+            int totalRead = 0;
+
+            while (totalRead < size)
             {
-                LogError($"Received unexpected number of bytes. Expected: {size}, Received: {bytesReceived}");
+                int read = await Connection.ReceiveAsync(
+                    mem.Slice(totalRead),
+                    token
+                ).ConfigureAwait(false);
+
+                // Socket closed or no data available
+                if (read == 0)
+                {
+                    LogError(
+                        $"ReadBytesFromCmdAsync: Socket returned 0 bytes. " +
+                        $"Expected {size}, received {totalRead}. Aborting read."
+                    );
+
+                    return Array.Empty<byte>();
+                }
+
+                totalRead += read;
             }
 
+            // ONLY decode once we have ALL expected bytes
             var result = DecodeResult(mem, length);
             return result;
         }
-        catch (ArgumentOutOfRangeException ex)
+        catch (Exception ex) when (ex is ArgumentOutOfRangeException || ex is InvalidOperationException)
         {
-            LogError($"ArgumentOutOfRangeException in ReadBytesFromCmdAsync. Length: {length}, Size: {size}, Buffer Length: {buffer.Length}. Error: {ex.Message}");
+            LogError(
+                $"Exception in ReadBytesFromCmdAsync. " +
+                $"Length: {length}, Size: {size}, Buffer Length: {buffer.Length}. " +
+                $"Error: {ex}"
+            );
             throw;
         }
         finally
         {
-            ArrayPool<byte>.Shared.Return(buffer, true);
+            ArrayPool<byte>.Shared.Return(buffer, clearArray: true);
         }
     }
 
-    private Task<byte[]> ReadMulti(ICommandBuilder b, IReadOnlyDictionary<ulong, int> offsetSizes, CancellationToken token)
+    private Task<byte[]> ReadMulti(
+        ICommandBuilder b,
+        IReadOnlyDictionary<ulong, int> offsetSizes,
+        CancellationToken token)
     {
         var totalSize = offsetSizes.Values.Sum();
         var cmd = b.PeekMulti(offsetSizes);
         return ReadBytesFromCmdAsync(cmd, totalSize, token);
     }
+
 
     private async Task Write(ICommandBuilder b, byte[] data, ulong offset, CancellationToken token)
     {
