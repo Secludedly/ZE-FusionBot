@@ -238,13 +238,15 @@ namespace SysBot.Pokemon.WinForms
 
             PokeTradeBotSWSH.SeedChecker = new Z3SeedSearchHandler<PK8>(); // Initialize the seed checker for SWSH mode
 
+            _botsForm = new BotsForm(); // Initialize the BotsForm instance
+
             try
             {
-                var (updateAvailable, _, _) = await UpdateChecker.CheckForUpdatesAsync(); // Check for updates
+                var (updateAvailable, _, newVersion) = await UpdateChecker.CheckForUpdatesAsync(); // Check for updates
                 hasUpdate = updateAvailable; // If there's an update, this flag gets checked
+                _botsForm.SetUpdateNotification(updateAvailable, newVersion); // Show update notification in BotsForm
             }
             catch { }
-            _botsForm = new BotsForm(); // Initialize the BotsForm instance
             _logsForm = new LogsForm(); // Initialize the LogsForm instance
             LogUtil.Forwarders.Add(new LogTextBoxForwarder(_logsForm.LogsBox)); // Add a log forwarder to the LogsForm's LogsBox
             _logsForm.LogsBox.MaxLength = 32767; // Set the maximum length of the LogsBox to 32767 characters (why this number though?)
