@@ -31,15 +31,15 @@ namespace SysBot.Pokemon.WinForms
     public sealed partial class Main : Form
     {
         // Currently active child form
-        private Form activeForm = null;
+        private Form? activeForm = null;
 
         // Current running environment
-        private IPokeBotRunner RunningEnvironment { get; set; }
+        private IPokeBotRunner RunningEnvironment { get; set; } = null!;
 
         // Program configuration
         [Browsable(false)]
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] // Do not serialize in the designer
-        public static ProgramConfig Config { get; set; }
+        public static ProgramConfig Config { get; set; } = new();
 
         // Static properties for update state
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] // Do not serialize in the designer
@@ -53,16 +53,18 @@ namespace SysBot.Pokemon.WinForms
         internal bool hasUpdate = false;
 
         // Currently active button in the left panel, for setting Bots as default
-        private IconButton currentBtn;
+        private IconButton currentBtn = null!;
 
-        private Panel leftBorderBtn;
+        private Panel leftBorderBtn = null!;
         private Dictionary<IconButton, Timer> hoverTimers = new();
-  
-        private bool _isFormLoading = true;               // Flag to indicate if the form is still loading
+
+#pragma warning disable CS0414 // Field is assigned but never used
+        private bool _isFormLoading = true;               // Flag to indicate if the form is still loading (reserved for future use)
+#pragma warning restore CS0414                            // Flag to indicate if the form is still loading
         private readonly List<PokeBotState> Bots = new(); // List of bots created in the program
-        private BotsForm _botsForm;                       // BotsForm instance to manage bot controls
-        private LogsForm _logsForm;                       // LogsForm instance to display logs
-        private HubForm _hubForm;                         // HubForm instance to manage hub settings
+        private BotsForm _botsForm = null!;                       // BotsForm instance to manage bot controls
+        private LogsForm _logsForm = null!;                       // LogsForm instance to display logs
+        private HubForm _hubForm = null!;                       // HubForm instance to manage hub settings
 
         public Panel PanelLeftSide => panelLeftSide;      // Expose panelLeftSide for other forms
 
@@ -74,7 +76,7 @@ namespace SysBot.Pokemon.WinForms
         private readonly Random rng = new();
         private readonly List<Sparkle> sparkles = new();
         private readonly Random glitterRng = new Random();
-        private Timer glitterTimer;
+        private Timer glitterTimer = null!;
 
         ////////////////////////////////////////////////////////////
         // Initialize custom fonts for UI controls with fallbacks //
@@ -704,7 +706,7 @@ namespace SysBot.Pokemon.WinForms
         ///////////////////////////////////////////////////
 
         // Initialize the method for the left side image in the panelLeftSide
-        private PictureBox leftSideImage;
+        private PictureBox leftSideImage = null!;
 
         // Initialize the meat and potatoes for the left side image in the panelLeftSide
         private void InitializeLeftSideImage()
@@ -748,7 +750,7 @@ namespace SysBot.Pokemon.WinForms
         }
 
         // Initialize the method for the upper panel image in the upperPanelImage
-        private PictureBox upperPanelImage;
+        private PictureBox upperPanelImage = null!;
 
         private void InitializeUpperImage()
         {
@@ -1022,13 +1024,13 @@ namespace SysBot.Pokemon.WinForms
         }
 
         // Close button
-        private void BtnClose_Click(object sender, EventArgs e)
+        private void BtnClose_Click(object? sender, EventArgs e)
         {
             Application.Exit(); // Exit program on Close button click
         }
 
         // Maximize and Restore button
-        private void BtnMaximize_Click(object sender, EventArgs e)
+        private void BtnMaximize_Click(object? sender, EventArgs e)
         {
             if (WindowState == FormWindowState.Normal)   // If the window is in normal state, then...
                 WindowState = FormWindowState.Maximized; // ...Maximize the window

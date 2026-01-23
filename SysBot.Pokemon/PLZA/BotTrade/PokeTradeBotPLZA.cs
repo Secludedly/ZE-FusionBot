@@ -610,10 +610,6 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
             return;
         }
 
-        // Use MenuState to determine whether to disconnect or navigate back
-        int timeoutSeconds = 30;
-        int elapsedExit = 0;
-
         // If we're in the Box or searching for a Link Trade, we need to use the BAB approach, otherwise we can just mash B.
         var remainMs = 120_000;
         while (await GetMenuState(token).ConfigureAwait(false) >= MenuState.LinkTrade)

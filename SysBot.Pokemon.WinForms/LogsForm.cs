@@ -11,12 +11,14 @@ namespace SysBot.Pokemon.WinForms
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public RichTextBox LogsBox { get; private set; }
 
-        private TextBox searchBox;
-        private Button enterButton;
-        private Button nextButton;
-        private Button prevButton;
-        private Label resultLabel;
-        private Label placeholderLabel;
+        private TextBox searchBox = null!;
+#pragma warning disable CS0649 // Field is never assigned
+        private Button? enterButton;
+#pragma warning restore CS0649
+        private Button nextButton = null!;
+        private Button prevButton = null!;
+        private Label resultLabel = null!;
+        private Label placeholderLabel = null!;
 
         private List<int> matchIndices = new();
         private int currentMatchIndex = -1;
@@ -29,11 +31,11 @@ namespace SysBot.Pokemon.WinForms
             Font logsFont;
             try
             {
-                logsFont = FontManager.Get("Ubuntu Mono", 10);
+                logsFont = FontManager.Get("Ubuntu Mono", 8);
             }
             catch
             {
-                logsFont = new Font("Ubuntu Mono", 10);
+                logsFont = new Font("Ubuntu Mono", 8);
             }
 
             LogsBox = new RichTextBox

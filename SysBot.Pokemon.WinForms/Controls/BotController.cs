@@ -26,21 +26,25 @@ public partial class BotController : UserControl
     private float _glowPhase = 60f;
     private bool _glowIncreasing = true;
     private Color _glowBaseColor = Color.Red;
-    private Panel _progressBarContainer;
-    private Panel _progressFill;
-    private Timer _progressAnimationTimer;
-    private Timer _shimmerTimer;
-    private Timer _sparkleTimer;
+    private Panel _progressBarContainer = null!;
+    private Panel _progressFill = null!;
+    private Timer _progressAnimationTimer = null!;
+#pragma warning disable CS0169 // Field is never used
+    private Timer? _shimmerTimer;
+#pragma warning restore CS0169
+    private Timer _sparkleTimer = null!;
     private int _targetProgress = 0;
     private int _currentProgress = 0;
     private Color _glowColor = Color.Cyan;
+#pragma warning disable CS0649 // Field is never assigned
     private int _shimmerX;
+#pragma warning restore CS0649
     private int _sparkleX = -50;
     private int _sparkleWidth = 50;
     private Color _startColor = Color.FromArgb(0, 122, 204);
     private Color _endColor = Color.FromArgb(153, 50, 204);
     private bool _holdAt100 = false;
-    private Timer _holdTimer;
+    private Timer _holdTimer = null!;
 
 
     public BotController()
@@ -348,7 +352,7 @@ public partial class BotController : UserControl
 
         protected override void OnRenderItemText(ToolStripItemTextRenderEventArgs e)
         {
-            if (_colorMap.TryGetValue(e.Item.Text, out Color color))
+            if (e.Item.Text != null && _colorMap.TryGetValue(e.Item.Text, out Color color))
                 e.TextColor = e.Item.Selected ? SystemColors.HighlightText : color;
             else
                 e.TextColor = e.Item.Selected ? SystemColors.HighlightText : SystemColors.ControlText;
@@ -403,7 +407,8 @@ public partial class BotController : UserControl
     {
         // Example output: "LAST LOG: 6:30:00 PM"
         string formatted = time.ToString("h:mm:ss tt"); // 12-hour, no leading zero on hour, AM/PM
-        lblLastLogTime.Text = $"{formatted}";
+        if (lblLastLogTime != null)
+            lblLastLogTime.Text = $"{formatted}";
     }
 
     public void ReloadStatus(BotSource<PokeBotState>? botSource = null)

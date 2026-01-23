@@ -3,7 +3,6 @@ using PKHeX.Core.AutoMod;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using PKHeX.Core.AutoMod;
 using System.Linq;
 
 namespace SysBot.Pokemon;

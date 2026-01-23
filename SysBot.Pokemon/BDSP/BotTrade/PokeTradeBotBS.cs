@@ -1368,7 +1368,7 @@ public class PokeTradeBotBS : PokeRoutineExecutor8BS, ICountBot, ITradeBot, IDis
             }
 
             var tradePartner = await GetTradePartnerInfo(token).ConfigureAwait(false);
-            var trainerNID = GetFakeNID(tradePartner?.TrainerName ?? string.Empty, tradePartner.TrainerID);
+            var trainerNID = GetFakeNID(tradePartner?.TrainerName ?? string.Empty, tradePartner?.TrainerID ?? 0);
 
             // Cache trade partner info from first trade
             if (currentTradeIndex == 0)

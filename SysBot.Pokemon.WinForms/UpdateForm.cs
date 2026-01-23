@@ -10,10 +10,10 @@ namespace SysBot.Pokemon.WinForms
 {
     public class UpdateForm : Form
     {
-        private Button buttonDownload;
-        private Label labelUpdateInfo;
-        private Label labelChangelogTitle;
-        private TextBox textBoxChangelog;
+        private Button buttonDownload = null!;
+        private Label labelUpdateInfo = null!;
+        private Label labelChangelogTitle = null!;
+        private TextBox textBoxChangelog = null!;
         private readonly bool isUpdateRequired;
         private readonly bool isUpdateAvailable;
         private readonly string newVersion;
