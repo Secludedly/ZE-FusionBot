@@ -246,6 +246,34 @@ public static class Helpers<T> where T : PKM, new()
             ApplyStandardItemLogic(pkm);
         }
 
+        // ============================================================================
+        // MAX LAIR POKEMON MOVE POPULATION BUG WORKAROUND
+        // ============================================================================
+        // PKHeX.Core.dll (as of 01-22-2026, commit fe32739) has a bug where Max Lair
+        // Pokemon from SWSH Crown Tundra do not get moves automatically populated
+        // during legalization, causing them to be marked as illegal.
+        //
+        // This workaround manually populates moves for Max Lair encounters after
+        // generation but before validation.
+        // ============================================================================
+        if (pkm is PK8 pk8 && !isEgg)
+        {
+            const int MaxLairLocationID = 244; // Max Lair in Crown Tundra
+            bool hasNoMoves = pk8.Move1 == 0 && pk8.Move2 == 0 && pk8.Move3 == 0 && pk8.Move4 == 0;
+            bool isFromMaxLair = pk8.MetLocation == MaxLairLocationID;
+
+            if (hasNoMoves && isFromMaxLair)
+            {
+                // Populate moves using PKHeX (not ALM)
+                pk8.SetSuggestedMoves();
+                pk8.HealPP();
+                pk8.RefreshChecksum();
+            }
+        }
+        // ============================================================================
+        // END OF MAX LAIR FIX
+        // ============================================================================
+
         // Generate LGPE code if needed
         List<Pictocodes>? lgcode = null;
         if (pkm is PB7)
