@@ -414,6 +414,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
         int attemptCount = 0;
         const int maxAttempt = 5;
         const int waitTime = 10; // time in minutes to wait after max attempts
+        int recheckDelayMs = 5000; // Start with 5 seconds, will increase with exponential backoff
 
         while (true) // Loop until a successful connection is made or the task is canceled
         {
@@ -443,6 +444,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
                     Log("Attempting to reopen the game.");
                     await ReOpenGame(Hub.Config, token).ConfigureAwait(false);
                     attemptCount = 0; // Reset attempt count
+                    recheckDelayMs = 5000; // Reset delay after softban wait
                 }
 
                 attemptCount++;
@@ -452,14 +454,23 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
                 await Click(X, 3_000, token).ConfigureAwait(false);
                 await Click(L, 5_000 + config.Timings.ExtraTimeConnectOnline, token).ConfigureAwait(false);
 
-                // Wait a bit before rechecking the connection status
-                await Task.Delay(5000, token).ConfigureAwait(false); // Wait 5 seconds before rechecking
+                // Use exponential backoff for retries to handle degraded connection conditions
+                // Increases delay after multiple failed attempts to allow network recovery
+                await Task.Delay(recheckDelayMs, token).ConfigureAwait(false);
 
                 if (attemptCount < maxAttempt)
                 {
                     Log("Rechecking the online connection status...");
                     // Wait and recheck logic
                     await Click(B, 0_500, token).ConfigureAwait(false);
+
+                    // Exponential backoff: increase delay after each failed attempt
+                    // Helps with degraded network conditions after multiple trades
+                    if (recheckDelayMs < 10000) // Cap at 10 seconds
+                    {
+                        recheckDelayMs += 1000; // Increment by 1 second each attempt
+                        Log($"Increasing retry delay to {recheckDelayMs}ms for next attempt");
+                    }
                 }
             }
             catch (Exception ex)
@@ -473,6 +484,7 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
                     Log("Attempting to reopen the game.");
                     await ReOpenGame(Hub.Config, token).ConfigureAwait(false);
                     attemptCount = 0;
+                    recheckDelayMs = 5000; // Reset delay after exception recovery
                 }
             }
         }
@@ -1365,13 +1377,27 @@ public class PokeTradeBotSV(PokeTradeHub<PK9> Hub, PokeBotState Config) : PokeRo
         if (StartFromOverworld && !await IsOnOverworld(OverworldOffset, token).ConfigureAwait(false))
             await RecoverToOverworld(token).ConfigureAwait(false);
 
-        if (!StartFromOverworld && !await IsConnectedOnline(ConnectedOffset, token).ConfigureAwait(false))
+        if (!StartFromOverworld)
         {
-            await RecoverToOverworld(token).ConfigureAwait(false);
-            if (!await ConnectAndEnterPortal(token).ConfigureAwait(false))
+            // IMPORTANT: Check socket state first before trusting game memory
+            // After multiple trades, the socket may be disconnected even if game state shows connected
+            // This prevents the "assume connection persists" issue that causes socket read failures
+            bool socketAlive = SwitchConnection.Connected;
+            bool gameConnected = socketAlive && await IsConnectedOnline(ConnectedOffset, token).ConfigureAwait(false);
+
+            if (!gameConnected)
             {
+                if (!socketAlive)
+                {
+                    Log("Socket connection lost between trades, forcing reconnection...");
+                }
+
                 await RecoverToOverworld(token).ConfigureAwait(false);
-                return false;
+                if (!await ConnectAndEnterPortal(token).ConfigureAwait(false))
+                {
+                    await RecoverToOverworld(token).ConfigureAwait(false);
+                    return false;
+                }
             }
         }
         else if (StartFromOverworld && !await ConnectAndEnterPortal(token).ConfigureAwait(false))

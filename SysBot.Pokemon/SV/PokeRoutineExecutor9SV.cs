@@ -133,28 +133,108 @@ public abstract class PokeRoutineExecutor9SV : PokeRoutineExecutor<PK9>
 
     public async Task<bool> IsConnectedOnline(ulong offset, CancellationToken token)
     {
-        var data = await SwitchConnection.ReadBytesAbsoluteAsync(offset, 1, token).ConfigureAwait(false);
-        return data[0] == 1;
+        // First verify the socket connection is alive before attempting memory read
+        // This prevents SocketException from occurring when the socket is disconnected
+        if (!await IsSocketConnected().ConfigureAwait(false))
+        {
+            Connection.Log("Socket disconnected, cannot check online status");
+            return false;
+        }
+
+        try
+        {
+            var data = await SwitchConnection.ReadBytesAbsoluteAsync(offset, 1, token).ConfigureAwait(false);
+
+            // If we got empty data back, the socket likely failed mid-read
+            if (data.Length == 0)
+            {
+                Connection.Log("Received empty data when checking connection status");
+                return false;
+            }
+
+            return data[0] == 1;
+        }
+        catch (Exception ex)
+        {
+            Connection.LogError($"Error checking connection status: {ex.Message}");
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Validates the underlying socket connection state without performing any memory reads.
+    /// </summary>
+    private async Task<bool> IsSocketConnected()
+    {
+        // Use a simple task to check connection without blocking
+        return await Task.Run(() =>
+        {
+            try
+            {
+                // Check if the socket is connected and can still communicate
+                return SwitchConnection.Connected;
+            }
+            catch
+            {
+                return false;
+            }
+        }).ConfigureAwait(false);
     }
 
     // 0x14 in a box and during trades, trade evolutions, and move learning.
     public async Task<bool> IsInBox(ulong offset, CancellationToken token)
     {
-        var data = await SwitchConnection.ReadBytesAbsoluteAsync(offset, 1, token).ConfigureAwait(false);
-        return data[0] == 0x14;
+        if (!await IsSocketConnected().ConfigureAwait(false))
+            return false;
+
+        try
+        {
+            var data = await SwitchConnection.ReadBytesAbsoluteAsync(offset, 1, token).ConfigureAwait(false);
+            if (data.Length == 0)
+                return false;
+            return data[0] == 0x14;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     // 0x10 if fully loaded into Poké Portal.
     public async Task<bool> IsInPokePortal(ulong offset, CancellationToken token)
     {
-        var data = await SwitchConnection.ReadBytesAbsoluteAsync(offset, 1, token).ConfigureAwait(false);
-        return data[0] == 0x10;
+        if (!await IsSocketConnected().ConfigureAwait(false))
+            return false;
+
+        try
+        {
+            var data = await SwitchConnection.ReadBytesAbsoluteAsync(offset, 1, token).ConfigureAwait(false);
+            if (data.Length == 0)
+                return false;
+            return data[0] == 0x10;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     public async Task<bool> IsOnOverworld(ulong offset, CancellationToken token)
     {
-        var data = await SwitchConnection.ReadBytesAbsoluteAsync(offset, 1, token).ConfigureAwait(false);
-        return data[0] == 0x11;
+        if (!await IsSocketConnected().ConfigureAwait(false))
+            return false;
+
+        try
+        {
+            var data = await SwitchConnection.ReadBytesAbsoluteAsync(offset, 1, token).ConfigureAwait(false);
+            if (data.Length == 0)
+                return false;
+            return data[0] == 0x11;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     public override Task<PK9> ReadBoxPokemon(int box, int slot, CancellationToken token)
