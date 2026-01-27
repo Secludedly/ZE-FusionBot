@@ -504,9 +504,12 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
             await Click(A, 1_000, token).ConfigureAwait(false);
 
             int attempts = 0;
+            int delayMs = 1_000; // Start with 1 second delay
             while (!await CheckIfConnectedOnline(token).ConfigureAwait(false))
             {
-                await Task.Delay(1_000, token).ConfigureAwait(false);
+                // Use exponential backoff for retries to handle degraded connection conditions
+                await Task.Delay(delayMs, token).ConfigureAwait(false);
+
                 if (++attempts > 30)
                 {
                     _consecutiveConnectionFailures++;
@@ -521,6 +524,14 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
                     }
 
                     return false;
+                }
+
+                // Exponential backoff: increase delay after every 5 failed attempts
+                // This helps with degraded network conditions after multiple trades
+                if (attempts % 5 == 0 && delayMs < 3_000)
+                {
+                    delayMs += 500; // Increment by 500ms every 5 attempts
+                    Log($"Connection attempt {attempts}, increasing retry delay to {delayMs}ms");
                 }
             }
             await Task.Delay(8_000 + Hub.Config.Timings.ExtraTimeConnectOnline, token).ConfigureAwait(false);
@@ -713,6 +724,13 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
 
     private async Task<bool> CheckIfConnectedOnline(CancellationToken token)
     {
+        // First check if socket is alive to prevent SocketException
+        if (!SwitchConnection.Connected)
+        {
+            Log("Socket connection lost, forcing reconnection");
+            return false;
+        }
+
         // Use the direct main memory offset for faster and more reliable connection checks
         return await IsConnected(token).ConfigureAwait(false);
     }
@@ -1188,15 +1206,29 @@ public class PokeTradeBotPLZA(PokeTradeHub<PA9> Hub, PokeBotState Config) : Poke
                 return false;
             }
         }
-        else if (!await CheckIfConnectedOnline(token).ConfigureAwait(false))
+        else
         {
-            await RecoverToOverworld(token).ConfigureAwait(false);
-            if (!await ConnectAndEnterPortal(token).ConfigureAwait(false))
+            // IMPORTANT: Check socket state first before trusting game memory
+            // After multiple trades, the socket may be disconnected even if game state shows connected
+            // This prevents the "assume connection persists" issue that causes socket read failures
+            bool socketAlive = SwitchConnection.Connected;
+            bool gameConnected = socketAlive && await CheckIfConnectedOnline(token).ConfigureAwait(false);
+
+            if (!gameConnected)
             {
-                Log("Connection failed. Restarting...");
-                SetTradeState(TradeState.Failed);
+                if (!socketAlive)
+                {
+                    Log("Socket connection lost between trades, forcing reconnection...");
+                }
+
                 await RecoverToOverworld(token).ConfigureAwait(false);
-                return false;
+                if (!await ConnectAndEnterPortal(token).ConfigureAwait(false))
+                {
+                    Log("Connection failed. Restarting...");
+                    SetTradeState(TradeState.Failed);
+                    await RecoverToOverworld(token).ConfigureAwait(false);
+                    return false;
+                }
             }
         }
 

@@ -314,6 +314,19 @@ public sealed class SwitchSocketAsync : SwitchSocket, ISwitchConnectionAsync
             var result = DecodeResult(mem, length);
             return result;
         }
+        catch (SocketException ex)
+        {
+            LogError(
+                $"Socket error in ReadBytesFromCmdAsync. " +
+                $"Length: {length}, Size: {size}. " +
+                $"Error: {ex.Message} (Code: {ex.SocketErrorCode}). " +
+                $"Socket will be reset."
+            );
+
+            // Reset the socket connection to recover from socket errors
+            InitializeSocket();
+            return Array.Empty<byte>();
+        }
         catch (Exception ex) when (ex is ArgumentOutOfRangeException || ex is InvalidOperationException)
         {
             LogError(

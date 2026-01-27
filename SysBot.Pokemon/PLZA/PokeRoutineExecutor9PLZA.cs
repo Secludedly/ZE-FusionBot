@@ -153,11 +153,56 @@ public abstract class PokeRoutineExecutor9PLZA(PokeBotState Config) : PokeRoutin
     /// <summary>
     /// Checks if the console is connected online using a direct main memory offset.
     /// This is the preferred method for PLZA v1.0.3+ as it's faster and more reliable.
+    /// Now includes socket state validation to prevent SocketException errors.
     /// </summary>
     public async Task<bool> IsConnected(CancellationToken token)
     {
-        var data = await SwitchConnection.ReadBytesMainAsync(ConnectedOffset, 1, token).ConfigureAwait(false);
-        return data[0] == 1;
+        // First verify the socket connection is alive before attempting memory read
+        // This prevents SocketException from occurring when the socket is disconnected
+        if (!await IsSocketConnected().ConfigureAwait(false))
+        {
+            Connection.Log("Socket disconnected, cannot check online status");
+            return false;
+        }
+
+        try
+        {
+            var data = await SwitchConnection.ReadBytesMainAsync(ConnectedOffset, 1, token).ConfigureAwait(false);
+
+            // If we got empty data back, the socket likely failed mid-read
+            if (data.Length == 0)
+            {
+                Connection.Log("Received empty data when checking connection status");
+                return false;
+            }
+
+            return data[0] == 1;
+        }
+        catch (Exception ex)
+        {
+            Connection.LogError($"Error checking connection status: {ex.Message}");
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Validates the underlying socket connection state without performing any memory reads.
+    /// </summary>
+    private async Task<bool> IsSocketConnected()
+    {
+        // Use a simple task to check connection without blocking
+        return await Task.Run(() =>
+        {
+            try
+            {
+                // Check if the socket is connected and can still communicate
+                return SwitchConnection.Connected;
+            }
+            catch
+            {
+                return false;
+            }
+        }).ConfigureAwait(false);
     }
 
     public async Task<byte> GetStoredLinkTradeCodeLength(CancellationToken token)
