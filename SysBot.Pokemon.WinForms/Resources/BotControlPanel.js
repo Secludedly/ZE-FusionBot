@@ -1538,27 +1538,49 @@ class UpdateManager {
                 return;
             }
 
-            const confirmed = confirm(`Update instance on port ${port} (${instance.name || 'Unknown'})?\n\nThis will restart the instance with the latest version.`);
+            // Check if this is the master instance
+            const isMaster = instance.isMaster || false;
+            const confirmMessage = isMaster
+                ? `Update Master instance on port ${port}?\n\nThis will update ALL instances including the master.\n\nAll instances will be restarted with the latest version.`
+                : `Update instance on port ${port} (${instance.name || 'Unknown'})?\n\nThis will restart the instance with the latest version.`;
+
+            const confirmed = confirm(confirmMessage);
             if (!confirmed) return;
 
             // Start single instance update
             const response = await this.app.api.post(`/api/bot/instances/${port}/update`);
 
             if (response.success) {
-                this.app.toastManager.success(`Started update for instance on port ${port}`);
-                
-                // Show progress modal
-                this.showModal('progress');
-                document.getElementById('progress-modal-title').textContent = `Updating Instance ${port}`;
-                
-                // Initialize update state
-                const updateState = this.app.state.get('updateState');
-                updateState.id = `single-${port}-${Date.now()}`;
-                updateState.type = 'single';
-                updateState.port = port;
-                updateState.startTime = Date.now();
-                this.app.state.set('updateState', updateState);
-                
+                // Check if this was redirected to update all
+                if (response.redirectedToUpdateAll) {
+                    this.app.toastManager.success('Started update for all instances (master update)');
+
+                    // Show progress modal
+                    this.showModal('progress');
+                    document.getElementById('progress-modal-title').textContent = 'Updating All Instances';
+
+                    // Initialize update state for update all
+                    const updateState = this.app.state.get('updateState');
+                    updateState.id = response.sessionId;
+                    updateState.type = 'update';
+                    updateState.startTime = Date.now();
+                    this.app.state.set('updateState', updateState);
+                } else {
+                    this.app.toastManager.success(`Started update for instance on port ${port}`);
+
+                    // Show progress modal
+                    this.showModal('progress');
+                    document.getElementById('progress-modal-title').textContent = `Updating Instance ${port}`;
+
+                    // Initialize update state
+                    const updateState = this.app.state.get('updateState');
+                    updateState.id = `single-${port}-${Date.now()}`;
+                    updateState.type = 'single';
+                    updateState.port = port;
+                    updateState.startTime = Date.now();
+                    this.app.state.set('updateState', updateState);
+                }
+
                 // Start monitoring (will use the regular status checking)
                 this.startStatusCheck();
                 this.app.state.set('refreshPaused', true);
@@ -1584,23 +1606,57 @@ class UpdateManager {
             document.getElementById('changelog-content').innerHTML = '<div class="spinner"></div>';
 
             const checkResponse = await fetch(this.app.api.endpoints.updateCheck);
-            let updateInfo = { version: 'Unknown', changelog: 'No changelog available' };
+            let updateInfo = { version: 'Latest', changelog: 'Checking for updates...', available: true };
 
             if (checkResponse.ok) {
                 updateInfo = await checkResponse.json();
             } else {
-                updateInfo.version = 'Latest';
-                updateInfo.changelog = 'Unable to fetch changelog. Update will proceed to latest version.';
+                const statusText = checkResponse.statusText || 'Network error';
+                updateInfo.changelog = `⚠️ Unable to connect to update server (${statusText})\n\nYou can still proceed with the update. The system will attempt to download the latest version from the repository.`;
+                console.warn('Update check failed:', checkResponse.status, statusText);
             }
 
-            document.getElementById('new-version').textContent = updateInfo.version;
-            document.getElementById('changelog-content').textContent = updateInfo.changelog;
+            // Update version display
+            document.getElementById('new-version').textContent = updateInfo.version || 'Latest';
+
+            // Format and display changelog
+            const changelogElement = document.getElementById('changelog-content');
+            if (changelogElement) {
+                // Convert basic markdown-style formatting to HTML
+                let formattedChangelog = (updateInfo.changelog || 'No changelog available')
+                    .replace(/\n/g, '<br>')
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/^##\s+(.+)$/gm, '<h4 style="margin-top: 1rem; margin-bottom: 0.5rem; color: var(--primary-color);">$1</h4>')
+                    .replace(/^-\s+(.+)$/gm, '<div style="margin-left: 1rem;">• $1</div>');
+
+                changelogElement.innerHTML = formattedChangelog;
+            }
 
         } catch (error) {
             console.error('Error checking updates:', error);
             document.getElementById('new-version').textContent = 'Latest';
-            document.getElementById('changelog-content').textContent = 'Unable to fetch update information.';
+            const changelogElement = document.getElementById('changelog-content');
+            if (changelogElement) {
+                changelogElement.innerHTML = `
+                    <div style="color: var(--warning-yellow);">
+                        ⚠️ <strong>Update Information Unavailable</strong><br><br>
+                        Error: ${this.escapeHtml(error.message)}<br><br>
+                        You can still proceed with the update. The system will attempt to download and install the latest version from the GitHub repository.
+                    </div>
+                `;
+            }
         }
+    }
+
+    /**
+     * Escape HTML to prevent XSS
+     * @param {string} text - Text to escape
+     * @returns {string} Escaped text
+     */
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 
     /**

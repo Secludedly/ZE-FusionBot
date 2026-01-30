@@ -445,8 +445,28 @@ public partial class BotServer(Main mainForm, int port = 8080, int tcpPort = 808
             // Check if this is the master instance trying to update itself
             if (port == _tcpPort)
             {
-                LogUtil.LogError($"Master instance (port {port}) attempted to update itself. This is not supported.", "WebServer");
-                return CreateErrorResponse("Master instance cannot update itself. Use /api/bot/update/all to update all instances including master.");
+                LogUtil.LogInfo($"Master instance (port {port}) update requested - redirecting to update all", "WebServer");
+
+                // For master instance, trigger update all instead
+                try
+                {
+                    var session = await UpdateManager.StartOrResumeUpdateAsync(_mainForm, _tcpPort, false);
+
+                    return JsonSerializer.Serialize(new
+                    {
+                        success = true,
+                        message = "Master instance update initiated - updating all instances",
+                        sessionId = session.SessionId,
+                        redirectedToUpdateAll = true,
+                        port,
+                        info = "Use /api/bot/update/active to check status"
+                    }, JsonOptions);
+                }
+                catch (Exception ex)
+                {
+                    LogUtil.LogError($"Failed to start update for master instance: {ex.Message}", "WebServer");
+                    return CreateErrorResponse($"Failed to start update: {ex.Message}");
+                }
             }
 
             // Check if instance exists and is online
@@ -831,23 +851,53 @@ public partial class BotServer(Main mainForm, int port = 8080, int tcpPort = 808
             var (updateAvailable, _, latestVersion) = await UpdateChecker.CheckForUpdatesAsync(false);
             var changelog = await UpdateChecker.FetchChangelogAsync();
 
-            var response = new UpdateCheckResponse
+            // If we couldn't get version info from GitHub, provide fallback response
+            if (string.IsNullOrEmpty(latestVersion) || latestVersion == "Unknown")
             {
-                Version = latestVersion ?? "Unknown",
-                Changelog = changelog,
+                LogUtil.LogInfo("Unable to fetch version from GitHub - using fallback", "WebServer");
+
+                var response = new UpdateCheckResponse
+                {
+                    Version = "Latest",
+                    Changelog = "## Update Available\n\n" +
+                               "Unable to fetch changelog from GitHub repository.\n\n" +
+                               "**Update will proceed to the latest version from the repository.**\n\n" +
+                               "Possible reasons:\n" +
+                               "- GitHub API rate limit reached\n" +
+                               "- Network connectivity issues\n" +
+                               "- Repository access issues\n\n" +
+                               "The update process will download the latest version directly from the GitHub releases.",
+                    Available = true,  // Assume update is available even if we can't verify
+                    Error = null
+                };
+
+                return JsonSerializer.Serialize(response, JsonOptions);
+            }
+
+            var successResponse = new UpdateCheckResponse
+            {
+                Version = latestVersion,
+                Changelog = string.IsNullOrEmpty(changelog)
+                    ? "No changelog available for this version."
+                    : changelog,
                 Available = updateAvailable
             };
 
-            return JsonSerializer.Serialize(response, JsonOptions);
+            return JsonSerializer.Serialize(successResponse, JsonOptions);
         }
         catch (Exception ex)
         {
+            LogUtil.LogError($"Error checking for updates: {ex.Message}", "WebServer");
+
             var response = new UpdateCheckResponse
             {
-                Version = "Unknown",
-                Changelog = "Unable to fetch update information",
-                Available = false,
-                Error = ex.Message
+                Version = "Latest",
+                Changelog = "## Update Information Unavailable\n\n" +
+                           $"Error: {ex.Message}\n\n" +
+                           "**You can still proceed with the update.**\n\n" +
+                           "The update process will attempt to download and install the latest version from the GitHub repository.",
+                Available = true,  // Allow update to proceed even on error
+                Error = null  // Don't expose error to frontend UI
             };
 
             return JsonSerializer.Serialize(response, JsonOptions);
