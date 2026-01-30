@@ -156,24 +156,26 @@ public static class CreatePokemonHelper
         }
         else
         {
-            // Non-ZA Pokemon: Apply custom IVs/Nature as before
-            // Set all IVs to 31 (perfect)
-            pk.IV_HP = 31;
-            pk.IV_ATK = 31;
-            pk.IV_DEF = 31;
-            pk.IV_SPA = 31;
-            pk.IV_SPD = 31;
-            pk.IV_SPE = 31;
+            // Non-ZA Pokemon: Apply custom IVs from user input
+            // Parse IVs from the ivs parameter (supports "31/31/31/31/31/31" or Showdown format)
+            int[] requestedIVs = ParseIVValues(ivs);
 
-            // Clear ALL Hyper Training flags since we have perfect IVs
+            pk.IV_HP = requestedIVs[0];
+            pk.IV_ATK = requestedIVs[1];
+            pk.IV_DEF = requestedIVs[2];
+            pk.IV_SPA = requestedIVs[3];
+            pk.IV_SPD = requestedIVs[4];
+            pk.IV_SPE = requestedIVs[5];
+
+            // Clear Hyper Training flags for stats that are already 31, set for those that aren't
             if (pk is IHyperTrain ht)
             {
-                ht.HT_HP = false;
-                ht.HT_ATK = false;
-                ht.HT_DEF = false;
-                ht.HT_SPA = false;
-                ht.HT_SPD = false;
-                ht.HT_SPE = false;
+                ht.HT_HP = requestedIVs[0] < 31;
+                ht.HT_ATK = requestedIVs[1] < 31;
+                ht.HT_DEF = requestedIVs[2] < 31;
+                ht.HT_SPA = requestedIVs[3] < 31;
+                ht.HT_SPD = requestedIVs[4] < 31;
+                ht.HT_SPE = requestedIVs[5] < 31;
             }
 
             // Set Nature - use provided or the random one we picked earlier
@@ -302,6 +304,64 @@ public static class CreatePokemonHelper
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// Parses IV string input and returns the IV values as an int array [HP, Atk, Def, SpA, SpD, Spe].
+    /// Supports formats: "31/31/31/31/31/31" or "31 HP / 31 Atk / 31 Def / 31 SpA / 31 SpD / 31 Spe"
+    /// </summary>
+    private static int[] ParseIVValues(string? ivs)
+    {
+        // Default to perfect IVs if none provided
+        if (string.IsNullOrWhiteSpace(ivs))
+            return [31, 31, 31, 31, 31, 31];
+
+        // Try to parse Showdown format first: "31 HP / 31 Atk / 31 Def / 31 SpA / 31 SpD / 31 Spe"
+        if (ivs.Contains("HP") || ivs.Contains("Atk") || ivs.Contains("Def"))
+        {
+            int[] result = [31, 31, 31, 31, 31, 31];
+            var cleanIvs = ivs.Replace("IVs:", "").Trim();
+            var parts = cleanIvs.Split('/');
+
+            foreach (var part in parts)
+            {
+                var trimmed = part.Trim();
+                var tokens = trimmed.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                if (tokens.Length >= 2 && int.TryParse(tokens[0], out int value))
+                {
+                    value = Math.Clamp(value, 0, 31);
+                    var stat = tokens[1].ToUpperInvariant();
+                    switch (stat)
+                    {
+                        case "HP": result[0] = value; break;
+                        case "ATK": result[1] = value; break;
+                        case "DEF": result[2] = value; break;
+                        case "SPA": result[3] = value; break;
+                        case "SPD": result[4] = value; break;
+                        case "SPE": result[5] = value; break;
+                    }
+                }
+            }
+            return result;
+        }
+
+        // Parse slash-separated format: "31/31/31/31/31/31"
+        var ivParts = ivs.Split('/');
+        if (ivParts.Length == 6)
+        {
+            int[] ivValues = new int[6];
+            for (int i = 0; i < 6; i++)
+            {
+                if (!int.TryParse(ivParts[i].Trim(), out ivValues[i]) || ivValues[i] < 0 || ivValues[i] > 31)
+                {
+                    ivValues[i] = 31; // Default to 31 if invalid
+                }
+            }
+            return ivValues;
+        }
+
+        // Invalid format, default to perfect IVs
+        return [31, 31, 31, 31, 31, 31];
     }
 
     /// <summary>
