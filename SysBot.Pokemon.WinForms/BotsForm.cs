@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using SysBot.Base;
+using SysBot.Pokemon;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -397,52 +398,38 @@ namespace SysBot.Pokemon.WinForms
 
             if (_CB_GameMode.SelectedIndex == -1)
                 return;
+
             var selectedMode = _CB_GameMode.SelectedItem?.ToString();
-            int modeValue = selectedMode switch
+            ProgramMode newMode = selectedMode switch
             {
-                "SWSH" => 1,
-                "BDSP" => 2,
-                "PLA" => 3,
-                "SV" => 4,
-                "LGPE" => 5,
-                "PLZA" => 6,
-                _ => 1
+                "SWSH" => ProgramMode.SWSH,
+                "BDSP" => ProgramMode.BDSP,
+                "PLA" => ProgramMode.LA,
+                "SV" => ProgramMode.SV,
+                "LGPE" => ProgramMode.LGPE,
+                "PLZA" => ProgramMode.PLZA,
+                _ => ProgramMode.SWSH
             };
-
-            string exePath = System.Diagnostics.Process.GetCurrentProcess().MainModule!.FileName!;
-            string exeDir = Path.GetDirectoryName(exePath)!;
-            string configPath = Path.Combine(exeDir, "config.json");
-
-            if (!File.Exists(configPath))
-            {
-                MessageBox.Show($"Config file not found at: {configPath}");
-                return;
-            }
 
             try
             {
-                var jsonString = File.ReadAllText(configPath);
-                using var doc = JsonDocument.Parse(jsonString);
-                var root = doc.RootElement.Clone();
-
-                using var stream = File.Create(configPath);
-                using var writer = new Utf8JsonWriter(stream, new JsonWriterOptions { Indented = true });
-
-                writer.WriteStartObject();
-                foreach (var prop in root.EnumerateObject())
+                // Use Main instance to switch mode live
+                if (Main.Instance != null)
                 {
-                    if (prop.NameEquals("Mode"))
-                        writer.WriteNumber("Mode", modeValue);
-                    else
-                        prop.WriteTo(writer);
+                    Main.Instance.SwitchGameMode(newMode);
                 }
-                writer.WriteEndObject();
-
-                MessageBox.Show($"Game environment updated to {selectedMode} (Mode: {modeValue}).\nRestart program or hit the RELOAD button");
+                else
+                {
+                    MessageBox.Show(
+                        "Main form instance not available. Please restart the program.",
+                        "Mode Switch Error",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error);
+                }
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Failed to update config: " + ex.Message);
+                MessageBox.Show($"Failed to switch game mode: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 

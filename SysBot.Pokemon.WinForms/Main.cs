@@ -363,6 +363,114 @@ namespace SysBot.Pokemon.WinForms
             _ => throw new IndexOutOfRangeException("Unsupported mode."), // A LIE
         };
 
+        /// <summary>
+        /// Switch game mode live without requiring a program reload
+        /// </summary>
+        /// <param name="newMode">The new ProgramMode to switch to</param>
+        public void SwitchGameMode(ProgramMode newMode)
+        {
+            if (Config.Mode == newMode)
+            {
+                LogUtil.LogInfo($"Already in {newMode} mode - no change needed", "GameMode");
+                return;
+            }
+
+            try
+            {
+                LogUtil.LogInfo($"Switching from {Config.Mode} to {newMode} mode...", "GameMode");
+
+                // Check if any bots are currently running
+                var runningBots = _botsForm.BotPanel.Controls.OfType<BotController>()
+                    .Where(c => c.GetBot()?.IsRunning == true)
+                    .ToList();
+
+                if (runningBots.Any())
+                {
+                    var result = MessageBox.Show(
+                        $"There are {runningBots.Count} bot(s) currently running.\n\n" +
+                        "Switching game modes will stop all running bots.\n\n" +
+                        "Do you want to continue?",
+                        "Stop Running Bots?",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Warning);
+
+                    if (result != DialogResult.Yes)
+                    {
+                        LogUtil.LogInfo("Game mode switch cancelled by user", "GameMode");
+                        return;
+                    }
+
+                    // Stop all running bots
+                    LogUtil.LogInfo("Stopping all running bots before mode switch...", "GameMode");
+                    SendAll(WebApiCommand.Stop);
+
+                    // Wait a moment for bots to stop
+                    System.Threading.Thread.Sleep(500);
+                }
+
+                // Store old mode for logging
+                var oldMode = Config.Mode;
+
+                // Update the config mode
+                Config.Mode = newMode;
+
+                // Update BatchCommandNormalizer to use the new mode
+                BatchCommandNormalizer.CurrentGameMode = newMode;
+
+                // Recreate the running environment with the new mode
+                RunningEnvironment = GetRunner(Config);
+                LogUtil.LogInfo($"Running environment recreated for {newMode}", "GameMode");
+
+                // Update UI elements
+                if (InvokeRequired)
+                {
+                    Invoke((Action)(() =>
+                    {
+                        Text = $"{(string.IsNullOrEmpty(Config.Hub.BotName) ? "ZE FusionBot |" : Config.Hub.BotName)} {TradeBot.Version} | Mode: {newMode}";
+                        lblTitle.Text = Text;
+                        UpdateBackgroundImage(newMode);
+                        UpdateUpperImage(newMode);
+                    }));
+                }
+                else
+                {
+                    Text = $"{(string.IsNullOrEmpty(Config.Hub.BotName) ? "ZE FusionBot |" : Config.Hub.BotName)} {TradeBot.Version} | Mode: {newMode}";
+                    lblTitle.Text = Text;
+                    UpdateBackgroundImage(newMode);
+                    UpdateUpperImage(newMode);
+                }
+
+                // Reinitialize sprite system for the new mode
+                InitUtil.InitializeStubs(newMode);
+                LogUtil.LogInfo($"Sprite system initialized for {newMode}", "GameMode");
+
+                // Reload routine combobox with mode-specific routines
+                LoadControls();
+                LogUtil.LogInfo("Routine options updated for new mode", "GameMode");
+
+                // Save the updated config to disk
+                SaveCurrentConfig();
+                LogUtil.LogInfo($"Config saved with new mode: {newMode}", "GameMode");
+
+                LogUtil.LogInfo($"Successfully switched from {oldMode} to {newMode}", "GameMode");
+                MessageBox.Show(
+                    $"Game mode successfully changed to {newMode}!\n\n" +
+                    "You can now start your bots and they will operate in the new mode.",
+                    "Mode Switch Successful",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                LogUtil.LogError($"Failed to switch game mode: {ex.Message}", "GameMode");
+                MessageBox.Show(
+                    $"Failed to switch game mode:\n\n{ex.Message}\n\nPlease try reloading the program.",
+                    "Mode Switch Failed",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+            }
+        }
+
 
         //////////////////////////////////////////////////////////////////
         /////// BOT CONTROL AND COMMAND LOGIC FOR UI AND WEBSERVER ///////
