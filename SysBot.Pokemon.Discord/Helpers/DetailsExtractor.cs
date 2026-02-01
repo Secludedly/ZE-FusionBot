@@ -46,6 +46,8 @@ public static class DetailsExtractor<T> where T : PKM, new()
             (SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.ShowMetDate ? $"**Met Date:** {embedData.MetDate}\n" : "") +
             (SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.ShowAbility ? $"**Ability:** {embedData.Ability}\n" : "") +
             (SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.ShowNature ? $"**{embedData.Nature}** Nature\n" : "") +
+            // Show Stat Nature for PLZA only, and only if it differs from regular Nature
+            (pk.Version is GameVersion.ZA && SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.ShowNature && !string.IsNullOrEmpty(embedData.StatNature) ? $"**Stat Nature:** {embedData.StatNature}\n" : "") +
             (SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.ShowLanguage ? $"**Language**: {embedData.Language}\n" : "") +
             (SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.ShowIVs ? $"**IVs**: {embedData.IVsDisplay}\n" : "") +
             (SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.ShowEVs && !string.IsNullOrWhiteSpace(embedData.EVsDisplay) ? $"**EVs**: {embedData.EVsDisplay}\n" : "");
@@ -132,6 +134,13 @@ public static class DetailsExtractor<T> where T : PKM, new()
 
         embedData.Ability = GetAbilityName(pk, strings);
         embedData.Nature = GetNatureName(pk, strings);
+
+        // For PLZA (PA9), extract Stat Nature if it differs from regular Nature
+        if (pk is PA9 && pk.StatNature != pk.Nature)
+        {
+            embedData.StatNature = strings.natures[(int)pk.StatNature];
+        }
+
         embedData.SpeciesName = strings.Species[pk.Species];
         embedData.SpecialSymbols = GetSpecialSymbols(pk);
         embedData.FormName = ShowdownParsing.GetStringFromForm(pk.Form, strings, pk.Species, pk.Context);
@@ -489,6 +498,9 @@ public class EmbedData
 
     /// <summary>Nature name.</summary>
     public string? Nature { get; set; }
+
+    /// <summary>Stat Nature name (for minted Natures in PLZA).</summary>
+    public string? StatNature { get; set; }
 
     /// <summary>Displayed Pokémon name (nickname or species).</summary>
     public string? PokemonDisplayName { get; set; }

@@ -88,6 +88,7 @@ public static class ForcedEncounterEnforcer
         // Only certain Natures are legal as actual Natures due to PID generation constraints
         // Other Natures can only be Stat Natures (minted)
         // Legal regular Natures: Jolly, Adamant, Brave, Docile, Hardy, Hasty, Impish, Lax, Naive, Naughty, Quirky, Rash, Sassy
+        // This section is for Toxtricity ONLY
         new Entry
         {
             Species = Species.Toxtricity,
