@@ -238,6 +238,30 @@ public static class Helpers<T> where T : PKM, new()
             });
         }
 
+        // ============================================================================
+        // DITTO METLOCATION FIX
+        // ============================================================================
+        // Fix Ditto MetLocation for game version compatibility
+        // ALM may select encounters from different games (e.g., SV location for SWSH trade)
+        // This ensures Ditto has a valid MetLocation for the target game
+        // ============================================================================
+        if (pkm.Species == 132) // Species 132 = Ditto
+        {
+            pkm.MetLocation = pkm switch
+            {
+                PB8 => 400,  // BDSP: Grand Underground
+                PK9 => 28,   // SV: South Province (Area Three)
+                _ => 162,    // PK8 (SWSH): Route 5 / Wild Area
+            };
+
+            // Revalidate after fixing MetLocation
+            var dittoLA = new LegalityAnalysis(pkm);
+            TradeExtensions<T>.TrashBytes(pkm, dittoLA);
+        }
+        // ============================================================================
+        // END OF DITTO METLOCATION FIX
+        // ============================================================================
+
         var spec = GameInfo.Strings.Species[template.Species];
 
         // Apply standard item logic only for non-eggs
