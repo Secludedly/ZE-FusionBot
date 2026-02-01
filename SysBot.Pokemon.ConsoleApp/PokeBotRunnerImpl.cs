@@ -49,7 +49,7 @@ public class PokeBotRunnerImpl<T> : PokeBotRunner<T> where T : PKM, new()
         if (string.IsNullOrWhiteSpace(config.Token))
             return;
 
-        Twitch = new TwitchBot<T>(config, Hub);
+        Twitch = new TwitchBot<T>(config, Hub.Config);
         if (config.DistributionCountDown)
             Hub.BotSync.BarrierReleasingActions.Add(() => Twitch.StartingDistribution(config.MessageStart));
     }
