@@ -37,7 +37,38 @@ namespace SysBot.Pokemon.Discord.Helpers.TradeModule
             Nature userRequestedNature = desiredNature; // Store user's requested nature for stat nature (minting)
             bool isMinted = false;
 
-            if (ForcedEncounterEnforcer.TryGetForcedNature(pk, out var forcedNature))
+            // Check for special Nature handling (e.g., Toxtricity)
+            if (ForcedEncounterEnforcer.HasSpecialNatureHandling(pk, out var randomLegalNature))
+            {
+                // Toxtricity-like Pokemon: Only certain Natures are legal as actual Natures
+                if (desiredNature != Nature.Random && !ForcedEncounterEnforcer.IsNatureLegal(pk, desiredNature))
+                {
+                    // User requested an illegal Nature - mint it as Stat Nature
+                    isMinted = true;
+                    LogUtil.LogInfo(
+                        $"{(Species)pk.Species}: Requested Nature {desiredNature} is illegal as actual Nature. Using random legal Nature {randomLegalNature} (actual) with {desiredNature} (stat nature/minted)",
+                        nameof(IVEnforcer));
+
+                    // Use random legal Nature as actual, requested as Stat Nature
+                    desiredNature = randomLegalNature;
+                }
+                else if (desiredNature == Nature.Random)
+                {
+                    // No specific Nature requested, use random legal Nature
+                    desiredNature = randomLegalNature;
+                    LogUtil.LogInfo(
+                        $"{(Species)pk.Species}: Using random legal Nature {randomLegalNature} (special Nature handling)",
+                        nameof(IVEnforcer));
+                }
+                else
+                {
+                    // User requested a legal Nature
+                    LogUtil.LogInfo(
+                        $"{(Species)pk.Species}: Using requested legal Nature {desiredNature} (special Nature handling)",
+                        nameof(IVEnforcer));
+                }
+            }
+            else if (ForcedEncounterEnforcer.TryGetForcedNature(pk, out var forcedNature))
             {
                 // Priority for StatNature when forced nature exists:
                 // 1. If user explicitly set StatNature via batch command, use that (no minting message)
@@ -79,8 +110,16 @@ namespace SysBot.Pokemon.Discord.Helpers.TradeModule
             // -----------------------------
             int[] ivs;
 
+            // Check for randomized IVs first (e.g., Magearna)
+            if (ForcedEncounterEnforcer.RequiresRandomizedIVs(pk, out var randomizedIVs))
+            {
+                ivs = randomizedIVs;
+                LogUtil.LogInfo(
+                    $"{(Species)pk.Species}: Using randomized IVs (3x31, 3x0) - {string.Join("/", ivs)}",
+                    nameof(IVEnforcer));
+            }
             // HARD OVERRIDE for static encounters
-            if (ForcedEncounterEnforcer.TryGetFixedIVs(pk, out var forcedIVs))
+            else if (ForcedEncounterEnforcer.TryGetFixedIVs(pk, out var forcedIVs))
             {
                 ivs = forcedIVs;
             }

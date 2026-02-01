@@ -40,7 +40,38 @@ namespace SysBot.Pokemon.Discord.Helpers.TradeModule
             Nature userRequestedNature = desiredNature; // Store user's requested nature for stat nature (minting)
             bool isMinted = false;
 
-            if (ForcedEncounterEnforcer.TryGetForcedNature(pkm, out var forcedNature))
+            // Check for special Nature handling (e.g., Toxtricity)
+            if (ForcedEncounterEnforcer.HasSpecialNatureHandling(pkm, out var randomLegalNature))
+            {
+                // Toxtricity-like Pokemon: Only certain Natures are legal as actual Natures
+                if (desiredNature != Nature.Random && !ForcedEncounterEnforcer.IsNatureLegal(pkm, desiredNature))
+                {
+                    // User requested an illegal Nature - mint it as Stat Nature
+                    isMinted = true;
+                    LogUtil.LogInfo(
+                        $"{(Species)pkm.Species}: Requested Nature {desiredNature} is illegal as actual Nature. Using random legal Nature {randomLegalNature} (actual) with {desiredNature} (stat nature/minted)",
+                        nameof(NatureEnforcer));
+
+                    // Use random legal Nature as actual, requested as Stat Nature
+                    desiredNature = randomLegalNature;
+                }
+                else if (desiredNature == Nature.Random)
+                {
+                    // No specific Nature requested, use random legal Nature
+                    desiredNature = randomLegalNature;
+                    LogUtil.LogInfo(
+                        $"{(Species)pkm.Species}: Using random legal Nature {randomLegalNature} (special Nature handling)",
+                        nameof(NatureEnforcer));
+                }
+                else
+                {
+                    // User requested a legal Nature
+                    LogUtil.LogInfo(
+                        $"{(Species)pkm.Species}: Using requested legal Nature {desiredNature} (special Nature handling)",
+                        nameof(NatureEnforcer));
+                }
+            }
+            else if (ForcedEncounterEnforcer.TryGetForcedNature(pkm, out var forcedNature))
             {
                 // Priority for StatNature when forced nature exists:
                 // 1. If user explicitly set Stat Nature via batch command, use that (no minting message)

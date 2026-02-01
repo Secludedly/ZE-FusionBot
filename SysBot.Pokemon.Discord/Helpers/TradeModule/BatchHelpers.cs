@@ -51,17 +51,52 @@ public static class BatchHelpers<T> where T : PKM, new()
                 // --------------------------------------------------
                 if (pk.Version == GameVersion.ZA && !pk.FatefulEncounter)
                 {
-                    if (ForcedEncounterEnforcer.TryGetForcedNature(pk, out var forcedNature))
+                    // Check if user explicitly set a different StatNature via batch command (.StatNature=)
+                    bool hasExplicitStatNature = pk.StatNature != pk.Nature;
+                    Nature explicitStatNature = hasExplicitStatNature ? pk.StatNature : Nature.Random;
+
+                    // Store user's requested nature for stat nature (minting)
+                    Nature userRequestedNature = set.Nature;
+
+                    // Check for special Nature handling (e.g., Toxtricity)
+                    if (ForcedEncounterEnforcer.HasSpecialNatureHandling(pk, out var randomLegalNature))
+                    {
+                        // Toxtricity-like Pokemon: Only certain Natures are legal as actual Natures
+                        if (userRequestedNature != Nature.Random && !ForcedEncounterEnforcer.IsNatureLegal(pk, userRequestedNature))
+                        {
+                            // User requested an illegal Nature - mint it as Stat Nature
+                            pk.Nature = randomLegalNature;
+                            pk.StatNature = hasExplicitStatNature ? explicitStatNature : userRequestedNature;
+                            LogUtil.LogInfo(
+                                $"{(Species)pk.Species}: Requested Nature {userRequestedNature} is illegal as actual Nature. Using random legal Nature {randomLegalNature} (actual) with {(hasExplicitStatNature ? explicitStatNature : userRequestedNature)} (stat nature/minted) - batch trade",
+                                nameof(BatchHelpers<T>));
+                            pk.RefreshChecksum();
+                        }
+                        else if (userRequestedNature == Nature.Random)
+                        {
+                            // No specific Nature requested, use random legal Nature
+                            pk.Nature = randomLegalNature;
+                            pk.StatNature = hasExplicitStatNature ? explicitStatNature : randomLegalNature;
+                            LogUtil.LogInfo(
+                                $"{(Species)pk.Species}: Using random legal Nature {randomLegalNature} (special Nature handling - batch trade)",
+                                nameof(BatchHelpers<T>));
+                            pk.RefreshChecksum();
+                        }
+                        else
+                        {
+                            // User requested a legal Nature
+                            pk.Nature = userRequestedNature;
+                            pk.StatNature = hasExplicitStatNature ? explicitStatNature : userRequestedNature;
+                            LogUtil.LogInfo(
+                                $"{(Species)pk.Species}: Using requested legal Nature {userRequestedNature} (special Nature handling - batch trade)",
+                                nameof(BatchHelpers<T>));
+                            pk.RefreshChecksum();
+                        }
+                    }
+                    else if (ForcedEncounterEnforcer.TryGetForcedNature(pk, out var forcedNature))
                     {
                         if (pk.Nature != forcedNature)
                         {
-                            // Check if user explicitly set a different StatNature via batch command (.StatNature=)
-                            bool hasExplicitStatNature = pk.StatNature != pk.Nature;
-                            Nature explicitStatNature = hasExplicitStatNature ? pk.StatNature : Nature.Random;
-
-                            // Store user's requested nature for stat nature (minting)
-                            Nature userRequestedNature = set.Nature;
-
                             pk.Nature = forcedNature;
 
                             // Priority for Stat Nature:

@@ -21,6 +21,11 @@ public static class ForcedEncounterEnforcer
         public byte? MetLevel { get; init; }
         public byte? Friendship { get; init; }
 
+        // Special handling flags
+        public bool IsSpecialNatureHandling { get; init; }  // For Toxtricity-like Pokemon with restricted Natures
+        public Nature[]? AllowedNatures { get; init; }      // List of legal actual Natures
+        public bool RequiresRandomizedIVs { get; init; }    // For Magearna-like Pokemon with randomized IVs
+
         // Determines if this Entry is IV-only (ignore everything else)
         public bool IVOnly => ForcedNature == null;
 
@@ -77,7 +82,32 @@ public static class ForcedEncounterEnforcer
         // Zygarde - All gennable forms (10%, 50%)
         // PKHeX form numbering as of Jan 2026: Form 2 = 10%, Form 3 = 50%, Form 4 = Complete
         new Entry { Species = Species.Zygarde, MetLevel = 84, Form = 2, Friendship = 0, Location = 212, ForcedNature = Nature.Quiet, FixedIVs = new[] { 31,31,15,19,31,28 } },
-        new Entry { Species = Species.Zygarde, MetLevel = 84, Form = 3, Friendship = 0, Location = 212, ForcedNature = Nature.Quiet, FixedIVs = new[] { 31,31,15,19,31,28 } }
+        new Entry { Species = Species.Zygarde, MetLevel = 84, Form = 3, Friendship = 0, Location = 212, ForcedNature = Nature.Quiet, FixedIVs = new[] { 31,31,15,19,31,28 } },
+
+        // Toxtricity - Special PID/Nature/Shiny correlation
+        // Only certain Natures are legal as actual Natures due to PID generation constraints
+        // Other Natures can only be Stat Natures (minted)
+        // Legal regular Natures: Jolly, Adamant, Brave, Docile, Hardy, Hasty, Impish, Lax, Naive, Naughty, Quirky, Rash, Sassy
+        new Entry
+        {
+            Species = Species.Toxtricity,
+            IsSpecialNatureHandling = true,
+            AllowedNatures = new[]
+            {
+                Nature.Jolly, Nature.Adamant, Nature.Brave, Nature.Docile, Nature.Hardy,
+                Nature.Hasty, Nature.Impish, Nature.Lax, Nature.Naive, Nature.Naughty,
+                Nature.Quirky, Nature.Rash, Nature.Sassy
+            }
+        },
+
+        // Magearna - Always Modest Nature with 3 IVs at 31 and 3 IVs at 0 (randomized positions)
+        // Shiny-locked static encounter
+        new Entry
+        {
+            Species = Species.Magearna,
+            ForcedNature = Nature.Modest,
+            RequiresRandomizedIVs = true
+        }
     };
 
     // Optional: full static entries with OT/Nickname/etc. (safety checks)
@@ -126,6 +156,95 @@ public static class ForcedEncounterEnforcer
 
         forcedNature = Nature.Random;
         return false;
+    }
+
+    /// <summary>
+    /// Checks if a Pokemon has special Nature handling (like Toxtricity) and returns a random legal Nature
+    /// </summary>
+    public static bool HasSpecialNatureHandling(PKM pkm, out Nature randomLegalNature)
+    {
+        var entry = IVNatureEntries.Concat(StrictEntries)
+                                   .FirstOrDefault(e => e.Matches(pkm));
+
+        if (entry != null && entry.IsSpecialNatureHandling && entry.AllowedNatures != null && entry.AllowedNatures.Length > 0)
+        {
+            // Return a random legal Nature from the allowed list
+            var random = new Random();
+            randomLegalNature = entry.AllowedNatures[random.Next(entry.AllowedNatures.Length)];
+            return true;
+        }
+
+        randomLegalNature = Nature.Random;
+        return false;
+    }
+
+    /// <summary>
+    /// Checks if a requested Nature is legal for a Pokemon with special Nature handling
+    /// </summary>
+    public static bool IsNatureLegal(PKM pkm, Nature requestedNature)
+    {
+        var entry = IVNatureEntries.Concat(StrictEntries)
+                                   .FirstOrDefault(e => e.Matches(pkm));
+
+        if (entry != null && entry.IsSpecialNatureHandling && entry.AllowedNatures != null)
+        {
+            return entry.AllowedNatures.Contains(requestedNature);
+        }
+
+        // If no special handling, all Natures are legal
+        return true;
+    }
+
+    /// <summary>
+    /// Checks if a Pokemon requires randomized IVs (like Magearna) and returns the IVs
+    /// </summary>
+    public static bool RequiresRandomizedIVs(PKM pkm, out int[] randomizedIVs)
+    {
+        var entry = IVNatureEntries.Concat(StrictEntries)
+                                   .FirstOrDefault(e => e.Matches(pkm));
+
+        if (entry != null && entry.RequiresRandomizedIVs)
+        {
+            // Generate 3 IVs at 31 and 3 IVs at 0, randomized positions
+            randomizedIVs = GenerateRandomizedIVs();
+            return true;
+        }
+
+        randomizedIVs = Array.Empty<int>();
+        return false;
+    }
+
+    /// <summary>
+    /// Generates randomized IVs: 3 IVs at 31 and 3 IVs at 0 (randomized positions)
+    /// </summary>
+    private static int[] GenerateRandomizedIVs()
+    {
+        var random = new Random();
+        var ivs = new int[6];
+
+        // Create a list of indices (0-5)
+        var indices = Enumerable.Range(0, 6).ToList();
+
+        // Shuffle the indices
+        for (int i = indices.Count - 1; i > 0; i--)
+        {
+            int j = random.Next(i + 1);
+            (indices[i], indices[j]) = (indices[j], indices[i]);
+        }
+
+        // Set first 3 shuffled positions to 31
+        for (int i = 0; i < 3; i++)
+        {
+            ivs[indices[i]] = 31;
+        }
+
+        // Set last 3 shuffled positions to 0
+        for (int i = 3; i < 6; i++)
+        {
+            ivs[indices[i]] = 0;
+        }
+
+        return ivs;
     }
 
     /// <summary>
