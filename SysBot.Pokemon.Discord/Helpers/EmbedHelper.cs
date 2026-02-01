@@ -204,7 +204,7 @@ public static class EmbedHelper
 
             if (isMysteryEgg)
             {
-                thumbnailUrl = "https://raw.githubusercontent.com/hexbyt3/sprites/main/mysteryegg3.png";
+                thumbnailUrl = "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/mysteryegg3.png";
             }
             else
             {

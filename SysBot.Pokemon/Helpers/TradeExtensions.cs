@@ -313,20 +313,20 @@ public abstract class TradeExtensions<T> where T : PKM, new()
 
         if (fullSize)
         {
-            baseLink = "https://raw.githubusercontent.com/hexbyt3/HomeImages/master/512x512/poke_capture_0001_000_mf_n_00000000_f_n.png".Split('_');
+            baseLink = "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-HOME-Images/master/512x512/poke_capture_0001_000_mf_n_00000000_f_n.png".Split('_');
         }
         else if (preferredImageSize.HasValue)
         {
             baseLink = preferredImageSize.Value switch
             {
-                ImageSize.Size256x256 => "https://raw.githubusercontent.com/hexbyt3/HomeImages/master/256x256/poke_capture_0001_000_mf_n_00000000_f_n.png".Split('_'),
-                ImageSize.Size128x128 => "https://raw.githubusercontent.com/hexbyt3/HomeImages/master/128x128/poke_capture_0001_000_mf_n_00000000_f_n.png".Split('_'),
-                _ => "https://raw.githubusercontent.com/hexbyt3/HomeImages/master/256x256/poke_capture_0001_000_mf_n_00000000_f_n.png".Split('_'),
+                ImageSize.Size256x256 => "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-HOME-Images/master/256x256/poke_capture_0001_000_mf_n_00000000_f_n.png".Split('_'),
+                ImageSize.Size128x128 => "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-HOME-Images/master/128x128/poke_capture_0001_000_mf_n_00000000_f_n.png".Split('_'),
+                _ => "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-HOME-Images/master/256x256/poke_capture_0001_000_mf_n_00000000_f_n.png".Split('_'),
             };
         }
         else
         {
-            baseLink = "https://raw.githubusercontent.com/hexbyt3/HomeImages/master/256x256/poke_capture_0001_000_mf_n_00000000_f_n.png".Split('_');
+            baseLink = "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-HOME-Images/master/256x256/poke_capture_0001_000_mf_n_00000000_f_n.png".Split('_');
         }
 
         if (Enum.IsDefined(typeof(GenderDependent), pkm.Species) && !canGmax && pkm.Form is 0)
@@ -364,7 +364,7 @@ public abstract class TradeExtensions<T> where T : PKM, new()
 
             string s = pkm.IsShiny ? "r" : "n";
             string g = md && pkm.Gender is not 1 ? "md" : "fd";
-            return "https://raw.githubusercontent.com/hexbyt3/HomeImages/master/256x256/poke_capture_0" + $"{pkm.Species}" + "_00" + $"{pkm.Form}" + "_" + $"{g}" + "_n_00000000_f_" + $"{s}" + ".png";
+            return "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-HOME-Images/master/256x256/poke_capture_0" + $"{pkm.Species}" + "_00" + $"{pkm.Form}" + "_" + $"{g}" + "_n_00000000_f_" + $"{s}" + ".png";
         }
 
         baseLink[2] = pkm.Species < 10 ? $"000{pkm.Species}" : pkm.Species < 100 && pkm.Species > 9 ? $"00{pkm.Species}" : pkm.Species >= 1000 ? $"{pkm.Species}" : $"0{pkm.Species}";

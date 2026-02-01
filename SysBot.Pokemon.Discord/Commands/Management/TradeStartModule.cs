@@ -105,7 +105,7 @@ public class TradeStartModule<T> : ModuleBase<SocketCommandContext> where T : PK
                 : "";
 
             string ballImgUrl =
-                "https://raw.githubusercontent.com/hexbyt3/sprites/36e891cc02fe283cd70d9fc8fef2f3c490096d6c/imgs/difficulty.png";
+                "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/dm-uhoherror.gif";
 
             if (detail.TradeData != null &&
                 detail.Type is not (PokeTradeType.Clone or PokeTradeType.Dump or PokeTradeType.Seed or PokeTradeType.FixOT))
@@ -120,7 +120,7 @@ public class TradeStartModule<T> : ModuleBase<SocketCommandContext> where T : PK
                     : (ballName.Contains("(la)") ? "la" + ballName : ballName);
 
                 ballImgUrl =
-                    $"https://raw.githubusercontent.com/hexbyt3/sprites/main/AltBallImg/28x28/{ballName}.png";
+                    $"https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/AltBallImg/28x28/{ballName}.png";
             }
 
             string tradeTitle = detail.IsMysteryEgg
@@ -135,7 +135,7 @@ public class TradeStartModule<T> : ModuleBase<SocketCommandContext> where T : PK
                 };
 
             string embedImageUrl = detail.IsMysteryEgg
-                ? "https://raw.githubusercontent.com/hexbyt3/sprites/main/mysteryegg3.png"
+                ? "https://raw.githubusercontent.com/Secludedly/sprites/main/mysteryegg3.png"
                 : detail.Type switch
                 {
                     PokeTradeType.Clone => "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/Cloning.png",

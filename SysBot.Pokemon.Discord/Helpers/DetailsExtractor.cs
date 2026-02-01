@@ -84,7 +84,7 @@ public static class DetailsExtractor<T> where T : PKM, new()
     {
         if (isCloneRequest || isSpecialRequest)
         {
-            embedBuilder.WithThumbnailUrl("https://raw.githubusercontent.com/hexbyt3/sprites/main/profoak.png");
+            embedBuilder.WithThumbnailUrl("https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/profoak.png");
         }
         else if (!string.IsNullOrEmpty(heldItemUrl))
         {
