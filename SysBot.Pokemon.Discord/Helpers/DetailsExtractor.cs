@@ -237,29 +237,26 @@ public static class DetailsExtractor<T> where T : PKM, new()
             userDetailsText += $"Total User Trades: {totalTradeCount} | Medals: {totalMedals}\n";
         }
 
-        // First trade — no record exists yet
-        if (tradeDetails == null)
-        {
-            userDetailsText += "First Trade, No Trainer Info Saved.";
-            return userDetailsText;
-        }
-
         // Display trainer info if storage enabled
         if (SysCord<T>.Runner.Config.Trade.TradeConfiguration.StoreTradeCodes)
         {
             List<string> trainerParts = new();
 
-            if (!string.IsNullOrEmpty(tradeDetails.OT))
-                trainerParts.Add($"OT: {tradeDetails.OT}");
+            // Only populate trainer parts if tradeDetails exists
+            if (tradeDetails != null)
+            {
+                if (!string.IsNullOrEmpty(tradeDetails.OT))
+                    trainerParts.Add($"OT: {tradeDetails.OT}");
 
-            if (tradeDetails.TID > 0)
-                trainerParts.Add($"TID: {tradeDetails.TID}");
+                if (tradeDetails.TID > 0)
+                    trainerParts.Add($"TID: {tradeDetails.TID}");
 
-            // SID is no longer force-rejected, we just show it if it exists
-            if (tradeDetails.SID > 0)
-                trainerParts.Add($"SID: {tradeDetails.SID}");
+                // SID is no longer force-rejected, we just show it if it exists
+                if (tradeDetails.SID > 0)
+                    trainerParts.Add($"SID: {tradeDetails.SID}");
+            }
 
-            // If user exists but no trainer fields are populated
+            // If no trainer info available (null or empty)
             if (trainerParts.Count == 0)
                 trainerParts.Add("Trainer Info Not Yet Recorded");
 
