@@ -141,7 +141,7 @@ public abstract class TradeExtensions<T> where T : PKM, new()
         }
     }
 
-    public static void DittoTrade(PKM pkm)
+    public static T DittoTrade(PKM pkm)
     {
         var dittoStats = new string[] { "atk", "spe", "spa" };
         var nickname = pkm.Nickname.ToLower();
@@ -172,7 +172,7 @@ public abstract class TradeExtensions<T> where T : PKM, new()
 
         // Create LA once and pass to TrashBytes to reuse it
         var la = new LegalityAnalysis(pkm);
-        TrashBytes(pkm, la);
+        return (T)TrashBytes(pkm, la); // Return the modified Pokemon
     }
 
     public static string FormOutput(ushort species, byte form, out string[] formString)

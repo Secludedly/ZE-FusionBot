@@ -244,19 +244,30 @@ public static class Helpers<T> where T : PKM, new()
         // Fix Ditto MetLocation for game version compatibility
         // ALM may select encounters from different games (e.g., SV location for SWSH trade)
         // This ensures Ditto has a valid MetLocation for the target game
+        // Only apply the fix if Ditto is currently invalid to avoid overriding correct locations
         // ============================================================================
         if (pkm.Species == 132) // Species 132 = Ditto
         {
-            pkm.MetLocation = pkm switch
+            var initialDittoLA = new LegalityAnalysis(pkm);
+            if (!initialDittoLA.Valid)
             {
-                PB8 => 400,  // BDSP: Grand Underground
-                PK9 => 28,   // SV: South Province (Area Three)
-                _ => 162,    // PK8 (SWSH): Route 5 / Wild Area
-            };
+                // Ditto is invalid, try to fix MetLocation
+                pkm.MetLocation = pkm switch
+                {
+                    PB8 => 400,  // BDSP: Grand Underground
+                    PK9 => 28,   // SV: South Province (Area Three)
+                    _ => 162,    // PK8 (SWSH): Route 5 / Wild Area
+                };
 
-            // Revalidate after fixing MetLocation
-            var dittoLA = new LegalityAnalysis(pkm);
-            TradeExtensions<T>.TrashBytes(pkm, dittoLA);
+                // Revalidate after fixing MetLocation and apply trash bytes fix
+                var dittoLA = new LegalityAnalysis(pkm);
+                pkm = (T)TradeExtensions<T>.TrashBytes(pkm, dittoLA); // CRITICAL: Assign result back!
+            }
+            else
+            {
+                // Ditto is already valid, just apply trash bytes without changing MetLocation
+                pkm = (T)TradeExtensions<T>.TrashBytes(pkm, initialDittoLA);
+            }
         }
         // ============================================================================
         // END OF DITTO METLOCATION FIX
