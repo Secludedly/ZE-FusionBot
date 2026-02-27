@@ -95,7 +95,10 @@ public static class AutoLegalityWrapper
         var fallback = GetDefaultTrainer(cfg);
         for (byte generation = 1; generation <= GameUtil.get_Generation(GameVersion.Gen9); generation++)
         {
-            var versions = GameUtil.GetVersionsInGeneration(generation, GameVersion.Any);
+            // Convert generation -> GameVersion, then -> EntityContext, since GetVersionsInGeneration expects an EntityContext.
+            var gameVersionForGen = GameUtil.GetVersion(generation);
+            var context = GameUtil.GetContextFromSaved(gameVersionForGen);
+            var versions = GameUtil.GetVersionsInGeneration(context, GameVersion.Any);
             foreach (var version in versions)
                 RegisterIfNoneExist(fallback, generation, version);
         }
@@ -197,7 +200,13 @@ public static class AutoLegalityWrapper
 
     public static ITrainerInfo GetTrainerInfo(byte gen)
     {
-        var trainerInfo = TrainerSettings.GetSavedTrainerData(gen);
+        // Convert generation (byte) to a representative GameVersion.
+        // GameUtil.GetVersion(byte) is used elsewhere in this file and returns a GameVersion for a generation.
+        var version = GameUtil.GetVersion(gen);
+
+        // Fetch saved trainer data using the GameVersion overload (correct type).
+        var trainerInfo = TrainerSettings.GetSavedTrainerData(version);
+
         // NET10 Fix: Force override ALM's internal defaults with our configured values
         return OverrideALMDefaults(trainerInfo);
     }

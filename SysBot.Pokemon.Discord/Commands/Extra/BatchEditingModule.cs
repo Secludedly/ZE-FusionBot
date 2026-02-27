@@ -15,7 +15,7 @@ public class BatchEditingModule : ModuleBase<SocketCommandContext>
     [Summary("Tries to get info about the requested property.")]
     public async Task GetBatchInfo(string propertyName)
     {
-        if (BatchEditing.TryGetPropertyType(propertyName, out string? result))
+        if (TryGetPropertyInfo(propertyName, out string? result))
             await ReplyAsync($"{propertyName}: {result}").ConfigureAwait(false);
         else
             await ReplyAsync($"Unable to find info for {propertyName}.").ConfigureAwait(false);
@@ -45,9 +45,40 @@ public class BatchEditingModule : ModuleBase<SocketCommandContext>
         var set = new StringInstructionSet(split);
         foreach (var s in set.Filters.Concat(set.Instructions))
         {
-            if (!BatchEditing.TryGetPropertyType(s.PropertyName, out string? _))
+            if (!TryGetPropertyInfo(s.PropertyName, out string? _))
                 invalid.Add(s);
         }
         return invalid.Count == 0;
+    }
+
+    private static bool TryGetPropertyInfo(string propertyName, out string? result)
+    {
+        result = null;
+        try
+        {
+            // Use reflection to check if property exists on common PKM types
+            var pk = new PA9(); // Use Z-A as the most recent generation
+            var prop = pk.GetType().GetProperty(propertyName);
+
+            if (prop != null)
+            {
+                result = prop.PropertyType.Name;
+                return true;
+            }
+
+            // If not found on PA9, try PKM base type
+            prop = typeof(PKM).GetProperty(propertyName);
+            if (prop != null)
+            {
+                result = prop.PropertyType.Name;
+                return true;
+            }
+
+            return false;
+        }
+        catch
+        {
+            return false;
+        }
     }
 }
