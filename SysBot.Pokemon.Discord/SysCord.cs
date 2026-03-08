@@ -688,6 +688,11 @@ public sealed partial class SysCord<T> where T : PKM, new()
                 return;
             }
 
+            if (msg.Attachments.Count > 0)
+            {
+                await TryHandleAttachmentAsync(msg).ConfigureAwait(false);
+            }
+
             char[] allowedPrefixes = new[]
             {
     '$', '!', '.', '=', '%', '~', '-', '+', ',', '/', '?', '*', '^',
