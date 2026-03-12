@@ -123,6 +123,14 @@ public static class AutoLegalityWrapper
         return fallback;
     }
 
+    public static SimpleTrainerInfo GetFallbackTrainer()
+    {
+        if (ConfiguredSettings == null)
+            throw new InvalidOperationException("AutoLegalityWrapper has not been initialized. Call EnsureInitialized first.");
+
+        return GetDefaultTrainer(ConfiguredSettings);
+    }
+
     private static void RegisterIfNoneExist(SimpleTrainerInfo fallback, byte generation, GameVersion version)
     {
         fallback = new SimpleTrainerInfo(version)
@@ -295,10 +303,21 @@ public static class AutoLegalityWrapper
                 if (set.Shiny && !pk.IsShiny)
                 {
                     // Pokemon should be shiny but isn't - force it to be shiny
-                    // Use Square shiny (XOR = 0) for SWSH/SV, regular shiny for others
-                    var desiredXor = pk is PK8 or PK9 ? 0 : 1;
+                    // Max Lair (MetLocation=244) REQUIRES Star shiny (XOR=1), never Square (XOR=0)
+                    // Square shiny at MetLocation=244 is flagged invalid by PKHeX
+                    var desiredXor = pk is PK8 pk8ForceShiny && pk8ForceShiny.MetLocation == 244
+                        ? 1  // Max Lair: always Star shiny
+                        : pk is PK8 or PK9 ? 0 : 1;
                     pk.PID = (uint)((pk.TID16 ^ pk.SID16 ^ (pk.PID & 0xFFFF) ^ desiredXor) << 16) | (pk.PID & 0xFFFF);
                     pk.RefreshChecksum();
+                }
+
+                // Fix Square shiny at Max Lair: PKHeX requires Star shiny (ShinyXor 1-15) for MetLocation=244
+                // ALM may generate Square shiny (ShinyXor=0) which PKHeX flags as invalid for Dynamax Adventures
+                if (pk is PK8 pk8MaxLair && pk8MaxLair.MetLocation == 244 && pk8MaxLair.IsShiny && pk8MaxLair.ShinyXor == 0)
+                {
+                    pk8MaxLair.PID ^= 0x10000u; // Flip bit 16: ShinyXor 0 → 1 (Square → Star)
+                    pk8MaxLair.RefreshChecksum();
                 }
             }
 
