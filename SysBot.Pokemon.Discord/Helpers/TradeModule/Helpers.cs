@@ -123,33 +123,10 @@ public static class Helpers<T> where T : PKM, new()
         }
     }
 
-    public static Task<ProcessedPokemonResult<T>> ProcessShowdownSetAsync(string content, bool ignoreAutoOT = false, IEnumerable<string>? userRoles = null)
+    public static Task<ProcessedPokemonResult<T>> ProcessShowdownSetAsync(string content, bool ignoreAutoOT = false)
     {
         content = ReusableActions.StripCodeBlock(content);
         bool isEgg = TradeExtensions<T>.IsEggCheck(content);
-
-        // Check role-based permissions for Batch Commands and Trainer Data Override
-        bool canUseBatchCommands = true;
-        bool canOverrideTrainerData = true;
-
-        if (userRoles != null && SysCordSettings.Manager != null)
-        {
-            canUseBatchCommands = SysCordSettings.Manager.GetHasRoleAccess(nameof(DiscordManager.RolesUseBatchCommands), userRoles);
-            canOverrideTrainerData = SysCordSettings.Manager.GetHasRoleAccess(nameof(DiscordManager.RolesAutoOT), userRoles);
-        }
-
-        // IMPORTANT: Remove trainer data overrides FIRST, then other batch commands
-        // If user doesn't have permission for Trainer Data Override, remove them from content
-        if (!canOverrideTrainerData && ContainsTrainerDataOverride(content))
-        {
-            content = RemoveTrainerDataOverrides(content);
-        }
-
-        // If user doesn't have permission for Batch Commands, remove NON-TRAINER batch commands from content
-        if (!canUseBatchCommands && ContainsBatchCommands(content))
-        {
-            content = RemoveNonTrainerBatchCommands(content);
-        }
 
         // CRITICAL FIX: Extract language BEFORE parsing ShowdownSet
         // If we let PKHeX see "Language: German", it includes it in the template
@@ -992,135 +969,9 @@ public static class Helpers<T> where T : PKM, new()
 
         // Past gen file fix is now handled in ProcessShowdownSetAsync before this point
 
-        // Check if user has permission to use AutoOT (ALWAYS check, regardless of ignoreAutoOT value)
-        if (SysCordSettings.Manager != null)
-        {
-            if (context.User is SocketGuildUser gUser)
-            {
-                var roles = gUser.Roles.Select(z => z.Name);
-                bool hasAutoOTRole = SysCordSettings.Manager.GetHasRoleAccess(nameof(DiscordManager.RolesAutoOT), roles);
-                if (!hasAutoOTRole)
-                {
-                    // User doesn't have AutoOT permission, force ignoreAutoOT to true
-                    ignoreAutoOT = true;
-                }
-            }
-        }
-
         await QueueHelper<T>.AddToQueueAsync(context, code, trainerName, sig, pk!, PokeRoutineType.LinkTrade,
             tradeType, usr, isBatchTrade, batchTradeNumber, totalBatchTrades, isHiddenTrade, isMysteryEgg,
             lgcode: lgcode, ignoreAutoOT: ignoreAutoOT, setEdited: setEdited, isNonNative: isNonNative).ConfigureAwait(false);
     }
 
-    public static bool ContainsBatchCommands(string content)
-    {
-        // Check for ANY batch command patterns (not trainer-specific)
-        return content.Contains('.') &&
-               (content.Contains('=') || content.Contains("++") || content.Contains("--"));
-    }
-
-    public static bool ContainsTrainerDataOverride(string content)
-    {
-        // Check if the original content contains trainer data overrides (Showdown style OR Batch commands)
-        return content.Contains("OT:", StringComparison.OrdinalIgnoreCase) ||
-               content.Contains("TID:", StringComparison.OrdinalIgnoreCase) ||
-               content.Contains("SID:", StringComparison.OrdinalIgnoreCase) ||
-               content.Contains("OTGender:", StringComparison.OrdinalIgnoreCase) ||
-               content.Contains(".OriginalTrainerName=", StringComparison.OrdinalIgnoreCase) ||
-               content.Contains(".TrainerTID7=", StringComparison.OrdinalIgnoreCase) ||
-               content.Contains(".TrainerID7=", StringComparison.OrdinalIgnoreCase) ||
-               content.Contains(".DisplayTID=", StringComparison.OrdinalIgnoreCase) ||
-               content.Contains(".TrainerSID7=", StringComparison.OrdinalIgnoreCase) ||
-               content.Contains(".DisplaySID=", StringComparison.OrdinalIgnoreCase) ||
-               content.Contains(".OriginalTrainerGender=", StringComparison.OrdinalIgnoreCase) ||
-               content.Contains(".TID16=", StringComparison.OrdinalIgnoreCase) ||
-               content.Contains(".SID16=", StringComparison.OrdinalIgnoreCase);
-    }
-
-    public static string RemoveBatchCommands(string content)
-    {
-        var lines = content.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-        var filteredLines = new List<string>();
-
-        foreach (var line in lines)
-        {
-            // Remove ALL batch command lines (lines starting with .)
-            var trimmed = line.Trim();
-            if (!trimmed.StartsWith('.'))
-            {
-                filteredLines.Add(line);
-            }
-        }
-
-        return string.Join(Environment.NewLine, filteredLines);
-    }
-
-    public static string RemoveNonTrainerBatchCommands(string content)
-    {
-        var lines = content.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-        var filteredLines = new List<string>();
-
-        foreach (var line in lines)
-        {
-            var trimmed = line.Trim();
-
-            // If it's a batch command line (starts with .)
-            if (trimmed.StartsWith('.'))
-            {
-                // Keep ONLY trainer-related batch commands, remove everything else
-                if (trimmed.StartsWith(".OriginalTrainerName=", StringComparison.OrdinalIgnoreCase) ||
-                    trimmed.StartsWith(".TrainerTID7=", StringComparison.OrdinalIgnoreCase) ||
-                    trimmed.StartsWith(".TrainerID7=", StringComparison.OrdinalIgnoreCase) ||
-                    trimmed.StartsWith(".DisplayTID=", StringComparison.OrdinalIgnoreCase) ||
-                    trimmed.StartsWith(".TrainerSID7=", StringComparison.OrdinalIgnoreCase) ||
-                    trimmed.StartsWith(".DisplaySID=", StringComparison.OrdinalIgnoreCase) ||
-                    trimmed.StartsWith(".OriginalTrainerGender=", StringComparison.OrdinalIgnoreCase) ||
-                    trimmed.StartsWith(".TID16=", StringComparison.OrdinalIgnoreCase) ||
-                    trimmed.StartsWith(".SID16=", StringComparison.OrdinalIgnoreCase))
-                {
-                    // This is a trainer-related command, keep it
-                    filteredLines.Add(line);
-                }
-                // else: skip this line (it's a non-trainer batch command)
-            }
-            else
-            {
-                // Not a batch command, keep it
-                filteredLines.Add(line);
-            }
-        }
-
-        return string.Join(Environment.NewLine, filteredLines);
-    }
-
-    public static string RemoveTrainerDataOverrides(string content)
-    {
-        var lines = content.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-        var filteredLines = new List<string>();
-
-        foreach (var line in lines)
-        {
-            var trimmed = line.Trim();
-
-            // Remove lines that contain trainer data overrides (both Showdown style and Batch commands)
-            if (!(trimmed.StartsWith("OT:", StringComparison.OrdinalIgnoreCase) ||
-                  trimmed.StartsWith("TID:", StringComparison.OrdinalIgnoreCase) ||
-                  trimmed.StartsWith("SID:", StringComparison.OrdinalIgnoreCase) ||
-                  trimmed.StartsWith("OTGender:", StringComparison.OrdinalIgnoreCase) ||
-                  trimmed.StartsWith(".OriginalTrainerName=", StringComparison.OrdinalIgnoreCase) ||
-                  trimmed.StartsWith(".TrainerTID7=", StringComparison.OrdinalIgnoreCase) ||
-                  trimmed.StartsWith(".TrainerID7=", StringComparison.OrdinalIgnoreCase) ||
-                  trimmed.StartsWith(".DisplayTID=", StringComparison.OrdinalIgnoreCase) ||
-                  trimmed.StartsWith(".TrainerSID7=", StringComparison.OrdinalIgnoreCase) ||
-                  trimmed.StartsWith(".DisplaySID=", StringComparison.OrdinalIgnoreCase) ||
-                  trimmed.StartsWith(".OriginalTrainerGender=", StringComparison.OrdinalIgnoreCase) ||
-                  trimmed.StartsWith(".TID16=", StringComparison.OrdinalIgnoreCase) ||
-                  trimmed.StartsWith(".SID16=", StringComparison.OrdinalIgnoreCase)))
-            {
-                filteredLines.Add(line);
-            }
-        }
-
-        return string.Join(Environment.NewLine, filteredLines);
-    }
 }
