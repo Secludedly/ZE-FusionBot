@@ -90,7 +90,7 @@ namespace SysBot.Pokemon.WinForms
             panelLeftSide.Dock = DockStyle.Left;
             panelLeftSide.Location = new Point(0, 0);
             panelLeftSide.Name = "panelLeftSide";
-            panelLeftSide.Size = new Size(220, 422);
+            panelLeftSide.Size = new Size(220, 447);
             panelLeftSide.TabIndex = 0;
             // 
             // btnLogs
@@ -230,7 +230,7 @@ namespace SysBot.Pokemon.WinForms
             lblTitle.BackColor = Color.Transparent;
             lblTitle.Font = new Font("Bahnschrift", 7.20000029F, FontStyle.Regular, GraphicsUnit.Point, 0);
             lblTitle.ForeColor = Color.Gainsboro;
-            lblTitle.Location = new Point(-1, 390);
+            lblTitle.Location = new Point(-1, 405);
             lblTitle.Margin = new Padding(0);
             lblTitle.Name = "lblTitle";
             lblTitle.Size = new Size(220, 32);
@@ -260,19 +260,19 @@ namespace SysBot.Pokemon.WinForms
             panelTitleBar.Dock = DockStyle.Top;
             panelTitleBar.Location = new Point(220, 0);
             panelTitleBar.Name = "panelTitleBar";
-            panelTitleBar.Size = new Size(580, 58);
+            panelTitleBar.Size = new Size(721, 58);
             panelTitleBar.TabIndex = 1;
             // 
             // btnClose
             // 
             btnClose.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnClose.BackColor = Color.FromArgb(31, 30, 68);
+            btnClose.BackColor = Color.Transparent;
             btnClose.ForeColor = Color.IndianRed;
             btnClose.IconChar = IconChar.Close;
             btnClose.IconColor = Color.IndianRed;
             btnClose.IconFont = IconFont.Auto;
             btnClose.IconSize = 20;
-            btnClose.Location = new Point(556, 6);
+            btnClose.Location = new Point(697, 6);
             btnClose.Name = "btnClose";
             btnClose.Size = new Size(20, 22);
             btnClose.TabIndex = 4;
@@ -281,12 +281,12 @@ namespace SysBot.Pokemon.WinForms
             // btnMaximize
             // 
             btnMaximize.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnMaximize.BackColor = Color.FromArgb(31, 30, 68);
+            btnMaximize.BackColor = Color.Transparent;
             btnMaximize.IconChar = IconChar.WindowMaximize;
             btnMaximize.IconColor = Color.White;
             btnMaximize.IconFont = IconFont.Auto;
             btnMaximize.IconSize = 20;
-            btnMaximize.Location = new Point(537, 6);
+            btnMaximize.Location = new Point(678, 6);
             btnMaximize.Name = "btnMaximize";
             btnMaximize.Size = new Size(20, 22);
             btnMaximize.TabIndex = 3;
@@ -295,12 +295,12 @@ namespace SysBot.Pokemon.WinForms
             // btnMinimize
             // 
             btnMinimize.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnMinimize.BackColor = Color.FromArgb(31, 30, 68);
+            btnMinimize.BackColor = Color.Transparent;
             btnMinimize.IconChar = IconChar.WindowMinimize;
             btnMinimize.IconColor = Color.White;
             btnMinimize.IconFont = IconFont.Auto;
             btnMinimize.IconSize = 20;
-            btnMinimize.Location = new Point(518, 6);
+            btnMinimize.Location = new Point(659, 6);
             btnMinimize.Name = "btnMinimize";
             btnMinimize.Size = new Size(20, 22);
             btnMinimize.TabIndex = 2;
@@ -332,7 +332,7 @@ namespace SysBot.Pokemon.WinForms
             // 
             // upperPanelImage
             // 
-            upperPanelImage.Location = new Point(597, 5);
+            upperPanelImage.Location = new Point(728, 5);
             upperPanelImage.Name = "upperPanelImage";
             upperPanelImage.Size = new Size(100, 50);
             upperPanelImage.TabIndex = 0;
@@ -344,7 +344,7 @@ namespace SysBot.Pokemon.WinForms
             shadowPanelTop.Dock = DockStyle.Top;
             shadowPanelTop.Location = new Point(220, 58);
             shadowPanelTop.Name = "shadowPanelTop";
-            shadowPanelTop.Size = new Size(580, 6);
+            shadowPanelTop.Size = new Size(721, 6);
             shadowPanelTop.TabIndex = 2;
             // 
             // shadowPanelLeft
@@ -353,7 +353,7 @@ namespace SysBot.Pokemon.WinForms
             shadowPanelLeft.Dock = DockStyle.Left;
             shadowPanelLeft.Location = new Point(220, 64);
             shadowPanelLeft.Name = "shadowPanelLeft";
-            shadowPanelLeft.Size = new Size(6, 358);
+            shadowPanelLeft.Size = new Size(6, 383);
             shadowPanelLeft.TabIndex = 3;
             // 
             // panelMain
@@ -364,32 +364,31 @@ namespace SysBot.Pokemon.WinForms
             panelMain.Dock = DockStyle.Fill;
             panelMain.Location = new Point(226, 64);
             panelMain.Name = "panelMain";
-            panelMain.Size = new Size(574, 358);
+            panelMain.Size = new Size(715, 383);
             panelMain.TabIndex = 4;
             // 
             // panel2
             // 
             panel2.BackColor = Color.FromArgb(20, 19, 57);
             panel2.Dock = DockStyle.Bottom;
-            panel2.Location = new Point(0, 352);
+            panel2.Location = new Point(0, 377);
             panel2.Name = "panel2";
-            panel2.Size = new Size(568, 6);
+            panel2.Size = new Size(709, 6);
             panel2.TabIndex = 3;
             // 
             // panel1
             // 
             panel1.BackColor = Color.FromArgb(20, 19, 57);
             panel1.Dock = DockStyle.Right;
-            panel1.Location = new Point(568, 0);
+            panel1.Location = new Point(709, 0);
             panel1.Name = "panel1";
-            panel1.Size = new Size(6, 358);
+            panel1.Size = new Size(6, 383);
             panel1.TabIndex = 4;
             // 
             // Main
             // 
-            AutoScaleDimensions = new SizeF(8F, 20F);
-            AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(800, 422);
+            AutoScaleMode = AutoScaleMode.None;
+            ClientSize = new Size(941, 447);
             Controls.Add(panelMain);
             Controls.Add(shadowPanelLeft);
             Controls.Add(shadowPanelTop);

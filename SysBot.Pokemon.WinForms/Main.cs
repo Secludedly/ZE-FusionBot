@@ -222,8 +222,7 @@ namespace SysBot.Pokemon.WinForms
             this.DoubleBuffered = true;                                        // Enable double buffering to reduce flickering
             this.SetStyle(ControlStyles.ResizeRedraw, true);                   // Redraw on resize
             this.MaximizedBounds = Screen.FromHandle(this.Handle).WorkingArea; // Set the maximized bounds to the working area of the screen
-            this.AutoScaleMode = AutoScaleMode.Dpi;                            // Set auto scale mode to DPI
-            this.AutoScaleDimensions = new SizeF(96F, 96F);                    // Set auto scale dimensions to 96 DPI
+            this.AutoScaleMode = AutoScaleMode.None;
 
 
             // Handlers for the Close/Maximize/Minimize buttons
@@ -893,7 +892,7 @@ namespace SysBot.Pokemon.WinForms
                               - panelTitleBar.Padding.Right;
 
             int centerX = panelTitleBar.Padding.Left
-                          + (usableWidth - upperPanelImage.Width) / 1;
+                          + (usableWidth - upperPanelImage.Width) / 1 - 30;
 
             upperPanelImage.Location = new Point(centerX, 0);
         }

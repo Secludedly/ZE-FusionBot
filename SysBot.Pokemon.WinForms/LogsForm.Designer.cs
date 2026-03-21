@@ -32,8 +32,7 @@ namespace SysBot.Pokemon.WinForms
             // 
             // LogsForm
             // 
-            AutoScaleDimensions = new System.Drawing.SizeF(8F, 20F);
-            AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            AutoScaleMode = System.Windows.Forms.AutoScaleMode.None;
             BackColor = System.Drawing.Color.FromArgb(23, 22, 60);
             ClientSize = new System.Drawing.Size(739, 305);
             ForeColor = System.Drawing.Color.White;

@@ -65,8 +65,7 @@ namespace SysBot.Pokemon.WinForms
 
         public BotsForm()
         {
-            AutoScaleMode = AutoScaleMode.Dpi;
-            AutoScaleDimensions = new SizeF(96, 96); 
+            AutoScaleMode = AutoScaleMode.None;
             InitializeControls();
             _isInitializing = true;
             LoadGameModeFromConfig();

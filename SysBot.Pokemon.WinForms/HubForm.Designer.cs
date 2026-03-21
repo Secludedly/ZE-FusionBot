@@ -60,8 +60,7 @@ namespace SysBot.Pokemon.WinForms
             // 
             // HubForm
             // 
-            AutoScaleDimensions = new SizeF(8F, 20F);
-            AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            AutoScaleMode = System.Windows.Forms.AutoScaleMode.None;
             BackColor = Color.FromArgb(23, 22, 60);
             ClientSize = new Size(739, 305);
             Controls.Add(PG_Hub);
