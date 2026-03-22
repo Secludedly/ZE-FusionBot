@@ -174,7 +174,21 @@ public class TradeStartModule<T> : ModuleBase<SocketCommandContext> where T : PK
                 .WithFooter($"{footerText}\u200B", ballImgUrl)
                 .Build();
 
-            await c.SendMessageAsync(embed: embed).ConfigureAwait(false);
+            try
+            {
+                await c.SendMessageAsync(embed: embed).ConfigureAwait(false);
+            }
+            catch (HttpException ex) when (ex.HttpCode is System.Net.HttpStatusCode.ServiceUnavailable
+                                                       or System.Net.HttpStatusCode.GatewayTimeout
+                                                       or System.Net.HttpStatusCode.BadGateway)
+            {
+                // Discord is temporarily unavailable; skip this notification rather than crashing.
+                LogUtil.LogError($"Trade start notification skipped (Discord {(int)ex.HttpCode}): {ex.Message}", "TradeStartModule");
+            }
+            catch (Exception ex)
+            {
+                LogUtil.LogError($"Trade start notification failed: {ex.Message}", "TradeStartModule");
+            }
         }
 
         // REGISTER FORWARDER ONCE EVER
