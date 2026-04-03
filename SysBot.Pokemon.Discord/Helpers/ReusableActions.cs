@@ -268,7 +268,9 @@ public static class ReusableActions
         try
         {
             // Write the file
-            await File.WriteAllBytesAsync(tmp, pkm.DecryptedPartyData);
+            var partyBytes = new byte[pkm.SIZE_PARTY];
+            pkm.WriteDecryptedDataParty(partyBytes);
+            await File.WriteAllBytesAsync(tmp, partyBytes);
 
             // Retry logic for handling transient errors
             const int maxRetries = 5;
@@ -337,7 +339,9 @@ public static class ReusableActions
 
         try
         {
-            await File.WriteAllBytesAsync(tmpPath, pkm.DecryptedPartyData).ConfigureAwait(false);
+            var partyBytes = new byte[pkm.SIZE_PARTY];
+            pkm.WriteDecryptedDataParty(partyBytes);
+            await File.WriteAllBytesAsync(tmpPath, partyBytes).ConfigureAwait(false);
 
             // Ensure we don't open DMs too fast - enforce minimum delay between DMs
             await _dmRateLimiter.WaitAsync().ConfigureAwait(false);

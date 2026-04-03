@@ -283,7 +283,9 @@ public abstract class PokeRoutineExecutor9SV : PokeRoutineExecutor<PK9>
         }
 
         pkm.ResetPartyStats();
-        return SwitchConnection.WriteBytesAbsoluteAsync(pkm.EncryptedBoxData, offset, token);
+        var data = new byte[pkm.SIZE_STORED];
+        pkm.WriteEncryptedDataStored(data);
+        return SwitchConnection.WriteBytesAbsoluteAsync(data, offset, token);
     }
 
     public Task SetCurrentBox(byte box, CancellationToken token)

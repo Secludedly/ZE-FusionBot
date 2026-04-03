@@ -286,7 +286,8 @@ public abstract class PokeRoutineExecutor9PLZA(PokeBotState Config) : PokeRoutin
         pkm.RefreshChecksum();
 
         // PLZA uses party format (344 bytes) + 64 bytes padding per box slot
-        var partyData = pkm.EncryptedPartyData;
+        var partyData = new byte[pkm.SIZE_PARTY];
+        pkm.WriteEncryptedDataParty(partyData);
         var boxData = new byte[partyData.Length + 0x40]; // Add 64-byte gap
         Array.Copy(partyData, boxData, partyData.Length);
         // Remaining 64 bytes stay as zeros (padding)

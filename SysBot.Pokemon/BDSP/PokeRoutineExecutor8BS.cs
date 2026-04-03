@@ -181,7 +181,9 @@ public abstract class PokeRoutineExecutor8BS : PokeRoutineExecutor<PB8>
         }
 
         pkm.ResetPartyStats();
-        return SwitchConnection.WriteBytesAbsoluteAsync(pkm.EncryptedPartyData, offset, token);
+        var data = new byte[pkm.SIZE_PARTY];
+        pkm.WriteEncryptedDataParty(data);
+        return SwitchConnection.WriteBytesAbsoluteAsync(data, offset, token);
     }
 
     public async Task StartGame(PokeTradeHubConfig config, CancellationToken token)
