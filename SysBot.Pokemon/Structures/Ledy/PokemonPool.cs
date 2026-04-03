@@ -11,6 +11,8 @@ public class PokemonPool<T>(BaseConfig Settings) : List<T>
 {
     public readonly Dictionary<string, LedyRequest<T>> Files = [];
 
+    public readonly List<LedyRequest<T>> Requests = [];
+
     private readonly int ExpectedSize = new T().Data.Length;
 
     private int Counter;
@@ -46,8 +48,29 @@ public class PokemonPool<T>(BaseConfig Settings) : List<T>
         var choice = this[Counter];
         Counter = (Counter + 1) % Count;
         if (Counter == 0 && Randomized)
-            Shuffle(this, 0, Count, Util.Rand);
+            ShuffleBoth();
         return choice;
+    }
+
+    public LedyRequest<T> GetRandomRequest()
+    {
+        var choice = Requests[Counter];
+        Counter = (Counter + 1) % Count;
+        if (Counter == 0 && Randomized)
+            ShuffleBoth();
+        return choice;
+    }
+
+    private void ShuffleBoth()
+    {
+        var rnd = Util.Rand;
+        for (int i = 0; i < Count; i++)
+        {
+            int index = i + rnd.Next(Count - i);
+            (this[index], this[i]) = (this[i], this[index]);
+            if (i < Requests.Count && index < Requests.Count)
+                (Requests[index], Requests[i]) = (Requests[i], Requests[index]);
+        }
     }
 
     public T GetRandomSurprise()
@@ -107,13 +130,25 @@ public class PokemonPool<T>(BaseConfig Settings) : List<T>
                 h.Tracker = 0;
 
             var fn = Path.GetFileNameWithoutExtension(file);
+
+            // Strip trailing 8-digit trade code (e.g. "Great Tusk-Tera(Steel)-03760382" → code=3760382, key="Great Tusk-Tera(Steel)")
+            int? tradeCode = null;
+            var lastDash = fn.LastIndexOf('-');
+            if (lastDash >= 0 && fn.Length - lastDash - 1 == 8 && int.TryParse(fn[(lastDash + 1)..], out var parsedCode))
+            {
+                tradeCode = parsedCode;
+                fn = fn[..lastDash];
+            }
+
             fn = StringsUtil.Sanitize(fn);
 
             // Since file names can be sanitized to the same string, only add one of them.
             if (!Files.ContainsKey(fn))
             {
+                var request = new LedyRequest<T>(dest, fn, tradeCode);
                 Add(dest);
-                Files.Add(fn, new LedyRequest<T>(dest, fn));
+                Requests.Add(request);
+                Files.Add(fn, request);
             }
             else
             {
@@ -133,6 +168,7 @@ public class PokemonPool<T>(BaseConfig Settings) : List<T>
             return false;
         Clear();
         Files.Clear();
+        Requests.Clear();
         return LoadFolder(path, opt);
     }
 }

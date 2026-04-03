@@ -182,12 +182,12 @@ public class TradeQueueManager<T> where T : PKM, new()
         if ((!cfg.DistributeWhileIdle && !force) || Hub.Ledy.Pool.Count == 0)
             return false;
 
-        var random = Hub.Ledy.Pool.GetRandomPoke();
-        var code = cfg.RandomCode ? Hub.Config.Trade.GetRandomTradeCode() : cfg.TradeCode;
+        var request = Hub.Ledy.Pool.GetRandomRequest();
+        var code = cfg.RandomCode ? Hub.Config.Trade.GetRandomTradeCode() : request.TradeCode ?? cfg.TradeCode;
         var lgcode = GetDefaultLGCode();
 
         var trainer = new PokeTradeTrainerInfo("Random Distribution");
-        detail = new(random, trainer, PokeTradeHub<T>.LogNotifier, PokeTradeType.Random, code, false, lgcode);
+        detail = new(request.RequestInfo, trainer, PokeTradeHub<T>.LogNotifier, PokeTradeType.Random, code, false, lgcode);
         return true;
     }
 
