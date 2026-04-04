@@ -12,7 +12,6 @@ using SharpCompress.Common;
 using SysBot.Base;
 using SysBot.Pokemon.Discord;
 using SysBot.Pokemon.Discord.Helpers;
-using SysBot.Pokemon.Discord.Helpers.TradeModule;
 using SysBot.Pokemon.Helpers;
 using System;
 using System.Collections.Concurrent;
@@ -240,14 +239,6 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
                         : "Failed to generate egg from the provided set.\nTry to remove possible illegal lines and try again.";
                     await Helpers<T>.ReplyAndDeleteAsync(Context, reason, 6);
                     return;
-                }
-
-                // ***** FORCE NATURE *****
-                // This will reroll PID until PID%25 == requested nature and keep IV/EVs consistent.
-                // NatureEnforcer is only supported for Z-A (PA9) Pokémon
-                if (pkm.Version == GameVersion.ZA)
-                {
-                    NatureEnforcer.ForceNature(pkm, set.Nature, set.Shiny);
                 }
 
                 // Convert to bot runtime type
@@ -1376,83 +1367,6 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
                 bool hasExplicitLanguage = content.Contains("Language:", StringComparison.OrdinalIgnoreCase);
                 TryApplyEarlyAutoOT(pk, userID, ignoreAutoOT, hasExplicitLanguage);
 
-                // --------------------------------------------------
-                // Forced encounter Nature override
-                // --------------------------------------------------
-                // - Never modify ShowdownSet
-                // - Never override Nature before ALM
-                // - This runs AFTER legality succeeds and is always safe
-                // - ZA-only enforcement with nature minting support
-                if (pk.Version == GameVersion.ZA && !pk.FatefulEncounter)
-                {
-                    if (ForcedEncounterEnforcer.TryGetForcedNature(pk, out var forcedNature))
-                    {
-                        if (pk.Nature != forcedNature)
-                        {
-                            // Check if a user explicitly set a different Stat Nature via batch command (.StatNature= / Stat Nature:).
-                            // If Stat Nature differs from Nature, preserve it as the explicit user request.
-                            bool hasExplicitStatNature = pk.StatNature != pk.Nature;
-                            Nature explicitStatNature = hasExplicitStatNature ? pk.StatNature : Nature.Random;
-
-                            // Store user's requested nature for stat nature (minting)
-                            Nature userRequestedNature = set.Nature;
-
-                            pk.Nature = forcedNature;
-
-                          // Priority for Stat Nature:
-                          // 1.If user explicitly set Stat Nature via batch command(.StatNature = / Stat Nature:), use that.
-                          // 2.However, if a user requested a different nature than a forced one, mint it(use requested as Stat Nature).
-                          // 3.Otherwise, use forced nature as Stat Nature.
-                            if (hasExplicitStatNature)
-                            {
-                                pk.StatNature = explicitStatNature;
-                                LogUtil.LogInfo(
-                                    $"{(Species)pk.Species}: Nature forced to {forcedNature} with explicit StatNature {explicitStatNature} (static encounter)",
-                                    nameof(TradeModule<T>));
-                            }
-                            else if (userRequestedNature != Nature.Random && userRequestedNature != forcedNature)
-                            {
-                                pk.StatNature = userRequestedNature;
-                                LogUtil.LogInfo(
-                                    $"{(Species)pk.Species}: Nature minted from {forcedNature} (actual) to {userRequestedNature} (stat nature) due to static encounter",
-                                    nameof(TradeModule<T>));
-                            }
-                            else
-                            {
-                                pk.StatNature = forcedNature;
-                                LogUtil.LogInfo(
-                                    $"{(Species)pk.Species}: User-requested Nature overridden to {forcedNature} (forced encounter rule)",
-                                    nameof(TradeModule<T>));
-                            }
-
-                            pk.RefreshChecksum();
-                        }
-                    }
-                }
-
-                // -----------------------------
-                // Apply IVs, HyperTraining, Nature, Shiny
-                // Unified ZA-only enforcement
-                // -----------------------------
-                if (pk.Version == GameVersion.ZA)
-                {
-                    // Always pass full IV array if present; otherwise default logic applies inside IVEnforcer
-                    int[] requestedIVs =
-                        set.IVs != null && set.IVs.Count() == 6
-                            ? set.IVs.ToArray()
-                            : Array.Empty<int>();
-
-                    IVEnforcer.ApplyRequestedIVsAndForceNature(
-                        pk,
-                        requestedIVs,
-                        set.Nature,
-                        set.Shiny,
-                        sav,
-                        template,
-                        userHTPreferences
-                    );
-                }
-
                 // -----------------------------
                 // Raw message ad check BEFORE queuing trade
                 // -----------------------------
@@ -1514,23 +1428,6 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
         var pk = await Helpers<T>.ProcessTradeAttachmentAsync(Context);
         if (pk == null)
             return;
-
-        // For attachments, the PKM already has IVs set by the user
-        // Just clear hypertrain flags to ensure those exact IVs are displayed
-        if (pk.Version == GameVersion.ZA)
-        {
-            // For attachments, the PKM already has IVs set by the user
-            // Just clear hypertrain flags to ensure those exact IVs are displayed
-            if (pk is IHyperTrain ht)
-            {
-                ht.HT_HP = false;
-                ht.HT_ATK = false;
-                ht.HT_DEF = false;
-                ht.HT_SPE = false;
-                ht.HT_SPA = false;
-                ht.HT_SPD = false;
-            }
-        }
 
         pk.RefreshChecksum();
 

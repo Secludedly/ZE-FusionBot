@@ -5,7 +5,6 @@ using PKHeX.Core;
 using PKHeX.Core.AutoMod;
 using SysBot.Base;
 using SysBot.Pokemon.Discord.Helpers;
-using SysBot.Pokemon.Discord.Helpers.TradeModule;
 using SysBot.Pokemon.Helpers;
 using System;
 using System.Collections.Generic;
@@ -59,34 +58,20 @@ public static class AutoLegalityExtensionsDiscord
                 return;
             }
 
-            // -----------------------------
-            // Enforce requested IVs, Nature, and Shiny (Z-A only, non-eggs)
-            // -----------------------------
-            // IVEnforcer and NatureEnforcer are only for Z-A (PA9) Pokemon
-            // For other games, the normal legalization process already handles nature/shiny
-            if (!isEggRequest && pkm is PA9 && template != null)
-            {
-                if (set.IVs != null && set.IVs.Count() == 6)
-                {
-                    IVEnforcer.ApplyRequestedIVsAndForceNature(
-                        pkm,
-                        set.IVs.ToArray(),
-                        set.Nature,
-                        set.Shiny,
-                        sav,
-                        template,
-                        userHTPreferences
-                    );
-                }
-                else
-                {
-                    // Even if no IVs requested, enforce nature/shiny only for Z-A
-                    NatureEnforcer.ForceNature(pkm, set.Nature, set.Shiny);
-                }
-            }
-
             var la = new LegalityAnalysis(pkm);
             var spec = GameInfo.Strings.Species[set.Species];
+
+            // If Z-A generation failed and we have a PA9, try every HOME-supported game
+            // before giving up — mirrors the same fallback used by the trade path.
+            if (!la.Valid && !isEggRequest && pkm is PA9 && template != null)
+            {
+                var fallback = TryGetAsHomePa9(template, spec);
+                if (fallback != null)
+                {
+                    pkm = fallback;
+                    la = new LegalityAnalysis(pkm);
+                }
+            }
 
             if (!la.Valid)
             {
@@ -211,5 +196,53 @@ public static class AutoLegalityExtensionsDiscord
         }
 
         return htFlags.Count > 0 ? htFlags : null;
+    }
+
+    /// <summary>
+    /// Mirrors the HOME fallback in Helpers&lt;T&gt;.TryGetAsHomePa9.
+    /// Tries every PKM format HOME supports (newest first) and returns the first
+    /// result that converts to a legally valid PA9.
+    /// </summary>
+    private static PA9? TryGetAsHomePa9(IBattleTemplate template, string speciesName)
+    {
+        (Func<ITrainerInfo> GetTrainer, string Name)[] sources =
+        [
+            (() => AutoLegalityWrapper.GetTrainerInfo<PK9>(),  "SV"),
+            (() => AutoLegalityWrapper.GetTrainerInfo<PK8>(),  "SWSH"),
+            (() => AutoLegalityWrapper.GetTrainerInfo<PA8>(),  "PLA"),
+            (() => AutoLegalityWrapper.GetTrainerInfo<PB8>(),  "BDSP"),
+            (() => AutoLegalityWrapper.GetTrainerInfo<PK7>(),  "USUM/SM"),
+            (() => AutoLegalityWrapper.GetTrainerInfo<PB7>(),  "LGPE"),
+            (() => AutoLegalityWrapper.GetTrainerInfo<PK6>(),  "ORAS/XY"),
+            (() => AutoLegalityWrapper.GetTrainerInfo<PK5>(),  "BW/B2W2"),
+            (() => AutoLegalityWrapper.GetTrainerInfo<PK4>(),  "DPPt/HGSS"),
+            (() => AutoLegalityWrapper.GetTrainerInfo<PK3>(),  "RSE/FRLG"),
+        ];
+
+        foreach (var (getTrainer, name) in sources)
+        {
+            try
+            {
+                var trainerInfo = getTrainer();
+                var generated = trainerInfo.GetLegal(template, out _);
+                if (generated == null)
+                    continue;
+
+                var converted = EntityConverter.ConvertToType(generated, typeof(PA9), out _);
+                if (converted is not PA9 pa9)
+                    continue;
+
+                if (!new LegalityAnalysis(pa9).Valid)
+                    continue;
+
+                LogUtil.LogInfo(
+                    $"{speciesName}: HOME fallback succeeded from {name} (Version={pa9.Version})",
+                    "PA9HomeFallback");
+                return pa9;
+            }
+            catch { }
+        }
+
+        return null;
     }
 }

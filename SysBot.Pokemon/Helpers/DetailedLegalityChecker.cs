@@ -177,8 +177,6 @@ public static class DetailedLegalityChecker
             return true;
         }
 
-        // For static encounters in ForcedEncounterEnforcer class, many have fixed natures
-        // PKHeX's LegalityAnalysis will have already flagged it otherwise
         if (encounter is EncounterStatic9 or EncounterStatic8 or EncounterStatic8a)
         {
             // We can't reliably determine the nature without more context,

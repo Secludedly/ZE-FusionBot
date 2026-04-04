@@ -4,7 +4,6 @@ using Discord.WebSocket;
 using PKHeX.Core;
 using SysBot.Base;
 using SysBot.Pokemon.Discord.Helpers;
-using SysBot.Pokemon.Discord.Helpers.TradeModule;
 using SysBot.Pokemon.Helpers;
 using System;
 using System.Collections.Generic;
@@ -65,7 +64,6 @@ public static class CreatePokemonHelper
         }
 
         // Build Showdown format string
-        // For ZA Pokemon, IVEnforcer will handle encounters in ForcedEncounterEnforcer class
         var speciesName = showdownSpeciesName;
         var showdownBuilder = new StringBuilder();
 
@@ -114,7 +112,6 @@ public static class CreatePokemonHelper
         var showdownText = showdownBuilder.ToString();
 
         // Process through normal ALM pipeline
-        // For encounters in ForcedEncounterEnforcer class, we'll apply the forced attributes AFTER ALM succeeds
         bool ignoreAutoOT = false; // AutoOT enabled for everyone in slash commands
         var processed = await Helpers<T>.ProcessShowdownSetAsync(showdownText, ignoreAutoOT: ignoreAutoOT).ConfigureAwait(false);
 
@@ -128,74 +125,44 @@ public static class CreatePokemonHelper
         var pk = processed.Pokemon;
         var lgcode = processed.LgCode;
 
-        // ===================================================================
-        // Use IVEnforcer for ZA Pokemon (same as text commands)
-        // This handles encounters in ForcedEncounterEnforcer classes automatically
-        // ===================================================================
-        if (pk.Version == GameVersion.ZA)
+        // Apply custom IVs from user input if provided via slash command parameter
+        int[] requestedIVs = ParseIVValues(ivs);
+
+        pk.IV_HP = requestedIVs[0];
+        pk.IV_ATK = requestedIVs[1];
+        pk.IV_DEF = requestedIVs[2];
+        pk.IV_SPA = requestedIVs[3];
+        pk.IV_SPD = requestedIVs[4];
+        pk.IV_SPE = requestedIVs[5];
+
+        // Clear Hyper Training flags for stats that are already 31, set for those that aren't
+        if (pk is IHyperTrain ht)
         {
-            var sav = AutoLegalityWrapper.GetTrainerInfo<T>();
-            var set = new ShowdownSet(showdownText);
-
-            // Parse the IVs from the showdown set
-            int[] requestedIVs = set.IVs != null && set.IVs.Count() == 6
-                ? set.IVs.ToArray()
-                : new[] { 31, 31, 31, 31, 31, 31 }; // Default to perfect IVs
-
-            // Use IVEnforcer which handles encounters in ForcedEncounterEnforcer class correctly
-            var template = AutoLegalityWrapper.GetTemplate(set);
-            IVEnforcer.ApplyRequestedIVsAndForceNature(
-                pk,
-                requestedIVs,
-                set.Nature,
-                set.Shiny,
-                sav,
-                template,
-                userHTPreferences: null
-            );
+            ht.HT_HP = requestedIVs[0] < 31;
+            ht.HT_ATK = requestedIVs[1] < 31;
+            ht.HT_DEF = requestedIVs[2] < 31;
+            ht.HT_SPA = requestedIVs[3] < 31;
+            ht.HT_SPD = requestedIVs[4] < 31;
+            ht.HT_SPE = requestedIVs[5] < 31;
         }
-        else
+
+        // Set Nature - use provided or the random one we picked earlier
+        if (Enum.TryParse<Nature>(finalNature, true, out var parsedNature))
         {
-            // Non-ZA Pokemon: Apply custom IVs from user input
-            // Parse IVs from the ivs parameter (supports "31/31/31/31/31/31" or Showdown format)
-            int[] requestedIVs = ParseIVValues(ivs);
+            pk.Nature = parsedNature;
+            pk.StatNature = parsedNature;
+        }
 
-            pk.IV_HP = requestedIVs[0];
-            pk.IV_ATK = requestedIVs[1];
-            pk.IV_DEF = requestedIVs[2];
-            pk.IV_SPA = requestedIVs[3];
-            pk.IV_SPD = requestedIVs[4];
-            pk.IV_SPE = requestedIVs[5];
+        // Refresh stats after IV/Nature changes
+        pk.ResetPartyStats();
+        pk.RefreshChecksum();
 
-            // Clear Hyper Training flags for stats that are already 31, set for those that aren't
-            if (pk is IHyperTrain ht)
-            {
-                ht.HT_HP = requestedIVs[0] < 31;
-                ht.HT_ATK = requestedIVs[1] < 31;
-                ht.HT_DEF = requestedIVs[2] < 31;
-                ht.HT_SPA = requestedIVs[3] < 31;
-                ht.HT_SPD = requestedIVs[4] < 31;
-                ht.HT_SPE = requestedIVs[5] < 31;
-            }
-
-            // Set Nature - use provided or the random one we picked earlier
-            if (Enum.TryParse<Nature>(finalNature, true, out var parsedNature))
-            {
-                pk.Nature = parsedNature;
-                pk.StatNature = parsedNature;
-            }
-
-            // Refresh stats after IV/Nature changes
+        // Apply requested form if one was specified
+        if (form > 0 && pk.Form != form)
+        {
+            pk.Form = form;
             pk.ResetPartyStats();
             pk.RefreshChecksum();
-
-            // Apply requested form if one was specified
-            if (form > 0 && pk.Form != form)
-            {
-                pk.Form = form;
-                pk.ResetPartyStats();
-                pk.RefreshChecksum();
-            }
         }
 
         // Apply post-processing (for Gigantamax, TeraType, etc.)

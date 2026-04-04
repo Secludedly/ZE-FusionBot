@@ -452,6 +452,29 @@ public static class Helpers<T> where T : PKM, new()
         // END OF WC8 EVENT FIX
         // ============================================================================
 
+        // ============================================================================
+        // PA9 CROSS-GAME HOME FALLBACK
+        // ============================================================================
+        // When Z-A generation fails for any reason, try every PKM format HOME supports
+        // (newest first) and convert the first valid result to PA9. This covers shinies
+        // that are locked in Z-A, species with no Z-A encounter, natures/IVs that are
+        // only legal in another game, and anything else PKHeX/ALM can't satisfy with
+        // the Z-A encounter pool. The converted PA9 retains the origin Version (e.g.
+        // SW, SV) so no Z-A-specific logic fires on it downstream.
+        // ============================================================================
+        if (!la.Valid && pkm is PA9)
+        {
+            var fallback = TryGetAsHomePa9(template, spec);
+            if (fallback != null)
+            {
+                pkm = fallback;
+                la = new LegalityAnalysis(pkm);
+            }
+        }
+        // ============================================================================
+        // END OF PA9 CROSS-GAME HOME FALLBACK
+        // ============================================================================
+
 
         if (pkm is not T pk || !la.Valid)
         {
@@ -837,6 +860,63 @@ public static class Helpers<T> where T : PKM, new()
 
         return randomPictocodes;
     }
+
+    // ============================================================================
+    // PA9 CROSS-GAME HOME FALLBACK HELPERS
+    // ============================================================================
+
+    /// <summary>
+    /// Tries every PKM format HOME supports (newest first) and returns the first result
+    /// that converts to a legally valid PA9. Used when Z-A generation fails for any reason.
+    /// </summary>
+    private static PA9? TryGetAsHomePa9(IBattleTemplate template, string speciesName)
+    {
+        // Lazy delegates — GetTrainerInfo is called inside the try-catch so a
+        // failure for one game type is silently skipped without aborting the loop.
+        (Func<ITrainerInfo> GetTrainer, string Name)[] sources =
+        [
+            (() => AutoLegalityWrapper.GetTrainerInfo<PK9>(),  "SV"),
+            (() => AutoLegalityWrapper.GetTrainerInfo<PK8>(),  "SWSH"),
+            (() => AutoLegalityWrapper.GetTrainerInfo<PA8>(),  "PLA"),
+            (() => AutoLegalityWrapper.GetTrainerInfo<PB8>(),  "BDSP"),
+            (() => AutoLegalityWrapper.GetTrainerInfo<PK7>(),  "USUM/SM"),
+            (() => AutoLegalityWrapper.GetTrainerInfo<PB7>(),  "LGPE"),
+            (() => AutoLegalityWrapper.GetTrainerInfo<PK6>(),  "ORAS/XY"),
+            (() => AutoLegalityWrapper.GetTrainerInfo<PK5>(),  "BW/B2W2"),
+            (() => AutoLegalityWrapper.GetTrainerInfo<PK4>(),  "DPPt/HGSS"),
+            (() => AutoLegalityWrapper.GetTrainerInfo<PK3>(),  "RSE/FRLG"),
+        ];
+
+        foreach (var (getTrainer, name) in sources)
+        {
+            try
+            {
+                var trainerInfo = getTrainer(); // invoked here so any throw is caught below
+                var generated = trainerInfo.GetLegal(template, out _);
+                if (generated == null)
+                    continue;
+
+                var converted = EntityConverter.ConvertToType(generated, typeof(PA9), out _);
+                if (converted is not PA9 pa9)
+                    continue;
+
+                if (!new LegalityAnalysis(pa9).Valid)
+                    continue;
+
+                LogUtil.LogInfo(
+                    $"{speciesName}: HOME fallback succeeded from {name} (Version={pa9.Version})",
+                    "PA9HomeFallback");
+                return pa9;
+            }
+            catch { }
+        }
+
+        return null;
+    }
+
+    // ============================================================================
+    // END OF PA9 SHINY FALLBACK HELPERS
+    // ============================================================================
 
     public static async Task<T?> ProcessTradeAttachmentAsync(SocketCommandContext context)
     {
