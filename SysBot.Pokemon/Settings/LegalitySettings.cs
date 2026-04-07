@@ -75,7 +75,7 @@ public class LegalitySettings
     ];
 
     [Category(Generate), Description("Method of searching for encounters when generating Pokémon. \"NativeOnly\" searches current game pair only, \"NewestFirst\" searches from most recent game, and \"PriorityOrder\" uses the order designated in the \"PriorityOrder\" setting.")]
-    public GameVersionPriorityType GameVersionPriority { get; set; } = GameVersionPriorityType.NativeOnly;
+    public GameVersionPriorityType GameVersionPriority { get; set; } = GameVersionPriorityType.NewestFirst;
 
     [Category(Generate), Description("The order of GameVersions ALM will attempt to legalize from.")]
     public List<GameVersion> PriorityOrder { get; set; } = Enum.GetValues<GameVersion>().Where(GameUtil.IsValidSavedVersion).Reverse().ToList();

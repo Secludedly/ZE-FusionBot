@@ -44,10 +44,10 @@ public static class DetailsExtractor<T> where T : PKM, new()
             (SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.ShowBall ? $"**Ball:** {embedData.Ball}\n" : "") +
             (SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.ShowMetLevel ? $"**Met Level:** {embedData.MetLevel}\n" : "") +
             (SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.ShowMetDate ? $"**Met Date:** {embedData.MetDate}\n" : "") +
+            (SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.ShowMetLocation ? $"**Met Location:** {embedData.MetLocation}\n" : "") +
             (SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.ShowAbility ? $"**Ability:** {embedData.Ability}\n" : "") +
             (SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.ShowNature ? $"**{embedData.Nature}** Nature\n" : "") +
-            // Show Stat Nature for PLZA only, and only if it differs from regular Nature
-            (pk.Version is GameVersion.ZA && SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.ShowNature && !string.IsNullOrEmpty(embedData.StatNature) ? $"**Stat Nature:** {embedData.StatNature}\n" : "") +
+            (SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.ShowNature && !string.IsNullOrEmpty(embedData.StatNature) ? $"**Stat Nature:** {embedData.StatNature}\n" : "") +
             (SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.ShowLanguage ? $"**Language**: {embedData.Language}\n" : "") +
             (SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.ShowIVs ? $"**IVs**: {embedData.IVsDisplay}\n" : "") +
             (SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.ShowEVs && !string.IsNullOrWhiteSpace(embedData.EVsDisplay) ? $"**EVs**: {embedData.EVsDisplay}\n" : "");
@@ -135,8 +135,8 @@ public static class DetailsExtractor<T> where T : PKM, new()
         embedData.Ability = GetAbilityName(pk, strings);
         embedData.Nature = GetNatureName(pk, strings);
 
-        // For PLZA (PA9), extract Stat Nature if it differs from regular Nature
-        if (pk is PA9 && pk.StatNature != pk.Nature)
+        // Extract Stat Nature if it differs from regular Nature (applies to any minted Pokémon)
+        if (pk.StatNature != pk.Nature)
         {
             embedData.StatNature = strings.natures[(int)pk.StatNature];
         }
@@ -186,6 +186,8 @@ public static class DetailsExtractor<T> where T : PKM, new()
         }.Where(s => !string.IsNullOrEmpty(s)));
         embedData.MetDate = pk.MetDate.ToString();
         embedData.MetLevel = pk.MetLevel;
+        var metLocationName = strings.GetLocationName(false, pk.MetLocation, pk.Format, pk.Generation, (GameVersion)pk.Version);
+        embedData.MetLocation = string.IsNullOrWhiteSpace(metLocationName) ? $"ID {pk.MetLocation}" : metLocationName;
         embedData.MovesDisplay = string.Join("\n", embedData.Moves);
         embedData.PokemonDisplayName = pk.IsNicknamed ? pk.Nickname : embedData.SpeciesName;
 
@@ -486,6 +488,9 @@ public class EmbedData
 
     /// <summary>Met level.</summary>
     public byte MetLevel { get; set; }
+
+    /// <summary>Met location name.</summary>
+    public string? MetLocation { get; set; }
 
     /// <summary>List of move names.</summary>
     public List<string>? Moves { get; set; }
