@@ -139,7 +139,7 @@ public class TradeStartModule<T> : ModuleBase<SocketCommandContext> where T : PK
                     PokeTradeType.Dump => "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/Dumping.png",
                     PokeTradeType.FixOT => "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/FixOTing.png",
                     PokeTradeType.Seed => "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/Seeding.png",
-                    _ => TradeExtensions<T>.PokeImg(detail.TradeData!, false, true)
+                    _ => TradeExtensions<T>.PokeImg(detail.TradeData!, false, false, SysCord<T>.Runner.Config.Trade.TradeEmbedSettings.PreferredImageSize)
                 };
 
             var (r, g, b) = await GetDominantColorAsync(embedImageUrl);
