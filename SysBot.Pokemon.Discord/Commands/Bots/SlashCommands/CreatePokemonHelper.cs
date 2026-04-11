@@ -73,16 +73,21 @@ public static class CreatePokemonHelper
         else
             showdownBuilder.AppendLine(speciesName);
 
-        // Line 2: Nature - Use provided or pick a random beneficial one
-        string finalNature = nature;
-        if (string.IsNullOrWhiteSpace(finalNature))
+        // Line 2: Nature - Use provided or pick a random beneficial one.
+        // For ZA (PA9) targets, skip the random nature pick — let ALM use the legal encounter
+        // nature. The ZA nature enforcement in ProcessShowdownSetAsync will handle the mint logic.
+        bool isZATarget = typeof(T) == typeof(PA9);
+        string? finalNature = nature;
+        if (string.IsNullOrWhiteSpace(finalNature) && !isZATarget)
         {
-            // Pick a random beneficial nature if none specified
+            // Pick a random beneficial nature if none specified (non-ZA only)
             string[] beneficialNatures = ["Adamant", "Jolly", "Timid", "Modest", "Careful", "Calm"];
             var random = new Random();
             finalNature = beneficialNatures[random.Next(beneficialNatures.Length)];
         }
-        showdownBuilder.AppendLine($"{finalNature} Nature");
+
+        if (!string.IsNullOrWhiteSpace(finalNature))
+            showdownBuilder.AppendLine($"{finalNature} Nature");
 
         // Stats and other properties
         showdownBuilder.AppendLine($"Level: {level}");
@@ -146,8 +151,11 @@ public static class CreatePokemonHelper
             ht.HT_SPE = requestedIVs[5] < 31;
         }
 
-        // Set Nature - use provided or the random one we picked earlier
-        if (Enum.TryParse<Nature>(finalNature, true, out var parsedNature))
+        // Set Nature - apply directly for non-ZA Pokemon.
+        // For ZA (PA9), ProcessShowdownSetAsync already handled the legality-aware nature logic
+        // (mint: StatNature = requested, Nature = legal encounter value when the requested is illegal).
+        // Overriding here would undo that mint, so we skip the assignment for PA9.
+        if (pk is not PA9 && !string.IsNullOrWhiteSpace(finalNature) && Enum.TryParse<Nature>(finalNature, true, out var parsedNature))
         {
             pk.Nature = parsedNature;
             pk.StatNature = parsedNature;

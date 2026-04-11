@@ -145,6 +145,24 @@ public static class Helpers<T> where T : PKM, new()
         ).ToArray();
         var contentWithoutLanguage = string.Join('\n', filteredLines);
 
+        // Detect user-specified Tera Type (for SV non-native override fix)
+        MoveType? userSpecifiedTeraType = null;
+        var teraTypeLine = contentLines.FirstOrDefault(l => l.TrimStart().StartsWith("Tera Type:", StringComparison.OrdinalIgnoreCase));
+        if (teraTypeLine != null)
+        {
+            var teraValue = teraTypeLine.Split(':').ElementAtOrDefault(1)?.Trim();
+            if (!string.IsNullOrEmpty(teraValue))
+            {
+                if (teraValue.Equals("Stellar", StringComparison.OrdinalIgnoreCase))
+                    userSpecifiedTeraType = (MoveType)TeraTypeUtil.Stellar;
+                else if (Enum.TryParse<MoveType>(teraValue, true, out var parsedTera))
+                    userSpecifiedTeraType = parsedTera;
+            }
+        }
+
+        // Detect if user explicitly specified IVs (for 6IV default enforcement)
+        bool userSpecifiedIVs = contentLines.Any(l => l.TrimStart().StartsWith("IVs:", StringComparison.OrdinalIgnoreCase));
+
         // Now parse the ShowdownSet without the Language line
         if (!ShowdownParsing.TryParseAnyLanguage(contentWithoutLanguage, out ShowdownSet? set) || set == null || set.Species == 0)
         {
@@ -283,6 +301,10 @@ public static class Helpers<T> where T : PKM, new()
             ApplyStandardItemLogic(pkm);
         }
 
+        // Capture the language ALM assigned before we override it.
+        // Used later to revert if the user's language conflicts with a fixed-OT encounter.
+        byte almGeneratedLanguage = (byte)pkm.Language;
+
         // Align language and nickname before legality check to avoid false invalids
         if (pkm is T pkBeforeCheck)
         {
@@ -338,6 +360,108 @@ public static class Helpers<T> where T : PKM, new()
                 });
             }
         }
+
+        // ============================================================================
+        // SV TERA TYPE OVERRIDE FIX FOR NON-NATIVE POKEMON
+        // ============================================================================
+        // Non-native Pokemon (from other games) in SV require TeraTypeOverride to be
+        // explicitly set. PKHeX does not set this automatically, and ALM fails to
+        // legalize these Pokemon as a result. Apply the fix before the legality check
+        // so the analysis sees the corrected value.
+        // ============================================================================
+        if (pkm is PK9 pk9TeraFix && !isEgg)
+        {
+            bool isSVNative = pk9TeraFix.Version is GameVersion.SL or GameVersion.VL;
+            if (!isSVNative)
+            {
+                // Non-native Pokemon (HOME transfers from other games) need both
+                // TeraTypeOriginal and TeraTypeOverride explicitly set or PKHeX marks them illegal.
+                //
+                // ALM incorrectly assigns Type2 as TeraTypeOriginal for dual-type non-native
+                // Pokemon (e.g. Dialga → Dragon instead of Steel, Rayquaza → Flying instead of
+                // Dragon, Lugia → Flying instead of Psychic). The correct value is always Type1.
+                var correctOriginal = (MoveType)pk9TeraFix.PersonalInfo.Type1;
+                pk9TeraFix.TeraTypeOriginal = correctOriginal;
+
+                if (userSpecifiedTeraType.HasValue)
+                    pk9TeraFix.TeraTypeOverride = userSpecifiedTeraType.Value;
+                else
+                    pk9TeraFix.TeraTypeOverride = correctOriginal;
+            }
+            else if (userSpecifiedTeraType.HasValue)
+            {
+                // Native SV Pokemon: user requested a specific Tera Type, apply only to Override.
+                pk9TeraFix.TeraTypeOverride = userSpecifiedTeraType.Value;
+            }
+        }
+        // ============================================================================
+        // END OF SV TERA TYPE OVERRIDE FIX
+        // ============================================================================
+
+        // ============================================================================
+        // 6IV DEFAULT ENFORCEMENT (ALL GAMES EXCEPT ZA)
+        // ============================================================================
+        // If the user did not specify IVs in their Showdown set, attempt to set all
+        // IVs to 31. If this makes the Pokemon illegal (e.g. event with fixed IVs),
+        // the original PKHeX-generated IVs are restored.
+        // This block intentionally skips PA9 (Legends: Z-A) which has its own handling.
+        // ============================================================================
+        if (!userSpecifiedIVs && pkm is not PA9)
+        {
+            var pkBackup = pkm.Clone();
+            pkm.IVs = [31, 31, 31, 31, 31, 31];
+            if (pkm is IHyperTrain htFix)
+                htFix.HyperTrainClear();
+            pkm.RefreshChecksum();
+
+            if (!new LegalityAnalysis(pkm).Valid)
+            {
+                // 6IVs are not legal for this encounter — restore original values.
+                pkm = pkBackup;
+            }
+        }
+        // ============================================================================
+        // END OF 6IV DEFAULT ENFORCEMENT
+        // ============================================================================
+
+        // ============================================================================
+        // FIXED-OT ENCOUNTER LANGUAGE FALLBACK
+        // ============================================================================
+        // Some event Pokemon (e.g. Floette-Eternal / AZ in Legends: Z-A) have a fixed
+        // OT that only exists in specific languages in the event data. If the user's
+        // requested language causes a legality failure that vanishes when we revert to
+        // the language ALM originally chose, silently use the encounter-compatible
+        // language instead. If reverting also fails, restore the requested language so
+        // the normal error path can report the actual reason.
+        // ============================================================================
+        if ((byte)pkm.Language != almGeneratedLanguage)
+        {
+            var langCheckLa = new LegalityAnalysis(pkm);
+            if (!langCheckLa.Valid)
+            {
+                pkm.Language = almGeneratedLanguage;
+                if (string.IsNullOrEmpty(set.Nickname))
+                {
+                    pkm.SetDefaultNickname(new LegalityAnalysis(pkm));
+                    pkm.IsNicknamed = false;
+                }
+
+                if (!new LegalityAnalysis(pkm).Valid)
+                {
+                    // Reverting didn't help — restore the user's language so the
+                    // downstream error message reflects the real failure.
+                    pkm.Language = finalLanguage;
+                    if (string.IsNullOrEmpty(set.Nickname))
+                    {
+                        pkm.SetDefaultNickname(new LegalityAnalysis(pkm));
+                        pkm.IsNicknamed = false;
+                    }
+                }
+            }
+        }
+        // ============================================================================
+        // END OF FIXED-OT ENCOUNTER LANGUAGE FALLBACK
+        // ============================================================================
 
         var la = new LegalityAnalysis(pkm);
 
@@ -495,6 +619,118 @@ public static class Helpers<T> where T : PKM, new()
                 ShowdownSet = set
             });
         }
+
+        // ============================================================================
+        // ZA NATURE LEGALITY ENFORCEMENT
+        // ============================================================================
+        // For ZA (PA9) Pokemon, honor the user's requested nature if it passes legality.
+        // If the requested nature is illegal for the encounter (e.g. Zeraora must be Brave),
+        // keep PKHeX's legal nature as the actual Nature and apply the requested nature as
+        // StatNature only (mint effect).
+        //
+        // Example 1: Zeraora (ZA native, forced Brave) + user requests Adamant
+        //            → Nature=Brave, StatNature=Adamant
+        // Example 2: Charmander (SWSH via HOME fallback) + user requests Timid
+        //            → Nature=Timid, StatNature=Timid
+        // Example 3: No nature requested, only StatNature via batch (.StatNature=X)
+        //            → Nature=PKHeX default, StatNature=X (already set by ALM)
+        // Example 4: Nothing requested → ALM picks, no change.
+        // ============================================================================
+        if (pk is PA9)
+        {
+            // Nature.Random (25) means the user did not specify a nature in the set.
+            Nature requestedNature = set.Nature;
+            bool userRequestedNature = requestedNature != Nature.Random;
+
+            // Detect if the user explicitly set a StatNature via .StatNature= batch command.
+            // IMPORTANT: We parse the content string directly rather than comparing pk.StatNature != pk.Nature.
+            // After ALM generation and/or HOME conversion the StatNature byte can differ from Nature as
+            // a format-conversion artifact — checking PKM fields would misidentify that as a user request.
+            Nature? userExplicitStatNature = null;
+            foreach (var line in contentLines)
+            {
+                var trimmed = line.Trim();
+                if (trimmed.StartsWith(".StatNature=", StringComparison.OrdinalIgnoreCase))
+                {
+                    var value = trimmed[".StatNature=".Length..].Trim();
+                    if (Enum.TryParse<Nature>(value, ignoreCase: true, out var parsedSN))
+                    {
+                        userExplicitStatNature = parsedSN;
+                        break;
+                    }
+                }
+            }
+
+            bool hasExplicitStatNature = userExplicitStatNature.HasValue;
+            Nature userStatNature = userExplicitStatNature ?? Nature.Random;
+
+            if (userRequestedNature && requestedNature != pk.Nature)
+            {
+                // The encounter forced a different nature than what the user requested.
+                // Test whether the user's requested nature is legal for this encounter.
+                var clone = (PA9)pk.Clone();
+                clone.Nature = requestedNature;
+                clone.StatNature = hasExplicitStatNature ? userStatNature : requestedNature;
+                clone.RefreshChecksum();
+
+                if (new LegalityAnalysis(clone).Valid)
+                {
+                    // Legal — apply the requested nature to both Nature and StatNature.
+                    pk.Nature = clone.Nature;
+                    pk.StatNature = clone.StatNature;
+                    pk.RefreshChecksum();
+                    LogUtil.LogInfo(
+                        $"{(Species)pk.Species}: Requested nature {requestedNature} is legal — applied.",
+                        "ZANature");
+                }
+                else
+                {
+                    // Requested nature is illegal for this encounter.
+                    // Try minting: keep the forced Nature but apply requested nature as StatNature.
+                    // Verify the mint itself is legal before applying — some encounters (e.g. certain
+                    // HOME-converted WC8 events) restrict StatNature via shiny/nature correlation checks
+                    // and will also reject a mismatched StatNature.
+                    var wantedStatNature = hasExplicitStatNature ? userStatNature : requestedNature;
+                    var cloneMint = (PA9)pk.Clone();
+                    cloneMint.StatNature = wantedStatNature;
+                    cloneMint.RefreshChecksum();
+
+                    if (new LegalityAnalysis(cloneMint).Valid)
+                    {
+                        // Mint is legal — apply it.
+                        pk.StatNature = wantedStatNature;
+                        pk.RefreshChecksum();
+                        LogUtil.LogInfo(
+                            $"{(Species)pk.Species}: Requested nature {requestedNature} is illegal for this encounter. " +
+                            $"Mint applied: Nature={pk.Nature}, StatNature={pk.StatNature}.",
+                            "ZANature");
+                    }
+                    else
+                    {
+                        // Minting is also restricted (e.g. shiny-correlation check ties StatNature to Nature).
+                        // Leave Nature and StatNature exactly as PKHeX produced them — both forced.
+                        LogUtil.LogInfo(
+                            $"{(Species)pk.Species}: Requested nature {requestedNature} is illegal and minting is " +
+                            $"restricted for this encounter. Keeping forced Nature={pk.Nature}, StatNature={pk.StatNature}.",
+                            "ZANature");
+                    }
+                }
+            }
+            else if (userRequestedNature && requestedNature == pk.Nature)
+            {
+                // User's requested nature matches what was generated — mirror to StatNature
+                // unless the user already set a different StatNature via batch command.
+                if (!hasExplicitStatNature)
+                {
+                    pk.StatNature = pk.Nature;
+                    pk.RefreshChecksum();
+                }
+            }
+            // Else: no nature was requested — leave Nature and StatNature exactly as ALM set them.
+        }
+        // ============================================================================
+        // END OF ZA NATURE LEGALITY ENFORCEMENT
+        // ============================================================================
 
         // Final preparation
         PrepareForTrade(pk, set, finalLanguage);

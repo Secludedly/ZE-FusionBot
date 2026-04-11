@@ -303,21 +303,30 @@ public static class AutoLegalityWrapper
                 if (set.Shiny && !pk.IsShiny)
                 {
                     // Pokemon should be shiny but isn't - force it to be shiny
-                    // Max Lair (MetLocation=244) REQUIRES Star shiny (XOR=1), never Square (XOR=0)
-                    // Square shiny at MetLocation=244 is flagged invalid by PKHeX
-                    var desiredXor = pk is PK8 pk8ForceShiny && pk8ForceShiny.MetLocation == 244
-                        ? 1  // Max Lair: always Star shiny
+                    // Dynamax Adventures (Max Lair, MetLocation=244) REQUIRE Star shiny (XOR=1).
+                    // This applies to native PK8 (SWSH save) AND to PK9 that originated in
+                    // SWSH and were transferred to SV via HOME (Version=SW/SH, MetLocation=244).
+                    bool isMaxLairOrigin = pk switch
+                    {
+                        PK8 { MetLocation: 244 } => true,
+                        PK9 { MetLocation: 244 } when pk.Version == GameVersion.SW || pk.Version == GameVersion.SH => true,
+                        _ => false,
+                    };
+                    var desiredXor = isMaxLairOrigin
+                        ? 1  // Max Lair: always Star shiny (Square is invalid for Dynamax Adventures)
                         : pk is PK8 or PK9 ? 0 : 1;
                     pk.PID = (uint)((pk.TID16 ^ pk.SID16 ^ (pk.PID & 0xFFFF) ^ desiredXor) << 16) | (pk.PID & 0xFFFF);
                     pk.RefreshChecksum();
                 }
 
-                // Fix Square shiny at Max Lair: PKHeX requires Star shiny (ShinyXor 1-15) for MetLocation=244
-                // ALM may generate Square shiny (ShinyXor=0) which PKHeX flags as invalid for Dynamax Adventures
-                if (pk is PK8 pk8MaxLair && pk8MaxLair.MetLocation == 244 && pk8MaxLair.IsShiny && pk8MaxLair.ShinyXor == 0)
+                // Fix Square shiny at Max Lair: PKHeX requires Star shiny (ShinyXor 1-15) for MetLocation=244.
+                // Covers native PK8 (SWSH save) and HOME-transferred PK9 with SWSH Max Lair origin.
+                bool isMaxLairSquareShiny = pk.IsShiny && pk.ShinyXor == 0 && pk.MetLocation == 244 &&
+                    (pk is PK8 || (pk is PK9 && (pk.Version == GameVersion.SW || pk.Version == GameVersion.SH)));
+                if (isMaxLairSquareShiny)
                 {
-                    pk8MaxLair.PID ^= 0x10000u; // Flip bit 16: ShinyXor 0 → 1 (Square → Star)
-                    pk8MaxLair.RefreshChecksum();
+                    pk.PID ^= 0x10000u; // Flip bit 16: ShinyXor 0 → 1 (Square → Star)
+                    pk.RefreshChecksum();
                 }
             }
 
