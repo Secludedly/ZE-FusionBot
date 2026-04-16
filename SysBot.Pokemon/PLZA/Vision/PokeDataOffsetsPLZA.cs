@@ -3,7 +3,7 @@ using System.Collections.Generic;
 namespace SysBot.Pokemon;
 
 /// <summary>
-/// Memory offsets for Pokémon Legends: Z-A (v2.0.1)
+/// Memory offsets for Pokémon Legends: Z-A (v2.0.2)
 /// </summary>
 public class PokeDataOffsetsPLZA
 {
