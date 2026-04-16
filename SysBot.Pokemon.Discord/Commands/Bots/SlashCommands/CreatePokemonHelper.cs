@@ -165,8 +165,8 @@ public static class CreatePokemonHelper
         pk.ResetPartyStats();
         pk.RefreshChecksum();
 
-        // Apply requested form if one was specified
-        if (form > 0 && pk.Form != form)
+        // Apply requested form if one was specified (includes form 0, e.g. Vivillon Icy-Snow)
+        if (pk.Form != form)
         {
             pk.Form = form;
             pk.ResetPartyStats();

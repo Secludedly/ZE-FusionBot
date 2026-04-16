@@ -259,6 +259,70 @@ public static class Helpers<T> where T : PKM, new()
         }
 
         // ============================================================================
+        // FORM CORRECTION FOR COSMETIC AND REGIONAL FORMS (e.g., Vivillon patterns)
+        // ============================================================================
+        // ALM's GetLegal generates the Pokemon in its encounter-default form, which for
+        // species like Vivillon is always the same base form (e.g., Meadow) regardless of
+        // what form was requested in the ShowdownSet.  Apply the requested form here so
+        // the downstream legality check validates the correct form.
+        // ============================================================================
+        if (!isEgg && pkm.Form != set.Form)
+        {
+            pkm.Form = set.Form;
+            pkm.ResetPartyStats();
+            pkm.RefreshChecksum();
+        }
+        // ============================================================================
+        // END OF FORM CORRECTION
+        // ============================================================================
+
+        // ============================================================================
+        // SCATTERBUG / SPEWPA FORM FIX
+        // ============================================================================
+        // ShowdownParsing does not expose named forms for Scatterbug or Spewpa, so
+        // set.Form is always 0 regardless of what the user typed (e.g. "Scatterbug-Sun").
+        // The general form correction above therefore never fires for these species.
+        // Parse the form suffix from the raw content line ourselves and match it against
+        // Vivillon's form name list — Scatterbug and Spewpa share the exact same 20
+        // regional patterns.
+        // ============================================================================
+        if (!isEgg && (pkm.Species == (ushort)Species.Scatterbug || pkm.Species == (ushort)Species.Spewpa))
+        {
+            var scatterLines = contentWithoutLanguage.Split('\n');
+            var scatterFirstLine = scatterLines.FirstOrDefault(l => !string.IsNullOrWhiteSpace(l))?.Trim() ?? string.Empty;
+            // Strip held item if present: "Scatterbug-Sun @ Oran Berry" → "Scatterbug-Sun"
+            var scatterSpeciesPart = scatterFirstLine.Split('@')[0].Trim();
+            var scatterDashIdx = scatterSpeciesPart.IndexOf('-');
+            if (scatterDashIdx >= 0)
+            {
+                var scatterFormSuffix = scatterSpeciesPart[(scatterDashIdx + 1)..].Trim();
+                var vivillonFormNames = FormConverter.GetFormList(
+                    (ushort)Species.Vivillon,
+                    GameInfo.Strings.Types,
+                    GameInfo.Strings.forms,
+                    GameInfo.GenderSymbolASCII,
+                    EntityContext.Gen9);
+                for (byte f = 0; f < vivillonFormNames.Length; f++)
+                {
+                    // Game strings use spaces ("Icy Snow"); user types dashes ("Icy-Snow")
+                    if (vivillonFormNames[f].Replace(" ", "-").Equals(scatterFormSuffix, StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (pkm.Form != f)
+                        {
+                            pkm.Form = f;
+                            pkm.ResetPartyStats();
+                            pkm.RefreshChecksum();
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+        // ============================================================================
+        // END OF SCATTERBUG / SPEWPA FORM FIX
+        // ============================================================================
+
+        // ============================================================================
         // DITTO METLOCATION FIX
         // ============================================================================
         // Fix Ditto MetLocation for game version compatibility
