@@ -6,9 +6,6 @@ using System.Threading.Tasks;
 
 namespace SysBot.Pokemon.Discord.Commands.Bots.SlashCommands;
 
-/// <summary>
-/// Slash command module for creating Legends: Arceus (PA8) Pokemon with Alpha support
-/// </summary>
 public class CreatePokemonPLAModule<T> : InteractionModuleBase<SocketInteractionContext> where T : PKM, new()
 {
     [SlashCommand("create-pla", "Create a Legends: Arceus Pokemon with Alpha support")]
@@ -19,11 +16,6 @@ public class CreatePokemonPLAModule<T> : InteractionModuleBase<SocketInteraction
 
         [Summary("shiny", "Should the Pokemon be shiny?")]
         bool shiny = false,
-
-        // Keine Held Items in PLA
-        //[Summary("item", "Held item (optional)")]
-        //[Autocomplete(typeof(ItemAutocompleteHandler))]
-        //string? item = null,
 
         [Summary("ball", "Poke Ball (optional)")]
         [Autocomplete(typeof(PlaBallAutocompleteHandler))]
@@ -45,7 +37,44 @@ public class CreatePokemonPLAModule<T> : InteractionModuleBase<SocketInteraction
         string? ivs = null,
 
         [Summary("evs", "Custom EVs (optional) - Format: 252/252/4/0/0/0 (HP/Atk/Def/SpA/SpD/Spe)")]
-        string? evs = null
+        string? evs = null,
+
+        [Summary("nickname", "Nickname for the Pokemon (optional)")]
+        string? nickname = null,
+
+        [Summary("ability", "Which ability slot to use (optional)")]
+        [Choice("Ability 1", "0")]
+        [Choice("Ability 2", "1")]
+        [Choice("Hidden Ability", "H")]
+        string? ability = null,
+
+        [Summary("move1", "First move (optional)")]
+        [Autocomplete(typeof(MoveAutocompleteHandler))]
+        string? move1 = null,
+
+        [Summary("move2", "Second move (optional)")]
+        [Autocomplete(typeof(MoveAutocompleteHandler))]
+        string? move2 = null,
+
+        [Summary("move3", "Third move (optional)")]
+        [Autocomplete(typeof(MoveAutocompleteHandler))]
+        string? move3 = null,
+
+        [Summary("move4", "Fourth move (optional)")]
+        [Autocomplete(typeof(MoveAutocompleteHandler))]
+        string? move4 = null,
+
+        [Summary("language", "Pokemon language (optional)")]
+        [Choice("English", "English")]
+        [Choice("Japanese", "Japanese")]
+        [Choice("French", "French")]
+        [Choice("German", "German")]
+        [Choice("Italian", "Italian")]
+        [Choice("Spanish", "Spanish")]
+        [Choice("Korean", "Korean")]
+        [Choice("Chinese (Simplified)", "ChineseS")]
+        [Choice("Chinese (Traditional)", "ChineseT")]
+        string? language = null
     )
     {
         if (Context.Guild == null)
@@ -58,21 +87,11 @@ public class CreatePokemonPLAModule<T> : InteractionModuleBase<SocketInteraction
 
         try
         {
-            // Build Alpha feature string (will be added to Showdown format)
             string specialFeature = alpha ? "Alpha: Yes" : string.Empty;
 
             await CreatePokemonHelper.ExecuteCreatePokemonAsync<T>(
-                Context,
-                pokemon,
-                shiny,
-                null, // No held items in PLA
-                ball,
-                level,
-                nature,
-                ivs,
-                evs,
-                specialFeature,
-                null // No post-processing needed for Alpha (handled by Showdown)
+                Context, pokemon, shiny, null, ball, level, nature, ivs, evs,
+                specialFeature, null, nickname, ability, move1, move2, move3, move4, language
             ).ConfigureAwait(false);
         }
         catch (System.Exception ex)

@@ -94,7 +94,7 @@ namespace SysBot.Pokemon.Discord
         // --------------------------------------------------------
         // RANDOMIZATION + LEGALITY PIPELINE
         // --------------------------------------------------------
-        private static T? GenerateMysteryMon(System.Threading.CancellationToken token)
+        public static T? GenerateMysteryMon(System.Threading.CancellationToken token)
         {
             var game = GetGameVersion();
             var speciesList = GetValidSpecies(game);
