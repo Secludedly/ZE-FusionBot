@@ -208,28 +208,6 @@ public static class Helpers<T> where T : PKM, new()
         // Generate with normal trainer (English), then set language after generation.
         var sav = AutoLegalityWrapper.GetTrainerInfo<T>();
 
-        // Fix for Asian languages: Truncate OT to 6 characters max
-        // Japanese, Korean, ChineseS, ChineseT only support 6 character OT names
-        if (finalLanguage == (byte)LanguageID.Japanese ||
-            finalLanguage == (byte)LanguageID.Korean ||
-            finalLanguage == (byte)LanguageID.ChineseS ||
-            finalLanguage == (byte)LanguageID.ChineseT)
-        {
-            if (sav.OT.Length > 6)
-            {
-                // Create a new trainer with truncated OT
-                var truncatedOT = sav.OT.Substring(0, 6);
-                sav = new SimpleTrainerInfo(sav.Version)
-                {
-                    OT = truncatedOT,
-                    TID16 = sav.TID16,
-                    SID16 = sav.SID16,
-                    Language = sav.Language,
-                    Generation = sav.Generation
-                };
-            }
-        }
-
         PKM pkm;
         string result;
 
@@ -257,6 +235,32 @@ public static class Helpers<T> where T : PKM, new()
                 ShowdownSet = set
             });
         }
+
+        // ============================================================================
+        // NON-FIXED-OT ENCOUNTER PREFERENCE
+        // ============================================================================
+        // If ALM chose a fixed-OT encounter (gift, static, NPC trade) when a wild or
+        // egg encounter also exists for this species, prefer the wild/egg encounter.
+        // This lets users request any language and receive their trade partner's OT.
+        // Falls back silently to the original result if no wild/egg alternative exists
+        // (e.g. Floette-Eternal, Zarude — species with no wild/egg encounter at all).
+        // ============================================================================
+        if (!isEgg)
+        {
+            var fixedOtCheck = new LegalityAnalysis(pkm);
+            if (fixedOtCheck.Valid && AutoLegalityWrapper.IsFixedOT(fixedOtCheck.EncounterOriginal, pkm))
+            {
+                var wildAlt = AutoLegalityWrapper.TryGetAsWildOrEgg(sav, template);
+                if (wildAlt != null)
+                {
+                    pkm = wildAlt;
+                    result = "Regenerated";
+                }
+            }
+        }
+        // ============================================================================
+        // END OF NON-FIXED-OT ENCOUNTER PREFERENCE
+        // ============================================================================
 
         // ============================================================================
         // FORM CORRECTION FOR COSMETIC AND REGIONAL FORMS (e.g., Vivillon patterns)
@@ -369,15 +373,41 @@ public static class Helpers<T> where T : PKM, new()
         // Used later to revert if the user's language conflicts with a fixed-OT encounter.
         byte almGeneratedLanguage = (byte)pkm.Language;
 
-        // Align language and nickname before legality check to avoid false invalids
+        // Set language early so 6IV/Tera checks see the correct language.
+        // Also fix the OT length and nickname for Asian languages here, before the
+        // FIXED-OT FALLBACK runs its LegalityAnalysis. Without this, PKHeX April-15
+        // fails with "OT Name too long" (6-char limit for Asian) and "Nickname does
+        // not match species name" (ClearNickname stores "" instead of e.g. "イーブイ"),
+        // which incorrectly triggers the fallback and forces English on every request.
+        // Species name is set via GameInfo.GetStrings to avoid running LegalityAnalysis
+        // early, which would risk NPC-trade encounter matching via the returned LA.
         if (pkm is T pkBeforeCheck)
         {
             pkBeforeCheck.Language = finalLanguage;
+
+            // Asian languages enforce a 6-char OT limit in PKHeX.
+            // Mirror what PrepareForTrade does at the end so the fallback LA sees a valid OT.
+            if ((finalLanguage == (byte)LanguageID.Japanese ||
+                 finalLanguage == (byte)LanguageID.Korean ||
+                 finalLanguage == (byte)LanguageID.ChineseS ||
+                 finalLanguage == (byte)LanguageID.ChineseT) &&
+                pkBeforeCheck.OriginalTrainerName.Length > 6)
+            {
+                const string asianOT = "王犬米";
+                pkBeforeCheck.OriginalTrainerName = asianOT;
+                // Simple property assignment leaves stale trash bytes from the previous
+                // longer OT ("FreeMons.Org"), which PKHeX's Trainer check flags as invalid.
+                // Clear them explicitly using the same pattern PrepareForTrade uses.
+                Span<byte> trashBuf = stackalloc byte[pkBeforeCheck.TrashCharCountTrainer * 2];
+                int trashLen = pkBeforeCheck.SetString(trashBuf, asianOT.AsSpan(), pkBeforeCheck.TrashCharCountTrainer, StringConverterOption.ClearZero);
+                pkBeforeCheck.OriginalTrainerTrash.Clear();
+                trashBuf[..trashLen].CopyTo(pkBeforeCheck.OriginalTrainerTrash);
+                pkBeforeCheck.RefreshChecksum();
+            }
+
             if (string.IsNullOrEmpty(set.Nickname))
             {
-                // Force default species nickname for the target language
-                var laNick = new LegalityAnalysis(pkBeforeCheck);
-                pkBeforeCheck.SetDefaultNickname(laNick);
+                pkBeforeCheck.Nickname = SpeciesName.GetSpeciesNameGeneration(pkBeforeCheck.Species, pkBeforeCheck.Language, pkBeforeCheck.Format);
                 pkBeforeCheck.IsNicknamed = false;
             }
         }
@@ -491,19 +521,22 @@ public static class Helpers<T> where T : PKM, new()
         // ============================================================================
         // FIXED-OT ENCOUNTER LANGUAGE FALLBACK
         // ============================================================================
-        // Some event Pokemon (e.g. Floette-Eternal / AZ in Legends: Z-A) have a fixed
-        // OT that only exists in specific languages in the event data. If the user's
-        // requested language causes a legality failure that vanishes when we revert to
-        // the language ALM originally chose, silently use the encounter-compatible
-        // language instead. If reverting also fails, restore the requested language so
-        // the normal error path can report the actual reason.
+        // Some encounters (e.g. Floette-Eternal / AZ in Legends Z-A, or in-game trade
+        // Pokémon like Eevee in SV after PKHeX Apr-15 update) require a specific OT that
+        // is only valid for certain languages. If the user's requested language causes a
+        // legality failure that vanishes when we revert to the language ALM originally
+        // chose, silently use the encounter-compatible language instead.
+        // effectiveLanguage tracks the final language choice so PrepareForTrade does not
+        // re-apply finalLanguage and undo this fallback.
         // ============================================================================
+        byte effectiveLanguage = finalLanguage;
         if ((byte)pkm.Language != almGeneratedLanguage)
         {
             var langCheckLa = new LegalityAnalysis(pkm);
             if (!langCheckLa.Valid)
             {
                 pkm.Language = almGeneratedLanguage;
+                effectiveLanguage = almGeneratedLanguage;
                 if (string.IsNullOrEmpty(set.Nickname))
                 {
                     pkm.SetDefaultNickname(new LegalityAnalysis(pkm));
@@ -515,6 +548,7 @@ public static class Helpers<T> where T : PKM, new()
                     // Reverting didn't help — restore the user's language so the
                     // downstream error message reflects the real failure.
                     pkm.Language = finalLanguage;
+                    effectiveLanguage = finalLanguage;
                     if (string.IsNullOrEmpty(set.Nickname))
                     {
                         pkm.SetDefaultNickname(new LegalityAnalysis(pkm));
@@ -527,6 +561,15 @@ public static class Helpers<T> where T : PKM, new()
         // END OF FIXED-OT ENCOUNTER LANGUAGE FALLBACK
         // ============================================================================
 
+        // Now that effectiveLanguage is resolved, set the default nickname once.
+        // The language is already correct on pkm; the FIXED-OT FALLBACK handles its own
+        // nickname updates internally when it reverts, so this covers the normal path.
+        if (string.IsNullOrEmpty(set.Nickname))
+        {
+            pkm.SetDefaultNickname(new LegalityAnalysis(pkm));
+            pkm.IsNicknamed = false;
+        }
+
         var la = new LegalityAnalysis(pkm);
 
         // Auto-fix language-related nickname mismatches for sets without a nickname
@@ -534,8 +577,11 @@ public static class Helpers<T> where T : PKM, new()
         {
             if (la.Results.Any(r => r.Identifier is CheckIdentifier.Nickname))
             {
-                // Clear nickname and re-validate; prevents false invalid when trainer language != set language
-                _ = pkm.ClearNickname();
+                // Set the correct species name for the current language instead of clearing
+                // to "" — ClearNickname stores an empty string which fails the nickname check
+                // for Asian languages (PKHeX expects e.g. "イーブイ", not "").
+                pkm.Nickname = SpeciesName.GetSpeciesNameGeneration(pkm.Species, pkm.Language, pkm.Format);
+                pkm.IsNicknamed = false;
                 la = new LegalityAnalysis(pkm);
             }
         }
@@ -796,8 +842,9 @@ public static class Helpers<T> where T : PKM, new()
         // END OF ZA NATURE LEGALITY ENFORCEMENT
         // ============================================================================
 
-        // Final preparation
-        PrepareForTrade(pk, set, finalLanguage);
+        // Final preparation — use effectiveLanguage so the FIXED-OT FALLBACK's language
+        // choice is not overwritten by finalLanguage here.
+        PrepareForTrade(pk, set, effectiveLanguage);
 
         // Check for spam names
         if (Info.Hub.Config.Trade.TradeConfiguration.EnableSpamCheck)
@@ -874,7 +921,13 @@ public static class Helpers<T> where T : PKM, new()
         }
 
         if (!set.Nickname.Equals(pk.Nickname) && string.IsNullOrEmpty(set.Nickname))
-            _ = pk.ClearNickname();
+        {
+            // Use the correct species name for the stored language instead of "" (ClearNickname).
+            // Asian languages require the actual species name in the nickname field; "" fails
+            // PKHeX's "Nickname does not match species name" legality check.
+            pk.Nickname = SpeciesName.GetSpeciesNameGeneration(pk.Species, pk.Language, pk.Format);
+            pk.IsNicknamed = false;
+        }
 
         pk.ResetPartyStats();
     }

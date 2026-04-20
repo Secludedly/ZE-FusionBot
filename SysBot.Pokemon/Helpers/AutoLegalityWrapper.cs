@@ -35,6 +35,10 @@ public static class AutoLegalityWrapper
     // The list of encounter types in the priority we prefer if no order is specified.
     private static readonly EncounterTypeGroup[] EncounterPriority = [EncounterTypeGroup.Egg, EncounterTypeGroup.Slot, EncounterTypeGroup.Static, EncounterTypeGroup.Mystery, EncounterTypeGroup.Trade];
 
+    // Used by TryGetAsWildOrEgg to temporarily narrow the encounter search.
+    private static readonly SemaphoreSlim s_wildRetryLock = new SemaphoreSlim(1, 1);
+    private static readonly List<EncounterTypeGroup> s_wildAndEggPriority = [EncounterTypeGroup.Slot, EncounterTypeGroup.Egg];
+
     private static void InitializeSettings(LegalitySettings cfg)
     {
         // Disable expensive PID+ validation for PLZA shiny Pokemon
@@ -182,6 +186,38 @@ public static class AutoLegalityWrapper
         },
         _ => false,
     };
+
+    /// <summary>
+    /// Tries to generate the Pokémon using only wild (Slot) and Egg encounters,
+    /// bypassing fixed-OT static/gift/trade encounters. Returns null if no valid
+    /// non-fixed-OT encounter exists for this species, or if another thread is
+    /// already performing a retry (avoids lock contention stalling the queue).
+    /// </summary>
+    public static PKM? TryGetAsWildOrEgg(ITrainerInfo sav, IBattleTemplate template)
+    {
+        if (!s_wildRetryLock.Wait(200))
+            return null;
+
+        var originalPriority = EncounterMovesetGenerator.PriorityList;
+        try
+        {
+            EncounterMovesetGenerator.PriorityList = s_wildAndEggPriority;
+            var pk = sav.GetLegal(template, out _);
+            if (pk == null)
+                return null;
+
+            var la = new LegalityAnalysis(pk);
+            if (!la.Valid || IsFixedOT(la.EncounterOriginal, pk))
+                return null;
+
+            return pk;
+        }
+        finally
+        {
+            EncounterMovesetGenerator.PriorityList = originalPriority;
+            s_wildRetryLock.Release();
+        }
+    }
 
     public static ITrainerInfo GetTrainerInfo<T>() where T : PKM, new()
     {

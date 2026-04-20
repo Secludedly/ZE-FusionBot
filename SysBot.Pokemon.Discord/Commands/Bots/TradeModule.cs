@@ -1291,20 +1291,14 @@ public partial class TradeModule<T> : ModuleBase<SocketCommandContext> where T :
         var la = new LegalityAnalysis(pk);
         if (!la.Valid)
         {
-            // If invalid, revert to original (will be updated later via ApplyAutoOT during trade)
+            // If invalid, fully revert to original valid state (ApplyAutoOT will apply partner info during trade)
             pk.OriginalTrainerName = originalPk.OriginalTrainerName;
             pk.TrainerTID7 = originalPk.TrainerTID7;
             pk.TrainerSID7 = originalPk.TrainerSID7;
             pk.OriginalTrainerGender = originalPk.OriginalTrainerGender;
-
-            // CRITICAL: Never revert language if user explicitly requested it
-            // Language should always be preserved regardless of AutoOT logic
-            if (!hasExplicitLanguage)
-            {
-                pk.Language = originalPk.Language;
-            }
-            // If user explicitly requested a language, keep it even if legality fails with cached trainer
-
+            pk.Language = originalPk.Language;
+            pk.Nickname = originalPk.Nickname;
+            pk.IsNicknamed = originalPk.IsNicknamed;
             pk.PID = originalPk.PID;
             pk.RefreshChecksum();
         }
