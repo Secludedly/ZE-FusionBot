@@ -2,6 +2,7 @@ using Discord;
 using Discord.Interactions;
 using PKHeX.Core;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -12,6 +13,24 @@ namespace SysBot.Pokemon.Discord.Commands.Bots.Autocomplete;
 /// </summary>
 public class ItemAutocompletePLZAHandler : AutocompleteHandler
 {
+    private static readonly Lazy<List<string>> _cache = new(BuildItemList);
+
+    private static List<string> BuildItemList()
+    {
+        var strings = GameInfo.GetStrings("en");
+        return strings.Item
+            .Select((name, index) => new { Name = name, Index = index })
+            .Where(item =>
+                !string.IsNullOrEmpty(item.Name) &&
+                item.Index > 0 &&
+                !item.Name.StartsWith("(") &&
+                !item.Name.Contains("???") &&
+                ItemRestrictions.IsHeldItemAllowed((ushort)item.Index, EntityContext.Gen9))
+            .Select(item => item.Name)
+            .OrderBy(name => name)
+            .ToList();
+    }
+
     public override Task<AutocompletionResult> GenerateSuggestionsAsync(
         IInteractionContext context,
         IAutocompleteInteraction autocompleteInteraction,
@@ -21,32 +40,18 @@ public class ItemAutocompletePLZAHandler : AutocompleteHandler
         try
         {
             var userInput = autocompleteInteraction.Data.Current.Value?.ToString() ?? string.Empty;
+            var itemNames = _cache.Value;
 
-            // Get all item names from PKHeX
-            var strings = GameInfo.GetStrings("en");
-            var itemNames = strings.Item
-                .Select((name, index) => new { Name = name, Index = index })
-                .Where(item =>
-                    !string.IsNullOrEmpty(item.Name) &&
-                    item.Index > 0 && // Skip "None"
-                    !item.Name.StartsWith("(") && // Skip invalid entries
-                    !item.Name.Contains("???") && // Skip unknown items
-                    ItemRestrictions.IsHeldItemAllowed((ushort)item.Index, EntityContext.Gen9)) // PLZA uses Gen9 context
-                .ToList();
-
-            // Filter based on user input
             var filteredItems = string.IsNullOrWhiteSpace(userInput)
-                ? itemNames
-                    .OrderBy(i => i.Name)
-                    .Take(25)
+                ? itemNames.Take(25)
                 : itemNames
-                    .Where(i => i.Name.Contains(userInput, StringComparison.OrdinalIgnoreCase))
-                    .OrderBy(i => i.Name.StartsWith(userInput, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
-                    .ThenBy(i => i.Name)
+                    .Where(name => name.Contains(userInput, StringComparison.OrdinalIgnoreCase))
+                    .OrderBy(name => name.StartsWith(userInput, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+                    .ThenBy(name => name)
                     .Take(25);
 
             var results = filteredItems
-                .Select(i => new AutocompleteResult(i.Name, i.Name))
+                .Select(name => new AutocompleteResult(name, name))
                 .ToList();
 
             return Task.FromResult(

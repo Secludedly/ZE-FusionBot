@@ -15,9 +15,7 @@ public class BallAutocompleteHandler : AutocompleteHandler
 {
     private static readonly HashSet<int> ExcludedBallIndices = new()
     {
-        // Event-only Cherish Ball
         (int)Ball.Cherish,
-        // PLA-only balls
         (int)Ball.LAPoke,
         (int)Ball.LAUltra,
         (int)Ball.LAFeather,
@@ -29,6 +27,23 @@ public class BallAutocompleteHandler : AutocompleteHandler
         (int)Ball.LAOrigin,
     };
 
+    private static readonly Lazy<List<string>> _cache = new(BuildBallList);
+
+    private static List<string> BuildBallList()
+    {
+        var strings = GameInfo.GetStrings("en");
+        return strings.balllist
+            .Select((name, index) => new { Name = name, Index = index })
+            .Where(ball =>
+                !string.IsNullOrEmpty(ball.Name) &&
+                ball.Index > 0 &&
+                ball.Index <= (int)Ball.LAOrigin &&
+                !ExcludedBallIndices.Contains(ball.Index))
+            .Select(ball => ball.Name)
+            .OrderBy(name => name)
+            .ToList();
+    }
+
     public override Task<AutocompletionResult> GenerateSuggestionsAsync(
         IInteractionContext context,
         IAutocompleteInteraction autocompleteInteraction,
@@ -38,31 +53,18 @@ public class BallAutocompleteHandler : AutocompleteHandler
         try
         {
             var userInput = autocompleteInteraction.Data.Current.Value?.ToString() ?? string.Empty;
+            var ballNames = _cache.Value;
 
-            // Get all ball names from PKHeX
-            var strings = GameInfo.GetStrings("en");
-            var ballNames = strings.balllist
-                .Select((name, index) => new { Name = name, Index = index })
-                .Where(ball =>
-                    !string.IsNullOrEmpty(ball.Name) &&
-                    ball.Index > 0 && // Skip "None"
-                    ball.Index <= (int)Ball.LAOrigin && // Only valid balls
-                    !ExcludedBallIndices.Contains(ball.Index)) // Exclude PLA-only and event-only balls for non-PLA commands
-                .ToList();
-
-            // Filter based on user input
             var filteredBalls = string.IsNullOrWhiteSpace(userInput)
-                ? ballNames
-                    .OrderBy(b => b.Name)
-                    .Take(25) // Show first 25 alphabetically if no input
+                ? ballNames.Take(25)
                 : ballNames
-                    .Where(b => b.Name.Contains(userInput, StringComparison.OrdinalIgnoreCase))
-                    .OrderBy(b => b.Name.StartsWith(userInput, StringComparison.OrdinalIgnoreCase) ? 0 : 1) // Prioritize starts-with matches
-                    .ThenBy(b => b.Name)
-                    .Take(25); // Discord limit
+                    .Where(name => name.Contains(userInput, StringComparison.OrdinalIgnoreCase))
+                    .OrderBy(name => name.StartsWith(userInput, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+                    .ThenBy(name => name)
+                    .Take(25);
 
             var results = filteredBalls
-                .Select(b => new AutocompleteResult(b.Name, b.Name))
+                .Select(name => new AutocompleteResult(name, name))
                 .ToList();
 
             return Task.FromResult(
@@ -101,6 +103,21 @@ public class PlaBallAutocompleteHandler : AutocompleteHandler
         (int)Ball.LAGigaton,
     };
 
+    private static readonly Lazy<List<string>> _cache = new(BuildBallList);
+
+    private static List<string> BuildBallList()
+    {
+        var strings = GameInfo.GetStrings("en");
+        return strings.balllist
+            .Select((name, index) => new { Name = name, Index = index })
+            .Where(ball =>
+                !string.IsNullOrEmpty(ball.Name) &&
+                AllowedPlaBalls.Contains(ball.Index))
+            .Select(ball => ball.Name)
+            .OrderBy(name => name)
+            .ToList();
+    }
+
     public override Task<AutocompletionResult> GenerateSuggestionsAsync(
         IInteractionContext context,
         IAutocompleteInteraction autocompleteInteraction,
@@ -110,27 +127,18 @@ public class PlaBallAutocompleteHandler : AutocompleteHandler
         try
         {
             var userInput = autocompleteInteraction.Data.Current.Value?.ToString() ?? string.Empty;
-
-            var strings = GameInfo.GetStrings("en");
-            var ballNames = strings.balllist
-                .Select((name, index) => new { Name = name, Index = index })
-                .Where(ball =>
-                    !string.IsNullOrEmpty(ball.Name) &&
-                    AllowedPlaBalls.Contains(ball.Index))
-                .ToList();
+            var ballNames = _cache.Value;
 
             var filteredBalls = string.IsNullOrWhiteSpace(userInput)
-                ? ballNames
-                    .OrderBy(b => b.Name)
-                    .Take(25)
+                ? ballNames.Take(25)
                 : ballNames
-                    .Where(b => b.Name.Contains(userInput, StringComparison.OrdinalIgnoreCase))
-                    .OrderBy(b => b.Name.StartsWith(userInput, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
-                    .ThenBy(b => b.Name)
+                    .Where(name => name.Contains(userInput, StringComparison.OrdinalIgnoreCase))
+                    .OrderBy(name => name.StartsWith(userInput, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+                    .ThenBy(name => name)
                     .Take(25);
 
             var results = filteredBalls
-                .Select(b => new AutocompleteResult(b.Name, b.Name))
+                .Select(name => new AutocompleteResult(name, name))
                 .ToList();
 
             return Task.FromResult(

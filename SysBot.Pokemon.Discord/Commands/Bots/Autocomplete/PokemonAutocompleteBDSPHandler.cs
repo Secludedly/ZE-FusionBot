@@ -13,6 +13,8 @@ namespace SysBot.Pokemon.Discord.Commands.Bots.Autocomplete;
 /// </summary>
 public class PokemonAutocompleteBDSPHandler : AutocompleteHandler
 {
+    private static readonly Lazy<List<(string Display, string Value)>> _cache = new(GetValidSpeciesForBDSP);
+
     public override Task<AutocompletionResult> GenerateSuggestionsAsync(
         IInteractionContext context,
         IAutocompleteInteraction autocompleteInteraction,
@@ -23,8 +25,7 @@ public class PokemonAutocompleteBDSPHandler : AutocompleteHandler
         {
             var userInput = autocompleteInteraction.Data.Current.Value?.ToString() ?? string.Empty;
 
-            // Get valid Pokemon for BDSP (Sinnoh Dex + National Dex)
-            var validSpecies = GetValidSpeciesForBDSP();
+            var validSpecies = _cache.Value;
 
             // Filter based on user input
             var filteredSpecies = string.IsNullOrWhiteSpace(userInput)

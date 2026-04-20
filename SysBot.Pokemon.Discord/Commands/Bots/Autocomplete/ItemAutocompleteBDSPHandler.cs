@@ -2,6 +2,7 @@ using Discord;
 using Discord.Interactions;
 using PKHeX.Core;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -9,6 +10,24 @@ namespace SysBot.Pokemon.Discord.Commands.Bots.Autocomplete;
 
 public class ItemAutocompleteBDSPHandler : AutocompleteHandler
 {
+    private static readonly Lazy<List<string>> _cache = new(BuildItemList);
+
+    private static List<string> BuildItemList()
+    {
+        var strings = GameInfo.GetStrings("en");
+        return strings.Item
+            .Select((name, index) => new { Name = name, Index = index })
+            .Where(item =>
+                !string.IsNullOrEmpty(item.Name) &&
+                item.Index > 0 &&
+                !item.Name.StartsWith("(") &&
+                !item.Name.Contains("???") &&
+                ItemRestrictions.IsHeldItemAllowed((ushort)item.Index, EntityContext.Gen8))
+            .Select(item => item.Name)
+            .OrderBy(name => name)
+            .ToList();
+    }
+
     public override Task<AutocompletionResult> GenerateSuggestionsAsync(
         IInteractionContext context,
         IAutocompleteInteraction autocompleteInteraction,
@@ -18,26 +37,17 @@ public class ItemAutocompleteBDSPHandler : AutocompleteHandler
         try
         {
             var userInput = autocompleteInteraction.Data.Current.Value?.ToString() ?? string.Empty;
-            var strings = GameInfo.GetStrings("en");
-            var itemNames = strings.Item
-                .Select((name, index) => new { Name = name, Index = index })
-                .Where(item =>
-                    !string.IsNullOrEmpty(item.Name) &&
-                    item.Index > 0 &&
-                    !item.Name.StartsWith("(") &&
-                    !item.Name.Contains("???") &&
-                    ItemRestrictions.IsHeldItemAllowed((ushort)item.Index, EntityContext.Gen8))
-                .ToList();
+            var itemNames = _cache.Value;
 
             var filteredItems = string.IsNullOrWhiteSpace(userInput)
-                ? itemNames.OrderBy(i => i.Name).Take(25)
+                ? itemNames.Take(25)
                 : itemNames
-                    .Where(i => i.Name.Contains(userInput, StringComparison.OrdinalIgnoreCase))
-                    .OrderBy(i => i.Name.StartsWith(userInput, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
-                    .ThenBy(i => i.Name)
+                    .Where(name => name.Contains(userInput, StringComparison.OrdinalIgnoreCase))
+                    .OrderBy(name => name.StartsWith(userInput, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+                    .ThenBy(name => name)
                     .Take(25);
 
-            var results = filteredItems.Select(i => new AutocompleteResult(i.Name, i.Name)).ToList();
+            var results = filteredItems.Select(name => new AutocompleteResult(name, name)).ToList();
             return Task.FromResult(results.Any() ? AutocompletionResult.FromSuccess(results) : AutocompletionResult.FromSuccess(new[] { new AutocompleteResult("No matches found", "None") }));
         }
         catch (Exception ex)
