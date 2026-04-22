@@ -7,19 +7,49 @@ using System.Threading.Tasks;
 
 namespace SysBot.Pokemon.Discord.Commands.Bots.SlashCommands;
 
+/// <summary>
+/// Slash command module for creating Sword/Shield (PK8) Pokemon with Gigantamax support
+/// </summary>
 public class CreatePokemonSWSHModule<T> : InteractionModuleBase<SocketInteractionContext> where T : PKM, new()
 {
-    private static readonly HashSet<Species> GigantamaxSpecies =
-    [
-        Species.Venusaur, Species.Charizard, Species.Blastoise, Species.Butterfree,
-        Species.Pikachu, Species.Meowth, Species.Machamp, Species.Gengar,
-        Species.Kingler, Species.Lapras, Species.Eevee, Species.Snorlax,
-        Species.Garbodor, Species.Melmetal, Species.Rillaboom, Species.Cinderace,
-        Species.Inteleon, Species.Corviknight, Species.Orbeetle, Species.Drednaw,
-        Species.Coalossal, Species.Flapple, Species.Appletun, Species.Sandaconda,
-        Species.Toxtricity, Species.Centiskorch, Species.Hatterene, Species.Grimmsnarl,
-        Species.Alcremie, Species.Copperajah, Species.Duraludon, Species.Urshifu,
-    ];
+    /// <summary>
+    /// List of Pokemon species that can Gigantamax in Sword/Shield
+    /// </summary>
+    private static readonly HashSet<Species> GigantamaxSpecies = new()
+    {
+        Species.Venusaur,
+        Species.Charizard,
+        Species.Blastoise,
+        Species.Butterfree,
+        Species.Pikachu,
+        Species.Meowth,
+        Species.Machamp,
+        Species.Gengar,
+        Species.Kingler,
+        Species.Lapras,
+        Species.Eevee,
+        Species.Snorlax,
+        Species.Garbodor,
+        Species.Melmetal,
+        Species.Rillaboom,
+        Species.Cinderace,
+        Species.Inteleon,
+        Species.Corviknight,
+        Species.Orbeetle,
+        Species.Drednaw,
+        Species.Coalossal,
+        Species.Flapple,
+        Species.Appletun,
+        Species.Sandaconda,
+        Species.Toxtricity,
+        Species.Centiskorch,
+        Species.Hatterene,
+        Species.Grimmsnarl,
+        Species.Alcremie,
+        Species.Copperajah,
+        Species.Duraludon,
+        Species.Urshifu,
+    };
 
     [SlashCommand("create-swsh", "Create a Sword/Shield Pokemon with Gigantamax support")]
     public async Task CreatePokemonSWSHAsync(
@@ -54,44 +84,7 @@ public class CreatePokemonSWSHModule<T> : InteractionModuleBase<SocketInteractio
         string? ivs = null,
 
         [Summary("evs", "Custom EVs (optional) - Format: 252/252/4/0/0/0 (HP/Atk/Def/SpA/SpD/Spe)")]
-        string? evs = null,
-
-        [Summary("nickname", "Nickname for the Pokemon (optional)")]
-        string? nickname = null,
-
-        [Summary("ability", "Which ability slot to use (optional)")]
-        [Choice("Ability 1", "0")]
-        [Choice("Ability 2", "1")]
-        [Choice("Hidden Ability", "H")]
-        string? ability = null,
-
-        [Summary("move1", "First move (optional)")]
-        [Autocomplete(typeof(MoveAutocompleteHandler))]
-        string? move1 = null,
-
-        [Summary("move2", "Second move (optional)")]
-        [Autocomplete(typeof(MoveAutocompleteHandler))]
-        string? move2 = null,
-
-        [Summary("move3", "Third move (optional)")]
-        [Autocomplete(typeof(MoveAutocompleteHandler))]
-        string? move3 = null,
-
-        [Summary("move4", "Fourth move (optional)")]
-        [Autocomplete(typeof(MoveAutocompleteHandler))]
-        string? move4 = null,
-
-        [Summary("language", "Pokemon language (optional)")]
-        [Choice("English", "English")]
-        [Choice("Japanese", "Japanese")]
-        [Choice("French", "French")]
-        [Choice("German", "German")]
-        [Choice("Italian", "Italian")]
-        [Choice("Spanish", "Spanish")]
-        [Choice("Korean", "Korean")]
-        [Choice("Chinese (Simplified)", "ChineseS")]
-        [Choice("Chinese (Traditional)", "ChineseT")]
-        string? language = null
+        string? evs = null
     )
     {
         if (Context.Guild == null)
@@ -104,19 +97,43 @@ public class CreatePokemonSWSHModule<T> : InteractionModuleBase<SocketInteractio
 
         try
         {
-            var speciesInput = pokemon.Contains('|') ? pokemon.Split('|')[0] : pokemon;
-            bool canGigantamax = System.Enum.TryParse<Species>(speciesInput, true, out var species) && GigantamaxSpecies.Contains(species);
+            // Parse Pokemon species to check if it can Gigantamax
+            var speciesInput = pokemon;
+            if (!string.IsNullOrWhiteSpace(pokemon) && pokemon.Contains('|'))
+            {
+                speciesInput = pokemon.Split('|')[0];
+            }
+
+            bool canGigantamax = false;
+            if (System.Enum.TryParse<Species>(speciesInput, true, out var species))
+            {
+                canGigantamax = GigantamaxSpecies.Contains(species);
+            }
+
+            // Build Gigantamax feature string - only if the species can actually Gigantamax
             string specialFeature = (gigantamax && canGigantamax) ? "Gigantamax: Yes" : string.Empty;
 
+            // Post-processing: Apply Gigantamax only if the species can actually Gigantamax
             void PostProcess(T pk)
             {
                 if (gigantamax && canGigantamax && pk is PK8 pk8)
+                {
                     pk8.CanGigantamax = true;
+                }
             }
 
             await CreatePokemonHelper.ExecuteCreatePokemonAsync<T>(
-                Context, pokemon, shiny, item, ball, level, nature, ivs, evs,
-                specialFeature, PostProcess, nickname, ability, move1, move2, move3, move4, language
+                Context,
+                pokemon,
+                shiny,
+                item,
+                ball,
+                level,
+                nature,
+                ivs,
+                evs,
+                specialFeature,
+                PostProcess
             ).ConfigureAwait(false);
         }
         catch (System.Exception ex)

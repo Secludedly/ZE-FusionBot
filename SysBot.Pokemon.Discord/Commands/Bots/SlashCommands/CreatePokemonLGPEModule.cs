@@ -6,6 +6,9 @@ using System.Threading.Tasks;
 
 namespace SysBot.Pokemon.Discord.Commands.Bots.SlashCommands;
 
+/// <summary>
+/// Slash command module for creating Let's Go Pikachu/Eevee (PB7) Pokemon
+/// </summary>
 public class CreatePokemonLGPEModule<T> : InteractionModuleBase<SocketInteractionContext> where T : PKM, new()
 {
     [SlashCommand("create-lgpe", "Create a Let's Go Pikachu/Eevee Pokemon")]
@@ -16,6 +19,11 @@ public class CreatePokemonLGPEModule<T> : InteractionModuleBase<SocketInteractio
 
         [Summary("shiny", "Should the Pokemon be shiny?")]
         bool shiny = false,
+
+        // Note: Let's Go Pikachu/Eevee does not have held items or special features
+        // [Summary("item", "Held item (optional)")]
+        // [Autocomplete(typeof(ItemAutocompleteLGPEHandler))]
+        // string? item = null,
 
         [Summary("ball", "Poke Ball (optional)")]
         [Autocomplete(typeof(BallAutocompleteHandler))]
@@ -34,44 +42,7 @@ public class CreatePokemonLGPEModule<T> : InteractionModuleBase<SocketInteractio
         string? ivs = null,
 
         [Summary("evs", "Custom EVs (optional) - Format: 252/252/4/0/0/0 (HP/Atk/Def/SpA/SpD/Spe)")]
-        string? evs = null,
-
-        [Summary("nickname", "Nickname for the Pokemon (optional)")]
-        string? nickname = null,
-
-        [Summary("ability", "Which ability slot to use (optional)")]
-        [Choice("Ability 1", "0")]
-        [Choice("Ability 2", "1")]
-        [Choice("Hidden Ability", "H")]
-        string? ability = null,
-
-        [Summary("move1", "First move (optional)")]
-        [Autocomplete(typeof(MoveAutocompleteHandler))]
-        string? move1 = null,
-
-        [Summary("move2", "Second move (optional)")]
-        [Autocomplete(typeof(MoveAutocompleteHandler))]
-        string? move2 = null,
-
-        [Summary("move3", "Third move (optional)")]
-        [Autocomplete(typeof(MoveAutocompleteHandler))]
-        string? move3 = null,
-
-        [Summary("move4", "Fourth move (optional)")]
-        [Autocomplete(typeof(MoveAutocompleteHandler))]
-        string? move4 = null,
-
-        [Summary("language", "Pokemon language (optional)")]
-        [Choice("English", "English")]
-        [Choice("Japanese", "Japanese")]
-        [Choice("French", "French")]
-        [Choice("German", "German")]
-        [Choice("Italian", "Italian")]
-        [Choice("Spanish", "Spanish")]
-        [Choice("Korean", "Korean")]
-        [Choice("Chinese (Simplified)", "ChineseS")]
-        [Choice("Chinese (Traditional)", "ChineseT")]
-        string? language = null
+        string? evs = null
     )
     {
         if (Context.Guild == null)
@@ -85,8 +56,17 @@ public class CreatePokemonLGPEModule<T> : InteractionModuleBase<SocketInteractio
         try
         {
             await CreatePokemonHelper.ExecuteCreatePokemonAsync<T>(
-                Context, pokemon, shiny, null, ball, level, nature, ivs, evs,
-                string.Empty, null, nickname, ability, move1, move2, move3, move4, language
+                Context,
+                pokemon,
+                shiny,
+                null, // No held item
+                ball,
+                level,
+                nature,
+                ivs,
+                evs,
+                string.Empty, // No special features
+                null
             ).ConfigureAwait(false);
         }
         catch (System.Exception ex)

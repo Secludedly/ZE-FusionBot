@@ -13,8 +13,6 @@ namespace SysBot.Pokemon.Discord.Commands.Bots.Autocomplete;
 /// </summary>
 public class PokemonAutocompletePLAHandler : AutocompleteHandler
 {
-    private static readonly Lazy<List<(string Display, string Value)>> _cache = new(() => GetValidSpeciesForGame(GameVersion.PLA));
-
     public override Task<AutocompletionResult> GenerateSuggestionsAsync(
         IInteractionContext context,
         IAutocompleteInteraction autocompleteInteraction,
@@ -25,7 +23,8 @@ public class PokemonAutocompletePLAHandler : AutocompleteHandler
         {
             var userInput = autocompleteInteraction.Data.Current.Value?.ToString() ?? string.Empty;
 
-            var validSpecies = _cache.Value;
+            // Get valid Pokemon for Legends: Arceus
+            var validSpecies = GetValidSpeciesForGame(GameVersion.PLA);
 
             // Filter based on user input
             var filteredSpecies = string.IsNullOrWhiteSpace(userInput)

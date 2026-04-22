@@ -15,6 +15,9 @@ using static SysBot.Pokemon.Helpers.DetailedLegalityChecker;
 
 namespace SysBot.Pokemon.Discord.Commands.Bots.SlashCommands;
 
+/// <summary>
+/// Helper class containing common logic for all CreatePokemon commands
+/// </summary>
 public static class CreatePokemonHelper
 {
     public static async Task<bool> ExecuteCreatePokemonAsync<T>(
@@ -25,20 +28,14 @@ public static class CreatePokemonHelper
         string? ball,
         int level,
         string? nature,
-        string? ivs,
-        string? evs,
-        string specialFeature,
-        Action<T>? postProcessing = null,
-        string? nickname = null,
-        string? abilitySlot = null,
-        string? move1 = null,
-        string? move2 = null,
-        string? move3 = null,
-        string? move4 = null,
-        string? language = null
-    ) where T : PKM, new()
+        string? ivs,     // Optional: "31/31/31/31/31/31" or "31 HP / 31 Atk / ..." format
+        string? evs,     // Optional: "252/252/4/0/0/0" or "252 HP / 252 Atk / ..." format
+        string specialFeature, // "Alpha: Yes", "Gigantamax", etc.
+        Action<T>? postProcessing = null) where T : PKM, new()
     {
-        // Parse the pokemon parameter (may be encoded as Species|FormIndex|ShowdownName)
+        var Info = SysCord<T>.Runner.Hub.Queues.Info;
+
+        // Pokemon parameter can encode form data as Species|FormIndex|ShowdownName
         var speciesInput = pokemon;
         byte form = 0;
         string showdownSpeciesName = pokemon;
@@ -52,96 +49,90 @@ public static class CreatePokemonHelper
             showdownSpeciesName = parts.ElementAtOrDefault(2) ?? speciesInput;
         }
 
+        // Validate pokemon parameter
         if (string.IsNullOrWhiteSpace(speciesInput))
         {
-            await context.Interaction.FollowupAsync("❌ Pokemon parameter is empty! Please use autocomplete to select a valid Pokemon.", ephemeral: true).ConfigureAwait(false);
+            await context.Interaction.FollowupAsync($"❌ Pokemon parameter is empty! Please use autocomplete to select a valid Pokemon.", ephemeral: true).ConfigureAwait(false);
             return false;
         }
 
+        // Parse Pokemon species
         if (!Enum.TryParse<Species>(speciesInput, true, out var species) || species <= 0)
         {
             await context.Interaction.FollowupAsync($"❌ Invalid Pokemon: **{speciesInput}**. Please use autocomplete to select a valid Pokemon.", ephemeral: true).ConfigureAwait(false);
             return false;
         }
 
-        // Resolve ability name from slot before building the Showdown set
-        string? resolvedAbilityName = ResolveAbilityName<T>(species, form, abilitySlot);
-
+        // Build Showdown format string
         var speciesName = showdownSpeciesName;
         var showdownBuilder = new StringBuilder();
 
-        // Line 1: [Nickname (]Species[)] @ Item
-        if (!string.IsNullOrWhiteSpace(nickname))
-        {
-            showdownBuilder.AppendLine(!string.IsNullOrWhiteSpace(item)
-                ? $"{nickname} ({speciesName}) @ {item}"
-                : $"{nickname} ({speciesName})");
-        }
+        // Line 1: Pokemon @ Item
+        if (!string.IsNullOrWhiteSpace(item))
+            showdownBuilder.AppendLine($"{speciesName} @ {item}");
         else
-        {
-            showdownBuilder.AppendLine(!string.IsNullOrWhiteSpace(item)
-                ? $"{speciesName} @ {item}"
-                : speciesName);
-        }
+            showdownBuilder.AppendLine(speciesName);
 
-        // Ability (if slot specified and resolved)
-        if (!string.IsNullOrWhiteSpace(resolvedAbilityName))
-            showdownBuilder.AppendLine($"Ability: {resolvedAbilityName}");
-
-        // Nature — for ZA (PA9), skip random pick; ALM uses the legal encounter nature
+        // Line 2: Nature - Use provided or pick a random beneficial one.
+        // For ZA (PA9) targets, skip the random nature pick — let ALM use the legal encounter
+        // nature. The ZA nature enforcement in ProcessShowdownSetAsync will handle the mint logic.
         bool isZATarget = typeof(T) == typeof(PA9);
         string? finalNature = nature;
         if (string.IsNullOrWhiteSpace(finalNature) && !isZATarget)
         {
+            // Pick a random beneficial nature if none specified (non-ZA only)
             string[] beneficialNatures = ["Adamant", "Jolly", "Timid", "Modest", "Careful", "Calm"];
-            finalNature = beneficialNatures[new Random().Next(beneficialNatures.Length)];
+            var random = new Random();
+            finalNature = beneficialNatures[random.Next(beneficialNatures.Length)];
         }
 
         if (!string.IsNullOrWhiteSpace(finalNature))
             showdownBuilder.AppendLine($"{finalNature} Nature");
 
+        // Stats and other properties
         showdownBuilder.AppendLine($"Level: {level}");
 
         if (!string.IsNullOrWhiteSpace(ball))
             showdownBuilder.AppendLine($"Ball: {ball}");
 
-        showdownBuilder.AppendLine(ParseIVString(ivs));
+        // IVs - Parse and validate custom IVs if provided
+        string ivString = ParseIVString(ivs);
+        showdownBuilder.AppendLine(ivString);
 
+        // EVs - Parse and apply custom EVs if provided
         if (!string.IsNullOrWhiteSpace(evs))
-            showdownBuilder.AppendLine(ParseEVString(evs));
+        {
+            string evString = ParseEVString(evs);
+            showdownBuilder.AppendLine(evString);
+        }
 
+        // Shiny
         if (shiny)
             showdownBuilder.AppendLine("Shiny: Yes");
 
-        // Language line — extracted by LanguageHelper before ShowdownSet parsing
-        if (!string.IsNullOrWhiteSpace(language))
-            showdownBuilder.AppendLine($"Language: {language}");
-
+        // Add special feature
         if (!string.IsNullOrWhiteSpace(specialFeature))
             showdownBuilder.AppendLine(specialFeature);
 
-        // Moves come last in Showdown format
-        foreach (var move in new[] { move1, move2, move3, move4 })
-        {
-            if (!string.IsNullOrWhiteSpace(move))
-                showdownBuilder.AppendLine($"- {move}");
-        }
-
         var showdownText = showdownBuilder.ToString();
 
-        var processed = await Helpers<T>.ProcessShowdownSetAsync(showdownText, ignoreAutoOT: false).ConfigureAwait(false);
+        // Process through normal ALM pipeline
+        bool ignoreAutoOT = false; // AutoOT enabled for everyone in slash commands
+        var processed = await Helpers<T>.ProcessShowdownSetAsync(showdownText, ignoreAutoOT: ignoreAutoOT).ConfigureAwait(false);
 
         if (!string.IsNullOrEmpty(processed.Error) || processed.Pokemon == null)
         {
-            await context.Interaction.FollowupAsync($"❌ {processed.Error ?? "Unknown error occurred during Pokemon generation."}", ephemeral: true).ConfigureAwait(false);
+            var errorMsg = processed.Error ?? "Unknown error occurred during Pokemon generation.";
+            await context.Interaction.FollowupAsync($"❌ {errorMsg}", ephemeral: true).ConfigureAwait(false);
             return false;
         }
 
         var pk = processed.Pokemon;
         var lgcode = processed.LgCode;
 
-        // Apply custom IVs
+        // Apply custom IVs from user input if provided via slash command parameter
         int[] requestedIVs = ParseIVValues(ivs);
+
         pk.IV_HP = requestedIVs[0];
         pk.IV_ATK = requestedIVs[1];
         pk.IV_DEF = requestedIVs[2];
@@ -149,6 +140,7 @@ public static class CreatePokemonHelper
         pk.IV_SPD = requestedIVs[4];
         pk.IV_SPE = requestedIVs[5];
 
+        // Clear Hyper Training flags for stats that are already 31, set for those that aren't
         if (pk is IHyperTrain ht)
         {
             ht.HT_HP = requestedIVs[0] < 31;
@@ -159,16 +151,21 @@ public static class CreatePokemonHelper
             ht.HT_SPE = requestedIVs[5] < 31;
         }
 
-        // Set Nature — skip for ZA (PA9) where ProcessShowdownSetAsync handles mint logic
+        // Set Nature - apply directly for non-ZA Pokemon.
+        // For ZA (PA9), ProcessShowdownSetAsync already handled the legality-aware nature logic
+        // (mint: StatNature = requested, Nature = legal encounter value when the requested is illegal).
+        // Overriding here would undo that mint, so we skip the assignment for PA9.
         if (pk is not PA9 && !string.IsNullOrWhiteSpace(finalNature) && Enum.TryParse<Nature>(finalNature, true, out var parsedNature))
         {
             pk.Nature = parsedNature;
             pk.StatNature = parsedNature;
         }
 
+        // Refresh stats after IV/Nature changes
         pk.ResetPartyStats();
         pk.RefreshChecksum();
 
+        // Apply requested form if one was specified (includes form 0, e.g. Vivillon Icy-Snow)
         if (pk.Form != form)
         {
             pk.Form = form;
@@ -176,48 +173,42 @@ public static class CreatePokemonHelper
             pk.RefreshChecksum();
         }
 
+        // Apply post-processing (for Gigantamax, TeraType, etc.)
         postProcessing?.Invoke(pk);
 
-        return await QueuePokemonForTradeAsync(context, pk, showdownSpeciesName, ignoreAutoOT: false, lgcode: lgcode).ConfigureAwait(false);
-    }
-
-    /// <summary>
-    /// Runs the final legality check and queues a pre-built Pokemon for trade, sending all embeds.
-    /// Used by all slash command modules that need to queue a Pokemon.
-    /// </summary>
-    public static async Task<bool> QueuePokemonForTradeAsync<T>(
-        SocketInteractionContext context,
-        T pk,
-        string displayName,
-        bool ignoreAutoOT = false,
-        bool isMysteryEgg = false,
-        List<Pictocodes>? lgcode = null
-    ) where T : PKM, new()
-    {
-        var Info = SysCord<T>.Runner.Hub.Queues.Info;
-
+        // ===================================================================
+        // Final legality check BEFORE adding to queue
+        // Prevents illegal Pokemon from being injected into the game
+        // ===================================================================
         var commandPrefix = SysCord<T>.Runner.Config.Discord.CommandPrefix;
+        string displayName = showdownSpeciesName;
         if (!DetailedLegalityChecker.IsLegalWithDetailedReport(pk, displayName, commandPrefix, out string? legalityError))
         {
+            // Pokemon is illegal so we send detailed error message to user
             await context.Interaction.FollowupAsync($"❌ **Illegal Pokemon Detected**\n\n{legalityError}", ephemeral: true).ConfigureAwait(false);
             return false;
         }
 
+        // Generate trade code
         var code = Info.GetRandomTradeCode(context.User.Id);
+        var sig = RequestSignificance.None;
         var userID = context.User.Id;
 
+        // Create trade detail
         var trainer_info = new PokeTradeTrainerInfo(context.User.Username, userID);
         var notifier = new DiscordTradeNotifier<T>(pk, trainer_info, code, context.User, 1, 1, false, lgcode: lgcode ?? []);
 
+        // Generate unique trade ID
         long timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         int uniqueTradeID = (int)(timestamp & 0x7FFFFFFF);
 
         var detail = new PokeTradeDetail<T>(pk, trainer_info, notifier, PokeTradeType.Specific, code,
-            false, null, 1, 1, false, false, uniqueTradeID, ignoreAutoOT: ignoreAutoOT);
+            sig == RequestSignificance.Favored, null, 1, 1, false, false, uniqueTradeID, ignoreAutoOT: ignoreAutoOT);
 
         var trade = new TradeEntry<T>(detail, userID, PokeRoutineType.LinkTrade, context.User.Username, uniqueTradeID);
 
-        var added = Info.AddToTradeQueue(trade, userID, false, false);
+        // Add to queue
+        var added = Info.AddToTradeQueue(trade, userID, false, sig == RequestSignificance.Owner);
 
         if (added == QueueResultAdd.AlreadyInQueue)
         {
@@ -231,27 +222,18 @@ public static class CreatePokemonHelper
             return false;
         }
 
+        // Send trade code embed via DM
         await EmbedHelper.SendTradeCodeEmbedAsync(context.User, code).ConfigureAwait(false);
 
-        // Build embed
-        var embedData = DetailsExtractor<T>.ExtractPokemonDetails(pk, context.User, false, false, false, false, false, false, 1, 1);
+        // Build channel embed
+        var embedData = DetailsExtractor<T>.ExtractPokemonDetails(
+            pk, context.User, false, false, false, false, false, false, 1, 1
+        );
 
-        DiscordColor embedColor;
-        string embedImageUrl;
-
-        if (isMysteryEgg)
-        {
-            embedImageUrl = "https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/mysteryegg3.png";
-            embedColor = DiscordColor.Gold;
-        }
-        else
-        {
-            (embedImageUrl, embedColor) = await QueueHelper<T>.PrepareEmbedDetails(pk).ConfigureAwait(false);
-        }
-
+        (string embedImageUrl, DiscordColor embedColor) = await QueueHelper<T>.PrepareEmbedDetails(pk).ConfigureAwait(false);
         embedData.EmbedImageUrl = embedImageUrl;
-        embedData.HeldItemUrl = string.Empty;
 
+        embedData.HeldItemUrl = string.Empty;
         if (!string.IsNullOrWhiteSpace(embedData.HeldItem))
         {
             string heldItemName = embedData.HeldItem.ToLower().Replace(" ", "");
@@ -263,8 +245,9 @@ public static class CreatePokemonHelper
         var position = Info.CheckPosition(userID, uniqueTradeID, PokeRoutineType.LinkTrade);
         var botct = Info.Hub.Bots.Count;
         var baseEta = position.Position > botct ? Info.Hub.Config.Queues.EstimateDelay(position.Position, botct) : 0;
+        var etaMessage = $"Wait Estimate: {baseEta:F1} min(s) for trade.";
         string footerText = $"Current Queue Position: {(position.Position == -1 ? 1 : position.Position)}";
-        footerText += $"\nWait Estimate: {baseEta:F1} min(s) for trade.";
+        footerText += $"\n{etaMessage}";
         footerText += $"\nZE FusionBot {TradeBot.Version}";
 
         var embedBuilder = new EmbedBuilder()
@@ -284,7 +267,9 @@ public static class CreatePokemonHelper
 
         if (embedData.IsLocalFile)
         {
+            // First, dismiss the "thinking..." message with an empty followup
             await context.Interaction.FollowupAsync("✅ Pokemon added to queue! Check your DMs for the trade code.", ephemeral: true).ConfigureAwait(false);
+            // Then send the embed with the file in the channel
             await context.Channel.SendFileAsync(embedData.EmbedImageUrl, embed: embed).ConfigureAwait(false);
             await QueueHelper<T>.ScheduleFileDeletion(embedData.EmbedImageUrl, 0).ConfigureAwait(false);
         }
@@ -296,69 +281,34 @@ public static class CreatePokemonHelper
         return true;
     }
 
-    private static string? ResolveAbilityName<T>(Species species, byte form, string? abilitySlot) where T : PKM, new()
-    {
-        if (string.IsNullOrWhiteSpace(abilitySlot) || species == Species.None)
-            return null;
-
-        try
-        {
-            var pi = GetPersonalInfo<T>(species, form);
-            if (pi is not IPersonalAbility12 pa12) return null;
-
-            int abilityID = abilitySlot.ToUpper() switch
-            {
-                "1" => pa12.Ability2,
-                "H" when pa12 is IPersonalAbility12H paH => paH.AbilityH,
-                _ => pa12.Ability1
-            };
-
-            if (abilityID <= 0 || abilityID >= GameInfo.Strings.Ability.Count)
-                return null;
-
-            var abilityName = GameInfo.Strings.Ability[abilityID];
-            return string.IsNullOrWhiteSpace(abilityName) ? null : abilityName;
-        }
-        catch { return null; }
-    }
-
-    private static IPersonalInfo? GetPersonalInfo<T>(Species species, byte form) where T : PKM, new()
-    {
-        try
-        {
-            IPersonalTable table = typeof(T).Name switch
-            {
-                "PK9" => PersonalTable.SV,
-                "PA9" => PersonalTable.ZA,
-                "PK8" => PersonalTable.SWSH,
-                "PB8" => PersonalTable.BDSP,
-                "PA8" => PersonalTable.LA,
-                "PB7" => PersonalTable.GG,
-                _ => PersonalTable.SV
-            };
-            return table.GetFormEntry((ushort)species, form);
-        }
-        catch { return null; }
-    }
-
+    /// <summary>
+    /// Parses IV string input and returns the IV values as an int array [HP, Atk, Def, SpA, SpD, Spe].
+    /// Supports formats: "31/31/31/31/31/31" or "31 HP / 31 Atk / 31 Def / 31 SpA / 31 SpD / 31 Spe"
+    /// </summary>
     private static int[] ParseIVValues(string? ivs)
     {
+        // Default to perfect IVs if none provided
         if (string.IsNullOrWhiteSpace(ivs))
             return [31, 31, 31, 31, 31, 31];
 
+        // Try to parse Showdown format first: "31 HP / 31 Atk / 31 Def / 31 SpA / 31 SpD / 31 Spe"
         if (ivs.Contains("HP") || ivs.Contains("Atk") || ivs.Contains("Def"))
         {
             int[] result = [31, 31, 31, 31, 31, 31];
-            var parts = ivs.Replace("IVs:", "").Trim().Split('/');
+            var cleanIvs = ivs.Replace("IVs:", "").Trim();
+            var parts = cleanIvs.Split('/');
+
             foreach (var part in parts)
             {
-                var tokens = part.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                var trimmed = part.Trim();
+                var tokens = trimmed.Split(' ', StringSplitOptions.RemoveEmptyEntries);
                 if (tokens.Length >= 2 && int.TryParse(tokens[0], out int value))
                 {
                     value = Math.Clamp(value, 0, 31);
-                    switch (tokens[1].ToUpperInvariant())
+                    var stat = tokens[1].ToUpperInvariant();
+                    switch (stat)
                     {
-                        case "HP":  result[0] = value; break;
+                        case "HP": result[0] = value; break;
                         case "ATK": result[1] = value; break;
                         case "DEF": result[2] = value; break;
                         case "SPA": result[3] = value; break;
@@ -370,6 +320,7 @@ public static class CreatePokemonHelper
             return result;
         }
 
+        // Parse slash-separated format: "31/31/31/31/31/31"
         var ivParts = ivs.Split('/');
         if (ivParts.Length == 6)
         {
@@ -377,68 +328,101 @@ public static class CreatePokemonHelper
             for (int i = 0; i < 6; i++)
             {
                 if (!int.TryParse(ivParts[i].Trim(), out ivValues[i]) || ivValues[i] < 0 || ivValues[i] > 31)
-                    ivValues[i] = 31;
+                {
+                    ivValues[i] = 31; // Default to 31 if invalid
+                }
             }
             return ivValues;
         }
 
+        // Invalid format, default to perfect IVs
         return [31, 31, 31, 31, 31, 31];
     }
 
+    /// <summary>
+    /// Parses IV string input from user and returns Showdown format.
+    /// Supports formats: "31/31/31/31/31/31" or "31 HP / 31 Atk / 31 Def / 31 SpA / 31 SpD / 31 Spe"
+    /// </summary>
     private static string ParseIVString(string? ivs)
     {
+        // Default to perfect IVs if none provided
         if (string.IsNullOrWhiteSpace(ivs))
             return "IVs: 31 HP / 31 Atk / 31 Def / 31 SpA / 31 SpD / 31 Spe";
 
+        // If already in showdown format, return as-is (with IVs: prefix if missing)
         if (ivs.Contains("HP") || ivs.Contains("Atk") || ivs.Contains("Def"))
+        {
             return ivs.StartsWith("IVs:") ? ivs : $"IVs: {ivs}";
+        }
 
+        // Parse slash-separated format: "31/31/31/31/31/31"
         var parts = ivs.Split('/');
         if (parts.Length == 6)
         {
+            // Validate each IV value (0-31)
             int[] ivValues = new int[6];
             for (int i = 0; i < 6; i++)
             {
                 if (!int.TryParse(parts[i].Trim(), out ivValues[i]) || ivValues[i] < 0 || ivValues[i] > 31)
+                {
+                    // Invalid IV, default to 31
                     ivValues[i] = 31;
+                }
             }
+
             return $"IVs: {ivValues[0]} HP / {ivValues[1]} Atk / {ivValues[2]} Def / {ivValues[3]} SpA / {ivValues[4]} SpD / {ivValues[5]} Spe";
         }
 
+        // Invalid format, default to perfect IVs
         return "IVs: 31 HP / 31 Atk / 31 Def / 31 SpA / 31 SpD / 31 Spe";
     }
 
+    /// <summary>
+    /// Parses EV string input from user and returns Showdown format.
+    /// Supports formats: "252/252/4/0/0/0" or "252 HP / 252 Atk / 4 Def / 0 SpA / 0 SpD / 0 Spe"
+    /// </summary>
     private static string ParseEVString(string? evs)
     {
         if (string.IsNullOrWhiteSpace(evs))
             return string.Empty;
 
+        // If already in showdown format, return as-is (with EVs: prefix if missing)
         if (evs.Contains("HP") || evs.Contains("Atk") || evs.Contains("Def"))
+        {
             return evs.StartsWith("EVs:") ? evs : $"EVs: {evs}";
+        }
 
+        // Parse slash-separated format: "252/252/4/0/0/0"
         var parts = evs.Split('/');
         if (parts.Length == 6)
         {
+            // Validate each EV value (0-252, total max 510)
             int[] evValues = new int[6];
             int totalEVs = 0;
 
             for (int i = 0; i < 6; i++)
             {
                 if (!int.TryParse(parts[i].Trim(), out evValues[i]) || evValues[i] < 0 || evValues[i] > 252)
+                {
                     evValues[i] = 0;
+                }
                 totalEVs += evValues[i];
             }
 
+            // If total EVs exceed 510, scale them down proportionally
             if (totalEVs > 510)
             {
                 double scaleFactor = 510.0 / totalEVs;
                 for (int i = 0; i < 6; i++)
+                {
                     evValues[i] = (int)(evValues[i] * scaleFactor);
+                }
             }
 
             return $"EVs: {evValues[0]} HP / {evValues[1]} Atk / {evValues[2]} Def / {evValues[3]} SpA / {evValues[4]} SpD / {evValues[5]} Spe";
         }
 
+        // Invalid format, return empty (no EVs)
         return string.Empty;
     }
 }

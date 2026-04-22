@@ -13,8 +13,6 @@ namespace SysBot.Pokemon.Discord.Commands.Bots.Autocomplete;
 /// </summary>
 public class PokemonAutocompleteSWSHHandler : AutocompleteHandler
 {
-    private static readonly Lazy<List<(string Display, string Value)>> _cache = new(() => GetValidSpeciesForGame(GameVersion.SWSH));
-
     public override Task<AutocompletionResult> GenerateSuggestionsAsync(
         IInteractionContext context,
         IAutocompleteInteraction autocompleteInteraction,
@@ -25,7 +23,8 @@ public class PokemonAutocompleteSWSHHandler : AutocompleteHandler
         {
             var userInput = autocompleteInteraction.Data.Current.Value?.ToString() ?? string.Empty;
 
-            var validSpecies = _cache.Value;
+            // Get valid Pokemon for Sword/Shield
+            var validSpecies = GetValidSpeciesForGame(GameVersion.SWSH);
 
             // Filter based on user input
             var filteredSpecies = string.IsNullOrWhiteSpace(userInput)

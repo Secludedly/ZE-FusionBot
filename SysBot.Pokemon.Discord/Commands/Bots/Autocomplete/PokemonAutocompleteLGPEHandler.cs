@@ -13,8 +13,6 @@ namespace SysBot.Pokemon.Discord.Commands.Bots.Autocomplete;
 /// </summary>
 public class PokemonAutocompleteLGPEHandler : AutocompleteHandler
 {
-    private static readonly Lazy<List<(string Display, string Value)>> _cache = new(GetValidSpeciesForLGPE);
-
     public override Task<AutocompletionResult> GenerateSuggestionsAsync(
         IInteractionContext context,
         IAutocompleteInteraction autocompleteInteraction,
@@ -25,7 +23,8 @@ public class PokemonAutocompleteLGPEHandler : AutocompleteHandler
         {
             var userInput = autocompleteInteraction.Data.Current.Value?.ToString() ?? string.Empty;
 
-            var validSpecies = _cache.Value;
+            // Get valid Pokemon for Let's Go (Gen 1 + Alolan forms + Meltan/Melmetal)
+            var validSpecies = GetValidSpeciesForLGPE();
 
             // Filter based on user input
             var filteredSpecies = string.IsNullOrWhiteSpace(userInput)

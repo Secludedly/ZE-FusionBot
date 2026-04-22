@@ -2,7 +2,6 @@ using Discord;
 using Discord.Interactions;
 using PKHeX.Core;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -13,24 +12,6 @@ namespace SysBot.Pokemon.Discord.Commands.Bots.Autocomplete;
 /// </summary>
 public class ItemAutocompleteHandler : AutocompleteHandler
 {
-    private static readonly Lazy<List<string>> _cache = new(BuildItemList);
-
-    private static List<string> BuildItemList()
-    {
-        var strings = GameInfo.GetStrings("en");
-        return strings.Item
-            .Select((name, index) => new { Name = name, Index = index })
-            .Where(item =>
-                !string.IsNullOrEmpty(item.Name) &&
-                item.Index > 0 &&
-                !item.Name.StartsWith("(") &&
-                !item.Name.Contains("???") &&
-                ItemRestrictions.IsHeldItemAllowed((ushort)item.Index, EntityContext.Gen9))
-            .Select(item => item.Name)
-            .OrderBy(name => name)
-            .ToList();
-    }
-
     public override Task<AutocompletionResult> GenerateSuggestionsAsync(
         IInteractionContext context,
         IAutocompleteInteraction autocompleteInteraction,
@@ -40,18 +21,32 @@ public class ItemAutocompleteHandler : AutocompleteHandler
         try
         {
             var userInput = autocompleteInteraction.Data.Current.Value?.ToString() ?? string.Empty;
-            var itemNames = _cache.Value;
 
+            // Get all item names from PKHeX
+            var strings = GameInfo.GetStrings("en");
+            var itemNames = strings.Item
+                .Select((name, index) => new { Name = name, Index = index })
+                .Where(item =>
+                    !string.IsNullOrEmpty(item.Name) &&
+                    item.Index > 0 && // Skip "None"
+                    !item.Name.StartsWith("(") && // Skip invalid entries like "(illegal)"
+                    !item.Name.Contains("???") && // Skip unknown items
+                    ItemRestrictions.IsHeldItemAllowed((ushort)item.Index, EntityContext.Gen9)) // Only held items allowed in Gen 9
+                .ToList();
+
+            // Filter based on user input
             var filteredItems = string.IsNullOrWhiteSpace(userInput)
-                ? itemNames.Take(25)
+                ? itemNames
+                    .OrderBy(i => i.Name)
+                    .Take(25) // Show first 25 alphabetically if no input
                 : itemNames
-                    .Where(name => name.Contains(userInput, StringComparison.OrdinalIgnoreCase))
-                    .OrderBy(name => name.StartsWith(userInput, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
-                    .ThenBy(name => name)
-                    .Take(25);
+                    .Where(i => i.Name.Contains(userInput, StringComparison.OrdinalIgnoreCase))
+                    .OrderBy(i => i.Name.StartsWith(userInput, StringComparison.OrdinalIgnoreCase) ? 0 : 1) // Prioritize starts-with matches
+                    .ThenBy(i => i.Name)
+                    .Take(25); // Discord limit
 
             var results = filteredItems
-                .Select(name => new AutocompleteResult(name, name))
+                .Select(i => new AutocompleteResult(i.Name, i.Name))
                 .ToList();
 
             return Task.FromResult(
