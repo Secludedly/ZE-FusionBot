@@ -297,13 +297,18 @@ namespace SysBot.Pokemon.Discord.Helpers
                     // This code injects FormArgument/Topping for Alcremie based on Showdown Format nickname
                     if (line.StartsWith("Alcremie-", StringComparison.OrdinalIgnoreCase))
                     {
-                        var parts = line.Split('-', StringSplitOptions.RemoveEmptyEntries);
+                        // Separate the item suffix (everything from '@' onward) before parsing the form.
+                        var atIndex = line.IndexOf('@');
+                        var speciesPart = atIndex >= 0 ? line[..atIndex].Trim() : line;
+                        var itemSuffix = atIndex >= 0 ? " @ " + line[(atIndex + 1)..].Trim() : string.Empty;
+
+                        var parts = speciesPart.Split('-', StringSplitOptions.RemoveEmptyEntries);
                         var lastPart = parts.Last();
 
                         if (AlcremieFormArguments.TryGetValue(lastPart, out int arg))
                         {
                             var speciesName = string.Join("-", parts.Take(parts.Length - 1));
-                            processed.Add(speciesName);
+                            processed.Add(speciesName + itemSuffix);
                             processed.Add($".FormArgument={arg}");
                             continue;
                         }
