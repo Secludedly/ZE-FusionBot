@@ -1,0 +1,2204 @@
+// ============================================================================
+// GLOBAL STATE AND CONFIGURATION
+// ============================================================================
+
+const API_BASE = '/api/bot';
+    const API_ENDPOINTS = {
+        instances: `${API_BASE}/instances`,
+        updateCheck: `${API_BASE}/update/check`,
+        updateAll: `${API_BASE}/update/all`,
+        updateActive: `${API_BASE}/update/active`,
+        idleStatus: `${API_BASE}/update/idle-status`,
+        restartAll: `${API_BASE}/restart/all`,
+        restartSchedule: `${API_BASE}/restart/schedule`,
+        commandAll: `${API_BASE}/command/all`
+    };
+
+    const appState = {
+        instances: [],
+        refreshInterval: null,
+        activeToasts: [],
+        restartScheduleInterval: null,
+        isInteracting: false,
+        refreshPaused: false,
+        lastRefreshTime: Date.now(),
+        updateState: {
+            id: null,
+            interval: null,
+            type: null,
+            startTime: null
+        },
+        restartState: {
+            startTime: null,
+            timeout: 300,
+            idleCheckInterval: null,
+            countdownInterval: null
+        }
+    };
+
+    let connectionLost = false;
+    let reconnectInterval = null;
+    let masterUpdating = false;
+
+    // ============================================================================
+    // UTILITY FUNCTIONS
+    // ============================================================================
+
+    const isMobile = () => {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+            window.innerWidth <= 768;
+    };
+
+    // Helper to get proper element from event target
+    const getElementFromTarget = (target) => {
+        if (!target) return null;
+        if (target.nodeType === 3) { // Text node
+            return target.parentElement;
+        }
+        if (target.nodeType === 1) { // Element node
+            return target;
+        }
+        return null;
+    };
+
+    const api = {
+        async get(url) {
+            try {
+                const absoluteUrl = url.startsWith('http') ? url : `${window.location.origin}${url}`;
+
+                const response = await fetch(absoluteUrl, {
+                    method: 'GET',
+                    mode: 'cors',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Cache-Control': 'no-cache'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error('API request failed:', url, error);
+                throw error;
+            }
+        },
+
+        async post(url, data = {}) {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return response.json();
+        }
+    };
+
+    const statusUtils = {
+        COLORS: {
+            RUNNING: '#10b981',
+            IDLE: '#f59e0b',
+            STOPPED: '#ef4444',
+            UNKNOWN: '#6b7280'
+        },
+
+        STATES: {
+            RUNNING: ['RUNNING', 'ACTIVE', 'ONLINE'],
+            IDLE: ['IDLE', 'PAUSED'],
+            STOPPED: ['STOPPED', 'OFFLINE', 'DISCONNECTED', 'ERROR']
+        },
+
+        getColor(status) {
+            const upperStatus = status?.toUpperCase() || '';
+
+            if (this.STATES.RUNNING.some(s => upperStatus.includes(s)) ||
+                (upperStatus && !this.STATES.IDLE.concat(this.STATES.STOPPED).some(s => upperStatus.includes(s)) &&
+                    !upperStatus.includes('UNKNOWN'))) {
+                return this.COLORS.RUNNING;
+            }
+
+            if (this.STATES.IDLE.some(s => upperStatus.includes(s))) {
+                return this.COLORS.IDLE;
+            }
+
+            if (this.STATES.STOPPED.some(s => upperStatus.includes(s))) {
+                return this.COLORS.STOPPED;
+            }
+
+            return this.COLORS.UNKNOWN;
+        },
+
+        getStatusClass(status) {
+            const color = this.getColor(status);
+            switch (color) {
+                case this.COLORS.RUNNING: return 'running';
+                case this.COLORS.IDLE: return 'idle';
+                case this.COLORS.STOPPED: return 'stopped';
+                default: return 'stopped';
+            }
+        },
+
+        getInstanceStatus(instance) {
+            if (!instance.botStatuses || instance.botStatuses.length === 0) {
+                return { status: 'stopped', text: 'Stopped' };
+            }
+
+            const statuses = instance.botStatuses.map(b => this.getStatusClass(b.status));
+            const runningCount = statuses.filter(s => s === 'running').length;
+            const idleCount = statuses.filter(s => s === 'idle').length;
+            const stoppedCount = statuses.filter(s => s === 'stopped').length;
+
+            if (runningCount === instance.botStatuses.length) {
+                return { status: 'running', text: 'All Running' };
+            } else if (idleCount === instance.botStatuses.length) {
+                return { status: 'idle', text: 'All Idle' };
+            } else if (stoppedCount === instance.botStatuses.length) {
+                return { status: 'stopped', text: 'All Stopped' };
+            } else if (runningCount > 0) {
+                return { status: 'mixed', text: `${runningCount}/${instance.botStatuses.length} Running` };
+            } else if (idleCount > 0) {
+                return { status: 'mixed', text: `${idleCount}/${instance.botStatuses.length} Idle` };
+            }
+
+            return { status: 'stopped', text: 'Stopped' };
+        }
+    };
+
+    // ============================================================================
+    // UI UTILITIES
+    // ============================================================================
+
+    const ui = {
+        toastConfig: {
+            success: { icon: '✅', class: 'success' },
+            error: { icon: '❌', class: 'error' },
+            warning: { icon: '⚠️', class: 'warning' },
+            info: { icon: 'ℹ️', class: 'info' }
+        },
+
+        TOAST_HEIGHT: 80,
+        TOAST_BASE_OFFSET: window.innerWidth <= 768 ? 0 : 32,
+
+        showToast(type, title, message, duration = 4000) {
+            const toastId = Date.now();
+            const toast = document.getElementById('toast').cloneNode(true);
+            toast.id = `toast-${toastId}`;
+
+            const config = this.toastConfig[type] || this.toastConfig.info;
+            toast.querySelector('.toast-icon').textContent = config.icon;
+            toast.querySelector('.toast-title').textContent = title;
+            toast.querySelector('.toast-message').textContent = message;
+            toast.className = `toast ${config.class}`;
+
+            document.body.appendChild(toast);
+            appState.activeToasts.push(toastId);
+
+            this.updateToastPositions();
+
+            toast.offsetHeight;
+
+            requestAnimationFrame(() => {
+                toast.classList.add('show');
+            });
+
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => {
+                    toast.remove();
+                    appState.activeToasts = appState.activeToasts.filter(id => id !== toastId);
+                    this.updateToastPositions();
+                }, 300);
+            }, duration);
+        },
+
+        updateToastPositions() {
+            const baseOffset = window.innerWidth <= 768 ? 0 : 32;
+            appState.activeToasts.forEach((id, index) => {
+                const toast = document.getElementById(`toast-${id}`);
+                if (toast) {
+                    toast.style.bottom = `${baseOffset + index * this.TOAST_HEIGHT}px`;
+                }
+            });
+        },
+
+        showError(message) {
+            console.error(message);
+            this.showToast('error', 'Error', message);
+        },
+
+        closeAllMenus() {
+            console.log('📱 ui.closeAllMenus called');
+            document.querySelectorAll('.action-menu.show').forEach(menu => {
+                console.log('📱 Closing menu:', menu.id);
+                menu.classList.remove('show');
+            });
+        },
+
+        updateRefreshIndicator(paused) {
+            const indicator = document.querySelector('.refresh-indicator');
+            if (indicator) {
+                indicator.classList.toggle('paused', paused);
+                indicator.title = paused ? 'Auto-refresh paused' : 'Auto-refresh active';
+            }
+        },
+
+        showModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.style.display = ''; // Remove any inline display style
+                modal.classList.add('show');
+            }
+        },
+
+        hideModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.classList.remove('show');
+                // Ensure modal is fully hidden after transition
+                setTimeout(() => {
+                    if (!modal.classList.contains('show')) {
+                        modal.style.display = 'none';
+                    }
+                }, 300);
+            }
+        }
+    };
+
+    // ============================================================================
+    // REFRESH MANAGEMENT
+    // ============================================================================
+
+    const refreshManager = {
+        async refresh(isManual = false) {
+            try {
+                if (!isManual && document.querySelector('.action-menu.show')) {
+                    return;
+                }
+
+                appState.lastRefreshTime = Date.now();
+                const data = await api.get(API_ENDPOINTS.instances);
+                appState.instances = data.instances || [];
+
+                if (!document.querySelector('.action-menu.show') || isManual) {
+                    instanceRenderer.render();
+                }
+            } catch (error) {
+                console.error('Error fetching instances:', error);
+                ui.showError('Failed to load bot instances. Make sure the bot is running.');
+            }
+        },
+
+        manual() {
+            ui.closeAllMenus();
+            this.refresh(true);
+            ui.showToast('info', 'Refreshed', 'Bot instances refreshed');
+        },
+
+        start() {
+            this.stop();
+            appState.refreshInterval = setInterval(() => {
+                const hasOpenMenu = document.querySelector('.action-menu.show') !== null;
+                const timeSinceLastRefresh = Date.now() - appState.lastRefreshTime;
+                const indicator = document.getElementById('refresh-indicator');
+
+                if (hasOpenMenu || appState.isInteracting || appState.refreshPaused) {
+                    indicator.classList.add('paused');
+                    indicator.title = 'Auto-refresh paused';
+                } else {
+                    indicator.classList.remove('paused');
+                    indicator.title = 'Auto-refresh active';
+                }
+
+                if (!hasOpenMenu && !appState.isInteracting && !appState.refreshPaused && timeSinceLastRefresh >= 5000) {
+                    this.refresh();
+                }
+            }, 1000);
+        },
+
+        stop() {
+            if (appState.refreshInterval) {
+                clearInterval(appState.refreshInterval);
+                appState.refreshInterval = null;
+            }
+        },
+
+        pause() {
+            appState.refreshPaused = true;
+            ui.updateRefreshIndicator(true);
+        },
+
+        resume() {
+            appState.refreshPaused = false;
+            ui.updateRefreshIndicator(false);
+        }
+    };
+
+    // ============================================================================
+    // DASHBOARD OVERVIEW
+    // ============================================================================
+
+    const dashboardManager = {
+        update() {
+            const instances = appState.instances;
+            let totalInstances = instances.length;
+            let onlineInstances = 0;
+            let totalActiveBots = 0;
+            let totalIdleBots = 0;
+
+            instances.forEach(instance => {
+                if (instance.isOnline) onlineInstances++;
+
+                if (instance.botStatuses && instance.botStatuses.length > 0) {
+                    instance.botStatuses.forEach(bot => {
+                        const statusClass = statusUtils.getStatusClass(bot.status);
+                        if (statusClass === 'running') totalActiveBots++;
+                        else if (statusClass === 'idle') totalIdleBots++;
+                    });
+                }
+            });
+
+            this.animateValue('total-instances', totalInstances);
+            this.animateValue('active-bots', totalActiveBots);
+            this.animateValue('idle-bots', totalIdleBots);
+            this.animateValue('online-instances', onlineInstances);
+        },
+
+        animateValue(elementId, endValue) {
+            const element = document.getElementById(elementId);
+            if (!element) return;
+
+            const startValue = parseInt(element.textContent) || 0;
+            const duration = 500;
+            const startTime = Date.now();
+
+            const update = () => {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const currentValue = Math.floor(startValue + (endValue - startValue) * this.easeOutCubic(progress));
+
+                element.textContent = currentValue;
+
+                if (progress < 1) {
+                    requestAnimationFrame(update);
+                }
+            };
+
+            requestAnimationFrame(update);
+        },
+
+        easeOutCubic(t) {
+            return 1 - Math.pow(1 - t, 3);
+        }
+    };
+
+    // ============================================================================
+    // INSTANCE RENDERING
+    // ============================================================================
+
+    const instanceRenderer = {
+        renderedPorts: new Set(),
+
+        render() {
+            const container = document.getElementById('instances-container');
+            const instances = appState.instances;
+
+            dashboardManager.update();
+
+            if (instances.length === 0) {
+                container.innerHTML = '<div class="error-message">⚠️ No bot instances found. Make sure at least one instance of ZE_FusionBot is running.</div>';
+                this.renderedPorts.clear();
+                return;
+            }
+
+            const currentPorts = new Set(instances.map(i => i.port));
+            const needsFullRender =
+                currentPorts.size !== this.renderedPorts.size ||
+                [...currentPorts].some(port => !this.renderedPorts.has(port)) ||
+                [...this.renderedPorts].some(port => !currentPorts.has(port));
+
+            if (needsFullRender) {
+                const skeletons = container.querySelectorAll('.skeleton-card');
+                if (skeletons.length > 0) {
+                    container.innerHTML = '';
+                }
+
+                container.innerHTML = instances.map((instance, index) => {
+                    const isOnline = instance.isOnline || false;
+                    const statusClass = isOnline ? 'online' : 'offline';
+                    const statusIndicator = isOnline ?
+                        '<span class="online-indicator"></span>Connected' :
+                        '<span class="offline-indicator"></span>Disconnected';
+
+                    const instanceStatus = statusUtils.getInstanceStatus(instance);
+
+                    const animationClass = isMobile() ? '' : 'animate-in';
+
+                    return `
+                <div class="instance-card ${statusClass} ${animationClass}" data-port="${instance.port}" style="--card-index: ${index}">
+                    <div class="instance-header">
+                        <h3 class="instance-title">
+                            ${instance.name}
+                            <span class="instance-status-badge ${instanceStatus.status}">${instanceStatus.text}</span>
+                        </h3>
+                        <span class="instance-badge">Port ${instance.port}</span>
+                    </div>
+                    <div class="instance-body">
+                        <div class="instance-info">
+                            <div class="info-item">
+                                <span class="info-label">Version</span>
+                                <span class="info-value">${instance.version}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Mode</span>
+                                <span class="info-value">${instance.mode}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Process ID</span>
+                                <span class="info-value">${instance.processId}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Connection</span>
+                                <span class="info-value">${statusIndicator}</span>
+                            </div>
+                        </div>
+
+                        ${instance.botStatuses && instance.botStatuses.length > 0 ? `
+                        <div class="bot-status">
+                            <div class="info-label" style="margin-bottom: 0.5rem;">BOTS (${instance.botStatuses.length})</div>
+                            ${instance.botStatuses.map((bot, index) => `
+                                <div class="bot-status-item">
+                                    <span class="bot-name">
+                                        <span style="color: ${statusUtils.getColor(bot.status)};">●</span>
+                                        <span>${bot.name || `Bot ${index + 1}`}</span>
+                                    </span>
+                                    <span class="bot-state ${statusUtils.getStatusClass(bot.status)}">${bot.status}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                        ` : instance.botCount > 0 ? `
+                        <div class="bot-status">
+                            <div class="info-label">BOTS</div>
+                            <div class="bot-status-item">
+                                <span class="bot-name">Bot Count: ${instance.botCount}</span>
+                                <span class="bot-state">Status Unknown</span>
+                            </div>
+                        </div>
+                        ` : ''}
+
+                        <div class="instance-controls">
+                            <button class="action-menu-button" data-port="${instance.port}" ${!isOnline ? 'disabled' : ''}>
+                                ⚡ Actions <span style="font-size: 0.75rem;">▼</span>
+                            </button>
+                            <div class="action-menu" id="action-menu-${instance.port}">
+                                <button class="action-menu-item success" data-action="start" data-port="${instance.port}">
+                                    ▶️ Start
+                                </button>
+                                <button class="action-menu-item danger" data-action="stop" data-port="${instance.port}">
+                                    ⏹️ Stop
+                                </button>
+                                <button class="action-menu-item warning" data-action="idle" data-port="${instance.port}">
+                                    ⏸️ Idle
+                                </button>
+                                <button class="action-menu-item" data-action="resume" data-port="${instance.port}">
+                                    ⏯️ Resume
+                                </button>
+                                <div class="action-menu-divider"></div>
+                                <button class="action-menu-item" data-action="restart" data-port="${instance.port}">
+                                    🔄 Restart
+                                </button>
+                                <button class="action-menu-item danger" data-action="reboot" data-port="${instance.port}">
+                                    🔌 Reboot
+                                </button>
+                                <div class="action-menu-divider"></div>
+                                <button class="action-menu-item" data-action="screenon" data-port="${instance.port}">
+                                    💡 Screen On
+                                </button>
+                                <button class="action-menu-item" data-action="screenoff" data-port="${instance.port}">
+                                    🌙 Screen Off
+                                </button>
+                                <div class="action-menu-divider"></div>
+                                <button class="action-menu-item" data-action="logs" data-port="${instance.port}">
+                                    📋 View Logs
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+                }).join('');
+
+                if (!isMobile()) {
+                    requestAnimationFrame(() => {
+                        container.querySelectorAll('.instance-card.animate-in').forEach((card, index) => {
+                            card.style.setProperty('--card-index', index);
+                            card.addEventListener('animationend', () => {
+                                card.classList.remove('animate-in');
+                            }, { once: true });
+                        });
+                    });
+                } else {
+                    container.querySelectorAll('.instance-card').forEach((card) => {
+                        card.style.opacity = '1';
+                        card.style.visibility = 'visible';
+                    });
+                }
+
+                this.renderedPorts = currentPorts;
+
+            } else {
+                instances.forEach(instance => {
+                    const card = container.querySelector(`[data-port="${instance.port}"]`);
+                    if (!card) return;
+
+                    const isOnline = instance.isOnline || false;
+                    card.classList.toggle('online', isOnline);
+                    card.classList.toggle('offline', !isOnline);
+
+                    const connectionValue = card.querySelector('.info-item:nth-child(4) .info-value');
+                    if (connectionValue) {
+                        connectionValue.innerHTML = isOnline ?
+                            '<span class="online-indicator"></span>Connected' :
+                            '<span class="offline-indicator"></span>Disconnected';
+                    }
+
+                    const instanceStatus = statusUtils.getInstanceStatus(instance);
+                    const statusBadge = card.querySelector('.instance-status-badge');
+                    if (statusBadge) {
+                        statusBadge.className = `instance-status-badge ${instanceStatus.status}`;
+                        statusBadge.textContent = instanceStatus.text;
+                    }
+
+                    const botStatusContainer = card.querySelector('.bot-status');
+                    if (botStatusContainer && instance.botStatuses && instance.botStatuses.length > 0) {
+                        const botItems = botStatusContainer.querySelectorAll('.bot-status-item');
+                        instance.botStatuses.forEach((bot, index) => {
+                            if (botItems[index]) {
+                                const statusSpan = botItems[index].querySelector('.bot-state');
+                                const statusDot = botItems[index].querySelector('.bot-name span:first-child');
+                                if (statusSpan) {
+                                    const statusClass = statusUtils.getStatusClass(bot.status);
+                                    statusSpan.className = `bot-state ${statusClass}`;
+                                    statusSpan.textContent = bot.status;
+                                }
+                                if (statusDot) {
+                                    statusDot.style.color = statusUtils.getColor(bot.status);
+                                }
+                            }
+                        });
+                    }
+                });
+            }
+        }
+    };
+
+    // ============================================================================
+    // COMMAND MANAGEMENT
+    // ============================================================================
+
+    const commandManager = {
+        async sendGlobal(command) {
+            console.log(`📱 commandManager.sendGlobal called with: ${command}`);
+            ui.showToast('info', 'Sending Command', `Sending ${command} to all instances...`);
+
+            try {
+                console.log(`📱 Posting to ${API_ENDPOINTS.commandAll}`);
+                const result = await api.post(API_ENDPOINTS.commandAll, { command: command });
+                console.log('📱 Command result:', result);
+
+                const successCount = result.successfulCommands || 0;
+                const totalCount = result.totalInstances || 0;
+
+                if (successCount === totalCount && totalCount > 0) {
+                    ui.showToast('success', 'Command Sent', `Successfully sent ${command} to all ${totalCount} instances`);
+                } else if (successCount > 0) {
+                    ui.showToast('warning', 'Partial Success', `Command sent to ${successCount} of ${totalCount} instances`);
+                } else {
+                    ui.showToast('error', 'Command Failed', `Failed to send command to any instances`);
+                }
+
+                setTimeout(() => refreshManager.refresh(true), 1000);
+            } catch (error) {
+                console.error('📱 Error sending global command:', error);
+                ui.showToast('error', 'Error', `Failed to send command: ${command}`);
+            }
+        },
+
+        async sendToInstance(port, command) {
+            console.log(`📱 commandManager.sendToInstance called - Port: ${port}, Command: ${command}`);
+            ui.closeAllMenus();
+            appState.isInteracting = false;
+            ui.showToast('info', 'Sending Command', `Sending ${command} to instance on port ${port}...`);
+
+            try {
+                const url = `${API_BASE}/instances/${port}/command`;
+                console.log(`📱 Posting to ${url}`);
+                const result = await api.post(url, { command: command });
+                console.log('📱 Instance command result:', result);
+
+                if (result.success !== false && !result.error) {
+                    ui.showToast('success', 'Command Sent', `Successfully sent ${command} to port ${port}`);
+                } else {
+                    ui.showToast('error', 'Command Failed', result.message || `Failed to send command to port ${port}`);
+                }
+
+                setTimeout(() => refreshManager.refresh(true), 1000);
+            } catch (error) {
+                console.error(`📱 Error sending command to port ${port}:`, error);
+                ui.showToast('error', 'Error', `Failed to send command to port ${port}`);
+            }
+        }
+    };
+
+    // ============================================================================
+    // ACTION HANDLERS
+    // ============================================================================
+
+    function toggleActionMenu(port) {
+        console.log(`📱 toggleActionMenu called for port: ${port}`);
+
+        const menu = document.getElementById(`action-menu-${port}`);
+        if (!menu) {
+            console.error(`📱 ERROR: Menu not found for port: ${port}`);
+            return;
+        }
+
+        const wasOpen = menu.classList.contains('show');
+        console.log(`📱 Menu was ${wasOpen ? 'open' : 'closed'}, toggling...`);
+
+        ui.closeAllMenus();
+
+        if (!wasOpen) {
+            menu.classList.add('show');
+            appState.isInteracting = true;
+            console.log(`📱 Menu opened for port ${port}`);
+
+            // No backdrop - menus will close when clicking outside
+        } else {
+            appState.isInteracting = false;
+            console.log(`📱 Menu closed for port ${port}`);
+        }
+    }
+
+    function handleGlobalAction(action) {
+        console.log('📱 handleGlobalAction called:', action);
+
+        switch (action) {
+            case 'start':
+            case 'stop':
+            case 'idle':
+            case 'resume':
+            case 'screenon':
+            case 'screenoff':
+                console.log(`📱 Sending global command: ${action}`);
+                commandManager.sendGlobal(action);
+                break;
+            case 'update':
+                console.log('📱 Starting update process');
+                updateAllInstances();
+                break;
+            case 'restart':
+                console.log('📱 Starting restart process');
+                restartAllInstances();
+                break;
+            default:
+                console.log(`📱 Unknown action: ${action}`);
+        }
+    }
+
+    function handleInstanceAction(port, action) {
+        console.log(`📱 handleInstanceAction called - Port: ${port}, Action: ${action}`);
+
+        if (action === 'logs') {
+            console.log(`📱 Opening logs for port ${port}`);
+            logViewer.openForInstance(parseInt(port));
+        } else {
+            console.log(`📱 Sending command ${action} to port ${port}`);
+            commandManager.sendToInstance(parseInt(port), action);
+        }
+    }
+
+    // ============================================================================
+    // EVENT HANDLERS - SIMPLIFIED FOR MOBILE
+    // ============================================================================
+
+    function setupEventHandlers() {
+        console.log('📱 Setting up event handlers...');
+        console.log('📱 User Agent:', navigator.userAgent);
+        console.log('📱 Is Mobile:', isMobile());
+        console.log('📱 Is iOS:', /iPhone|iPad|iPod/i.test(navigator.userAgent));
+
+        // iOS Safari touch fix - force touch event registration
+        if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+            console.log('📱 iOS detected - adding touch event listeners');
+            document.addEventListener('touchstart', function (e) {
+                console.log('📱 Document touchstart fired');
+            }, { passive: true });
+
+            // Fix for iOS Safari button clicking issues
+            document.querySelectorAll('button').forEach(btn => {
+                btn.style.cursor = 'pointer';
+                console.log('📱 Added cursor pointer to button:', btn.textContent.trim());
+            });
+        }
+
+        // Refresh button
+        const refreshBtn = document.getElementById('refresh-button');
+        if (refreshBtn) {
+            console.log('📱 Setting up refresh button');
+            refreshBtn.onclick = (e) => {
+                console.log('📱 Refresh button clicked');
+                e.preventDefault();
+                e.stopPropagation();
+                refreshManager.manual();
+            };
+        } else {
+            console.log('📱 WARNING: Refresh button not found!');
+        }
+
+        // Global action buttons with iOS fix
+        const globalButtons = document.querySelectorAll('[data-global-action]');
+        console.log(`📱 Found ${globalButtons.length} global action buttons`);
+
+        globalButtons.forEach(btn => {
+            const action = btn.getAttribute('data-global-action');
+            console.log(`📱 Setting up global button: ${action}`, btn.textContent.trim());
+
+            // Remove any existing listeners
+            btn.onclick = null;
+            btn.removeEventListener('click', handleGlobalClick);
+            btn.removeEventListener('touchend', handleGlobalClick);
+
+            function handleGlobalClick(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const buttonAction = btn.getAttribute('data-global-action');
+                console.log(`📱 Global button ${buttonAction} event fired:`, e.type);
+                console.log(`📱 Triggering global action: ${buttonAction}`);
+                handleGlobalAction(buttonAction);
+            }
+
+            // Add both click and touchend for iOS
+            btn.addEventListener('click', handleGlobalClick, { passive: false });
+            if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+                console.log(`📱 Adding touchend listener for ${action}`);
+                btn.addEventListener('touchend', handleGlobalClick, { passive: false });
+            }
+
+            // Debug: Check if listeners were actually added
+            console.log(`📱 Button ${action} has onclick:`, btn.onclick !== null);
+            console.log(`📱 Button ${action} computed styles:`, {
+                pointerEvents: window.getComputedStyle(btn).pointerEvents,
+                cursor: window.getComputedStyle(btn).cursor,
+                zIndex: window.getComputedStyle(btn).zIndex,
+                position: window.getComputedStyle(btn).position
+            });
+        });
+
+        // Delegate for dynamically created elements
+        document.addEventListener('click', (e) => {
+            console.log('📱 Document click event on:', e.target);
+
+            // Ensure target is an element
+            const target = getElementFromTarget(e.target);
+            if (!target) {
+                console.log('📱 No valid target element found');
+                return;
+            }
+
+            console.log('📱 Target element:', target.tagName, target.className);
+
+            // Action menu buttons
+            const menuButton = target.closest('.action-menu-button');
+            if (menuButton) {
+                console.log('📱 Action menu button clicked, port:', menuButton.getAttribute('data-port'));
+                e.preventDefault();
+                e.stopPropagation();
+                const port = menuButton.getAttribute('data-port');
+                if (port) toggleActionMenu(port);
+                return;
+            }
+
+            // Action menu items
+            const menuItem = target.closest('.action-menu-item');
+            if (menuItem) {
+                const action = menuItem.getAttribute('data-action');
+                const port = menuItem.getAttribute('data-port');
+                console.log(`📱 Action menu item clicked: ${action} for port ${port}`);
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // Add visual feedback
+                menuItem.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    menuItem.style.transform = '';
+                }, 150);
+                
+                if (action && port) {
+                    handleInstanceAction(port, action);
+                    ui.closeAllMenus();
+                }
+                return;
+            }
+
+            // Close menus when clicking outside
+            if (!target.closest('.instance-controls') && !target.closest('.action-menu')) {
+                console.log('📱 Click outside menus - closing all');
+                ui.closeAllMenus();
+            }
+        });
+
+        // Add touch event debugging
+        if (isMobile()) {
+            console.log('📱 Adding mobile touch event debugging');
+
+            document.addEventListener('touchstart', (e) => {
+                const target = getElementFromTarget(e.target);
+                console.log('📱 Touchstart on:', target?.tagName, target?.className);
+            }, { passive: true });
+
+            document.addEventListener('touchend', (e) => {
+                const target = getElementFromTarget(e.target);
+                console.log('📱 Touchend on:', target?.tagName, target?.className);
+            }, { passive: true });
+        }
+
+        // Modal controls
+        document.getElementById('close-update-modal')?.addEventListener('click', () => closeModal('update-modal'));
+        document.getElementById('cancel-update')?.addEventListener('click', () => closeModal('update-modal'));
+        document.getElementById('confirm-update')?.addEventListener('click', confirmUpdate);
+
+        // Schedule controls
+        document.getElementById('schedule-restart-toggle')?.addEventListener('change', toggleScheduledRestart);
+        document.getElementById('restart-time')?.addEventListener('change', updateRestartSchedule);
+
+        // Log viewer controls
+        document.getElementById('close-log-viewer')?.addEventListener('click', () => logViewer.close());
+        document.getElementById('log-search')?.addEventListener('keyup', (e) => logViewer.handleSearch(e));
+        document.getElementById('log-instance-filter')?.addEventListener('change', () => logViewer.applyFilters());
+        document.getElementById('log-level-filter')?.addEventListener('change', () => logViewer.applyFilters());
+        document.getElementById('log-pause-btn')?.addEventListener('click', () => logViewer.togglePause());
+        document.getElementById('log-clear-btn')?.addEventListener('click', () => logViewer.clearLogs());
+        document.getElementById('log-autoscroll')?.addEventListener('change', () => logViewer.toggleAutoScroll());
+
+        console.log('📱 Event handler setup complete!');
+
+        // Test touch handler to verify touch events work at all
+        if (isMobile()) {
+            console.log('📱 Setting up test touch handler on document.body');
+
+            // Check if something is preventing touch events
+            const origPreventDefault = Event.prototype.preventDefault;
+            Event.prototype.preventDefault = function () {
+                if (this.type.includes('touch') || this.type === 'click') {
+                    console.log('📱 ⚠️ preventDefault called on:', this.type, 'target:', this.target);
+                }
+                return origPreventDefault.call(this);
+            };
+
+            document.body.addEventListener('touchstart', (e) => {
+                console.log('📱 🔥 BODY TOUCHSTART FIRED! Target:', e.target);
+                console.log('📱 🔥 Touch coordinates:', e.touches[0].clientX, e.touches[0].clientY);
+            }, { passive: true });
+
+            document.body.addEventListener('click', (e) => {
+                console.log('📱 🔥 BODY CLICK FIRED! Target:', e.target);
+            }, { passive: true });
+        }
+    }
+
+    // ============================================================================
+    // UPDATE FUNCTIONS
+    // ============================================================================
+
+    async function updateAllInstances() {
+        showModal('update-modal');
+        progressVisualizer.reset();
+
+        try {
+            const instancesResponse = await fetch(`${API_BASE}/instances`);
+            const instancesData = await instancesResponse.json();
+            const currentVersion = instancesData.instances?.[0]?.version || 'Unknown';
+
+            document.getElementById('current-version').textContent = currentVersion;
+            document.getElementById('new-version').textContent = 'Checking...';
+            document.getElementById('changelog-content').innerHTML = '<div class="spinner"></div>';
+
+            const checkResponse = await fetch(`${API_BASE}/update/check`);
+            let updateInfo = { version: 'Unknown', changelog: 'No changelog available' };
+
+            if (checkResponse.ok) {
+                updateInfo = await checkResponse.json();
+            } else {
+                updateInfo.version = 'Latest';
+                updateInfo.changelog = 'Unable to fetch changelog. Update will proceed to latest version.';
+            }
+
+            document.getElementById('new-version').textContent = updateInfo.version;
+            document.getElementById('changelog-content').textContent = updateInfo.changelog;
+
+        } catch (error) {
+            console.error('Error checking updates:', error);
+            document.getElementById('new-version').textContent = 'Latest';
+            document.getElementById('changelog-content').textContent = 'Unable to fetch update information. Click Update to proceed.';
+        }
+    }
+
+    async function confirmUpdate() {
+        closeModal('update-modal');
+        showModal('progress-modal');
+        document.getElementById('progress-modal-title').textContent = 'Update in Progress';
+        document.getElementById('force-update-info').style.display = 'block';
+
+        appState.updateState.type = 'update';
+        appState.updateState.startTime = Date.now();
+        updateProgress('Initializing update process...', 'Starting background update process', 10);
+
+        try {
+            const response = await fetch(`${API_BASE}/update/all`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ force: true })
+            });
+
+            if (!response.ok) throw new Error('Failed to start update');
+
+            const result = await response.json();
+            appState.updateState.id = result.sessionId;
+
+            if (result.Info) {
+                updateProgress(
+                    'Update started',
+                    result.Info,
+                    20
+                );
+                addLogEntry('Update process initiated in background', 'info');
+            }
+
+            appState.updateState.interval = setInterval(() => {
+                checkUpdateStatus();
+            }, 2000);
+
+            appState.refreshPaused = true;
+
+        } catch (error) {
+            console.error('Error starting update:', error);
+            updateProgress('Update failed', error.message, 0);
+            addLogEntry(`Failed to start update: ${error.message}`, 'error');
+            appState.refreshPaused = false;
+
+            setTimeout(() => {
+                closeModal('progress-modal');
+                ui.showToast('error', 'Error', 'Failed to start update process');
+            }, 2000);
+        }
+    }
+
+    async function checkUpdateStatus() {
+        if (!appState.updateState.id) return;
+
+        try {
+            const response = await fetch(`${API_BASE}/update/active`);
+            if (!response.ok) {
+                throw new Error('Failed to check update status');
+            }
+
+            const data = await response.json();
+
+            if (!data.active || !data.session) {
+                clearInterval(appState.updateState.interval);
+                appState.updateState.id = null;
+                appState.updateState.interval = null;
+                appState.refreshPaused = false;
+                closeModal('progress-modal');
+                refreshManager.refresh(true);
+                return;
+            }
+
+            const status = data.session;
+
+            console.log(`Update status - Phase: ${status.phase}, Progress: ${status.progress}, Message: ${status.message}, IsComplete: ${status.isComplete}`);
+
+            updateProgress(
+                status.phase === 'CheckingVersion' ? 'Checking for updates' :
+                    status.phase === 'DiscoveringInstances' ? 'Scanning instances' :
+                        status.phase === 'IdlingBots' ? 'Preparing instances' :
+                            status.phase === 'WaitingForIdle' ? (status.message.includes('FORCING') ? 'Forcing update' : 'Waiting for bots to idle') :
+                                status.phase === 'UpdatingSlaves' ? 'Updating slave instances' :
+                                    status.phase === 'UpdatingMaster' ? 'Updating master instance' :
+                                        status.phase === 'Complete' ? (status.success ? 'Update complete!' : 'Update failed') :
+                                            status.phase === 'Failed' ? 'Update error' : 'Processing...',
+                status.message,
+                status.progress
+            );
+
+            if (status.phase === 'WaitingForIdle' || status.phase === 'IdlingBots') {
+                console.log('Showing idle status display');
+                document.getElementById('idle-status').style.display = 'block';
+                document.getElementById('force-update-info').style.display = 'block';
+
+                if (status.startTime) {
+                    const startTime = new Date(status.startTime);
+                    const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                    const remaining = Math.max(0, 180 - elapsed);
+                    document.getElementById('timeout-countdown').textContent = remaining;
+
+                    if (remaining <= 30 && remaining > 0) {
+                        document.getElementById('timeout-countdown').style.color = 'var(--danger)';
+                    }
+                }
+
+                updateIdleStatus(status);
+            } else if (status.phase === 'UpdatingSlaves' || status.phase === 'UpdatingMaster') {
+                document.getElementById('idle-status').style.display = 'none';
+                document.getElementById('force-update-info').style.display = 'none';
+
+                if (status.instances && status.instances.length > 0) {
+                    status.instances.forEach(inst => {
+                        if (inst.status === 'Updated') {
+                            progressVisualizer.addTimelineItem(
+                                `Port ${inst.port}: Updated successfully`,
+                                'success',
+                                `instance-${inst.port}`
+                            );
+                        } else if (inst.status === 'Failed' && inst.error) {
+                            progressVisualizer.addTimelineItem(
+                                `Port ${inst.port}: ${inst.error}`,
+                                'error',
+                                `instance-${inst.port}`
+                            );
+                        } else if (inst.status === 'Updating' && status.currentlyUpdating && status.currentlyUpdating.port === inst.port) {
+                            progressVisualizer.addTimelineItem(
+                                `Port ${inst.port}: Currently updating...`,
+                                'active',
+                                `instance-${inst.port}-updating`
+                            );
+                        }
+                    });
+                }
+            } else {
+                document.getElementById('idle-status').style.display = 'none';
+                document.getElementById('force-update-info').style.display = 'none';
+            }
+
+            if (status.phase === 'UpdatingMaster') {
+                masterUpdating = true;
+                progressVisualizer.addTimelineItem('Master instance update triggered - expect disconnection', 'warning');
+            }
+
+            if (status.isComplete) {
+                clearInterval(appState.updateState.interval);
+                appState.updateState.interval = null;
+                appState.updateState.id = null;
+                appState.refreshPaused = false;
+
+                if (status.success) {
+                    const masterRestarting = status.message.includes('Master instance is restarting');
+
+                    updateProgress('Update successful!', status.message, 100);
+                    addLogEntry(status.message, 'success');
+
+                    if (masterRestarting) {
+                        ui.showToast('info', 'Updates Complete', 'All instances updated. Master is restarting...', 10000);
+                        setTimeout(() => {
+                            closeModal('progress-modal');
+                            setTimeout(() => {
+                                ui.showToast('info', 'Reloading', 'Refreshing page to show updated versions...', 3000);
+                                window.location.reload();
+                            }, 5000);
+                        }, 8000);
+                    } else {
+                        ui.showToast('success', 'Success', `Updated ${status.successCount} instances successfully`);
+                        setTimeout(() => {
+                            closeModal('progress-modal');
+                            ui.showToast('info', 'Reloading', 'Refreshing page to show updated versions...', 3000);
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 2000);
+                        }, 3000);
+                    }
+                } else {
+                    updateProgress('Update failed', status.message, 100);
+                    addLogEntry(status.message, 'error');
+                    if (status.errors && status.errors.length > 0) {
+                        status.errors.forEach(err => addLogEntry(err, 'error'));
+                    }
+                    ui.showToast('error', 'Error', `Update completed with ${status.failureCount} failures`);
+
+                    setTimeout(() => {
+                        closeModal('progress-modal');
+                        refreshManager.refresh(true);
+                    }, 3000);
+                }
+            }
+        } catch (error) {
+            console.log('Status check failed - checking if master is updating');
+
+            if (connectionLost || !response) {
+                updateProgress(
+                    'Connection Lost',
+                    'Master instance may be updating. Will reconnect automatically...',
+                    -1
+                );
+            }
+        }
+    }
+
+    function updateIdleStatus(status) {
+        fetch(`${API_BASE}/update/idle-status`)
+            .then(response => response.json())
+            .then(data => {
+                const totalBots = data.totalBots || 0;
+                const idledBots = data.totalIdleBots || 0;
+                const activeBots = totalBots - idledBots;
+                const totalInstances = status.instances?.length || 0;
+                const instancesNeedingUpdate = status.instances?.filter(i => i.status !== 'Updated').length || totalInstances;
+
+                const idleCountEl = document.querySelector('.idle-count');
+                idleCountEl.innerHTML = `
+                <strong id="bots-idled">${idledBots}</strong> / <strong id="bots-total">${totalBots}</strong> bots idled
+                ${activeBots > 0 ? `<span style="color: var(--warning); margin-left: 0.5rem;">(${activeBots} still active)</span>` : ''}
+            `;
+
+                const idleStatusEl = document.getElementById('idle-status');
+                let instancesInfo = idleStatusEl.querySelector('.instances-info');
+                if (!instancesInfo) {
+                    instancesInfo = document.createElement('div');
+                    instancesInfo.className = 'instances-info';
+                    instancesInfo.style.marginTop = '0.5rem';
+                    instancesInfo.style.fontSize = '0.875rem';
+                    instancesInfo.style.color = 'var(--text-secondary)';
+                    idleStatusEl.appendChild(instancesInfo);
+                }
+                instancesInfo.innerHTML = `
+                <div>📦 Updating <strong>${instancesNeedingUpdate}</strong> of <strong>${totalInstances}</strong> instances</div>
+                ${data.instanceIdleStatus ? `<div style="margin-top: 0.25rem;">🤖 ${data.instanceIdleStatus}</div>` : ''}
+            `;
+
+                const elapsed = Math.floor((Date.now() - appState.updateState.startTime) / 1000);
+                const remaining = Math.max(0, 180 - elapsed);
+
+                const minutes = Math.floor(remaining / 60);
+                const seconds = remaining % 60;
+                const timeText = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+                const countdownEl = document.getElementById('timeout-countdown');
+                countdownEl.textContent = timeText;
+
+                if (remaining <= 30 && remaining > 0) {
+                    countdownEl.style.color = 'var(--danger)';
+                    countdownEl.style.fontWeight = 'bold';
+                    countdownEl.style.animation = 'pulse 1s ease-in-out infinite';
+                } else {
+                    countdownEl.style.color = '';
+                    countdownEl.style.fontWeight = '';
+                    countdownEl.style.animation = '';
+                }
+
+                const forceUpdateInfo = document.getElementById('force-update-info');
+                if (remaining === 0) {
+                    forceUpdateInfo.innerHTML = '⚡ <strong>Force update in progress...</strong> All active bots are being stopped.';
+                    forceUpdateInfo.style.background = 'var(--gradient-warning)';
+                    forceUpdateInfo.style.color = 'white';
+                    addLogEntry('Timeout reached - forcing update on all active bots', 'warning');
+                } else if (remaining <= 10) {
+                    forceUpdateInfo.innerHTML = `⚠️ <strong>Force update starting in ${remaining} seconds!</strong> Save your work now.`;
+                    forceUpdateInfo.style.background = 'var(--gradient-danger)';
+                    forceUpdateInfo.style.color = 'white';
+                } else if (remaining <= 30) {
+                    forceUpdateInfo.innerHTML = `⚡ Update will be forced automatically in <strong>${timeText}</strong>`;
+                }
+            })
+            .catch(error => console.error('Error checking idle status:', error));
+    }
+
+    // ============================================================================
+    // RESTART FUNCTIONS
+    // ============================================================================
+
+    async function restartAllInstances() {
+        const response = await fetch(`${API_BASE}/instances`);
+        const data = await response.json();
+        const masterExists = data.instances.some(i => i.isMaster);
+
+        if (!masterExists) {
+            ui.showToast('error', 'Error', 'No master instance found. Cannot initiate restart.');
+            return;
+        }
+
+        showModal('progress-modal');
+        document.getElementById('progress-modal-title').textContent = 'Restart in Progress';
+        document.getElementById('force-update-info').style.display = 'none';
+        progressVisualizer.reset();
+
+        updateProgress('Preparing restart...', 'Idling all bots before restart', 10);
+
+        try {
+            const response = await fetch(`${API_BASE}/restart/all`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+
+            if (!response.ok) throw new Error('Restart initiation failed');
+
+            const result = await response.json();
+
+            if (result.success) {
+                updateProgress(
+                    'All bots idled',
+                    result.message || 'Proceeding with restart sequence',
+                    50
+                );
+                addLogEntry('All bots are now idle', 'success');
+
+                proceedWithRestart();
+            } else {
+                throw new Error(result.error || result.message || 'Failed to initiate restart');
+            }
+        } catch (error) {
+            console.error('Error restarting instances:', error);
+            updateProgress('Restart failed', error.message, 0);
+            addLogEntry(`Restart failed: ${error.message}`, 'error');
+
+            setTimeout(() => {
+                closeModal('progress-modal');
+                ui.showToast('error', 'Error', 'Failed to restart instances');
+            }, 2000);
+        }
+    }
+
+    async function proceedWithRestart() {
+        updateProgress(
+            'Starting restarts',
+            'Beginning restart process for all instances...',
+            60
+        );
+
+        try {
+            const response = await fetch(`${API_BASE}/restart/proceed`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+
+            if (!response.ok) throw new Error('Failed to proceed with restarts');
+
+            const result = await response.json();
+
+            if (result.success) {
+                updateProgress(
+                    'Restarts in progress',
+                    'Instances are being restarted',
+                    90
+                );
+
+                if (result.masterRestarting) {
+                    setTimeout(() => {
+                        updateProgress(
+                            'Master instance restarting',
+                            'This web interface will temporarily disconnect...',
+                            95
+                        );
+                        addLogEntry('Master instance restarting - expect temporary disconnection', 'warning');
+                    }, 1000);
+                } else {
+                    setTimeout(() => {
+                        updateProgress(
+                            'Restarts complete!',
+                            'All instances have been restarted successfully',
+                            100
+                        );
+                        addLogEntry('All restarts completed successfully!', 'success');
+
+                        setTimeout(() => {
+                            closeModal('progress-modal');
+                            ui.showToast('success', 'Restart Complete', 'All instances restarted');
+                            refreshManager.refresh(true);
+                        }, 3000);
+                    }, 5000);
+                }
+            }
+        } catch (error) {
+            console.error('Error proceeding with restarts:', error);
+            updateProgress('Restart failed', error.message, 0);
+            addLogEntry(`Failed to proceed with restarts: ${error.message}`, 'error');
+        }
+    }
+
+    // ============================================================================
+    // CONNECTION MONITORING
+    // ============================================================================
+
+    function startConnectionMonitor() {
+        setInterval(async () => {
+            try {
+                const response = await fetch(`${API_BASE}/instances`, {
+                    method: 'GET',
+                    signal: AbortSignal.timeout(2000)
+                });
+
+                if (!response.ok) throw new Error('Server error');
+
+                if (connectionLost) {
+                    connectionLost = false;
+                    handleReconnection();
+                }
+            } catch (error) {
+                if (!connectionLost && document.getElementById('progress-modal').classList.contains('show')) {
+                    connectionLost = true;
+                    handleConnectionLost();
+                }
+            }
+        }, 1000);
+    }
+
+    function handleConnectionLost() {
+        if (masterUpdating) return;
+
+        const modalTitle = document.getElementById('progress-modal-title').textContent;
+        const processType = modalTitle.includes('Restart') ? 'restarting' : 'updating';
+
+        updateProgress(
+            'Connection Lost',
+            `Connection to server lost. This may be due to the master instance ${processType}...`,
+            -1
+        );
+
+        document.getElementById('progress-bar').style.width = '100%';
+        document.getElementById('progress-bar').style.opacity = '0.5';
+        document.getElementById('progress-bar').classList.add('indeterminate');
+
+        addLogEntry(`Lost connection to server - master instance may be ${processType}`, 'warning');
+        showReconnectionUI(processType);
+    }
+
+    function showReconnectionUI(processType = 'updating') {
+        const modalBody = document.querySelector('#progress-modal .modal-body');
+
+        if (!document.getElementById('reconnect-status')) {
+            const reconnectDiv = document.createElement('div');
+            reconnectDiv.id = 'reconnect-status';
+            reconnectDiv.className = 'reconnect-status';
+            reconnectDiv.innerHTML = `
+            <div class="reconnect-icon">🔄</div>
+            <div class="reconnect-text">Attempting to reconnect...</div>
+            <div class="reconnect-hint">The master instance is ${processType}. This page will automatically reconnect when the ${processType === 'restarting' ? 'restart' : 'update'} is complete.</div>
+        `;
+            modalBody.appendChild(reconnectDiv);
+        }
+    }
+
+    function handleReconnection() {
+        addLogEntry('Connection restored!', 'success');
+
+        const reconnectStatus = document.getElementById('reconnect-status');
+        if (reconnectStatus) {
+            reconnectStatus.remove();
+        }
+
+        document.getElementById('progress-bar').classList.remove('indeterminate');
+        document.getElementById('progress-bar').style.opacity = '1';
+
+        if (appState.updateState.id) {
+            addLogEntry('Attempting to reconnect to update process...', 'info');
+            checkUpdateStatus();
+        } else {
+            checkForOngoingOperations();
+        }
+    }
+
+    async function checkForOngoingOperations() {
+        try {
+            const response = await fetch(`${API_BASE}/update/active`);
+            if (!response.ok) return;
+
+            const data = await response.json();
+            if (!data.active || !data.session) return;
+
+            const activeUpdate = data.session;
+            if (activeUpdate.isComplete) return;
+
+            console.log('Found active update:', activeUpdate);
+
+            appState.updateState.id = activeUpdate.id;
+            appState.updateState.type = 'update';
+
+            if (activeUpdate.startTime) {
+                appState.updateState.startTime = new Date(activeUpdate.startTime).getTime();
+            } else {
+                appState.updateState.startTime = Date.now();
+            }
+
+            showModal('progress-modal');
+            document.getElementById('progress-modal-title').textContent =
+                appState.updateState.type === 'restart' ? 'Restart in Progress' : 'Update in Progress';
+
+            updateProgress(
+                activeUpdate.phase === 'CheckingVersion' ? 'Checking for updates' :
+                    activeUpdate.phase === 'DiscoveringInstances' ? 'Scanning instances' :
+                        activeUpdate.phase === 'IdlingBots' ? 'Preparing instances' :
+                            activeUpdate.phase === 'WaitingForIdle' ? 'Waiting for bots to idle' :
+                                activeUpdate.phase === 'UpdatingSlaves' ? 'Updating slave instances' :
+                                    activeUpdate.phase === 'UpdatingMaster' ? 'Updating master instance' :
+                                        activeUpdate.phase === 'Complete' ? 'Update complete!' : 'Processing...',
+                activeUpdate.message,
+                activeUpdate.progress
+            );
+
+            addLogEntry('Reconnected to ongoing update process', 'info');
+
+            if (activeUpdate.phase === 'WaitingForIdle' || activeUpdate.phase === 'IdlingBots') {
+                document.getElementById('idle-status').style.display = 'block';
+                document.getElementById('force-update-info').style.display = 'block';
+            }
+
+            appState.updateState.interval = setInterval(() => {
+                checkUpdateStatus();
+            }, 2000);
+
+            checkUpdateStatus();
+
+            appState.refreshPaused = true;
+
+        } catch (error) {
+            console.error('Error checking for active updates:', error);
+        }
+    }
+
+    // ============================================================================
+    // SCHEDULED RESTART FUNCTIONS
+    // ============================================================================
+
+    async function loadRestartSchedule() {
+        try {
+            const response = await fetch(`${API_BASE}/restart/schedule`);
+            if (response.ok) {
+                const schedule = await response.json();
+                const enabled = schedule.Enabled || false;
+                const time = schedule.Time || '00:00';
+
+                document.getElementById('schedule-restart-toggle').checked = enabled;
+                document.getElementById('restart-time').value = time;
+                document.getElementById('restart-time').disabled = !enabled;
+
+                if (enabled) {
+                    document.getElementById('schedule-status').style.display = 'flex';
+                    updateNextRestartTime();
+                    startScheduleChecker();
+                } else {
+                    document.getElementById('schedule-status').style.display = 'none';
+                }
+
+                console.log(`Loaded restart schedule from server: Enabled=${enabled}, Time=${time}`);
+            } else {
+                console.error('Failed to load restart schedule from server');
+                document.getElementById('schedule-restart-toggle').checked = false;
+                document.getElementById('restart-time').value = '00:00';
+                document.getElementById('restart-time').disabled = true;
+                document.getElementById('schedule-status').style.display = 'none';
+            }
+        } catch (error) {
+            console.error('Error loading restart schedule:', error);
+            document.getElementById('schedule-restart-toggle').checked = false;
+            document.getElementById('restart-time').value = '00:00';
+            document.getElementById('restart-time').disabled = true;
+            document.getElementById('schedule-status').style.display = 'none';
+        }
+    }
+
+    async function toggleScheduledRestart() {
+        const toggle = document.getElementById('schedule-restart-toggle');
+        if (!toggle) {
+            return;
+        }
+
+        const enabled = toggle.checked;
+        const time = document.getElementById('restart-time').value;
+
+        document.getElementById('restart-time').disabled = !enabled;
+
+        try {
+            const requestBody = JSON.stringify({ Enabled: enabled, Time: time });
+
+            const response = await fetch(`${API_BASE}/restart/schedule`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: requestBody
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+            }
+
+            const responseText = await response.text();
+
+            let result;
+            try {
+                result = JSON.parse(responseText);
+            } catch (parseError) {
+                throw new Error('Invalid JSON response from server');
+            }
+
+            ui.showToast('success', 'Schedule Updated',
+                enabled ? `Scheduled restart enabled for ${time}` : 'Scheduled restart disabled');
+
+            if (enabled) {
+                document.getElementById('schedule-status').style.display = 'flex';
+                updateNextRestartTime();
+                startScheduleChecker();
+            } else {
+                document.getElementById('schedule-status').style.display = 'none';
+                if (appState.restartScheduleInterval) {
+                    clearInterval(appState.restartScheduleInterval);
+                    appState.restartScheduleInterval = null;
+                }
+            }
+        } catch (error) {
+
+            document.getElementById('schedule-restart-toggle').checked = !enabled;
+            document.getElementById('restart-time').disabled = enabled;
+
+            ui.showToast('error', 'Update Failed',
+                'Failed to update restart schedule. Please check the console for details.');
+        }
+    }
+
+    async function updateRestartSchedule() {
+        const enabled = document.getElementById('schedule-restart-toggle').checked;
+        const time = document.getElementById('restart-time').value;
+
+        try {
+            const response = await fetch(`${API_BASE}/restart/schedule`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ Enabled: enabled, Time: time })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to update schedule: ${response.statusText}`);
+            }
+
+            const result = await response.json();
+            console.log('Schedule updated:', result);
+
+            updateNextRestartTime();
+            ui.showToast('success', 'Time Updated', `Restart time changed to ${time}`);
+        } catch (error) {
+            console.error('Error updating restart schedule:', error);
+            ui.showToast('error', 'Update Failed', 'Failed to update restart time');
+            await loadRestartSchedule();
+        }
+    }
+
+    function updateNextRestartTime() {
+        const time = document.getElementById('restart-time').value;
+        const [hours, minutes] = time.split(':').map(n => parseInt(n));
+
+        const now = new Date();
+        const next = new Date();
+        next.setHours(hours, minutes, 0, 0);
+
+        if (next <= now) {
+            next.setDate(next.getDate() + 1);
+        }
+
+        const formatter = new Intl.DateTimeFormat('en-US', {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+        });
+
+        document.getElementById('next-restart-time').textContent = formatter.format(next);
+    }
+
+    function startScheduleChecker() {
+        if (appState.restartScheduleInterval) clearInterval(appState.restartScheduleInterval);
+        appState.restartScheduleInterval = setInterval(checkRestartSchedule, 30000);
+    }
+
+    async function checkRestartSchedule() {
+        try {
+            const response = await fetch(`${API_BASE}/restart/schedule`);
+            if (!response.ok) {
+                console.error('Failed to check restart schedule');
+                return;
+            }
+
+            const schedule = await response.json();
+
+            if (!schedule.Enabled) {
+                if (appState.restartScheduleInterval) {
+                    clearInterval(appState.restartScheduleInterval);
+                    appState.restartScheduleInterval = null;
+                }
+                return;
+            }
+
+            if (schedule.NextRestart) {
+                const nextRestartTime = new Date(schedule.NextRestart);
+                const now = new Date();
+
+                const timeDiff = nextRestartTime - now;
+                if (timeDiff > 0 && timeDiff < 60000) {
+                    ui.showToast('warning', 'Scheduled Restart',
+                        `System will restart in ${Math.ceil(timeDiff / 1000)} seconds`, 10000);
+                }
+            }
+
+            if (schedule.Enabled && !appState.restartScheduleInterval) {
+                startScheduleChecker();
+            }
+        } catch (error) {
+            console.error('Error checking restart schedule:', error);
+        }
+    }
+
+    // ============================================================================
+    // UI HELPER FUNCTIONS
+    // ============================================================================
+
+    function showModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.style.display = ''; // Remove any inline display style
+            modal.classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
+    }
+
+    function closeModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.classList.remove('show');
+            // Ensure modal is fully hidden after transition
+            setTimeout(() => {
+                if (!modal.classList.contains('show')) {
+                    modal.style.display = 'none';
+                }
+            }, 300);
+        }
+        document.body.style.overflow = '';
+
+        if (modalId === 'progress-modal') {
+            if (appState.updateState.interval) {
+                clearInterval(appState.updateState.interval);
+                appState.updateState.interval = null;
+            }
+
+            appState.updateState.id = null;
+            appState.refreshPaused = false;
+
+            if (appState.restartState.idleCheckInterval) {
+                clearInterval(appState.restartState.idleCheckInterval);
+                appState.restartState.idleCheckInterval = null;
+            }
+            if (appState.restartState.countdownInterval) {
+                clearInterval(appState.restartState.countdownInterval);
+                appState.restartState.countdownInterval = null;
+            }
+
+            document.getElementById('force-update-info').textContent = '⚡ Update will be forced automatically after timeout';
+        }
+    }
+
+    const progressVisualizer = {
+        timelineItems: [],
+        itemIds: new Set(),
+
+        addTimelineItem(text, status = 'active', id = null) {
+            const timeline = document.getElementById('update-timeline');
+            if (!timeline) return;
+
+            if (id && this.itemIds.has(id)) {
+                return;
+            }
+
+            const item = document.createElement('div');
+            item.className = `timeline-item ${status}`;
+            item.style.setProperty('--item-index', this.timelineItems.length);
+            item.innerHTML = `
+            <div class="timeline-dot"></div>
+            <div class="timeline-content">
+                <span class="timeline-time">${new Date().toLocaleTimeString()}</span>
+                <span class="timeline-text">${text}</span>
+            </div>
+        `;
+
+            timeline.appendChild(item);
+            this.timelineItems.push(item);
+
+            if (id) {
+                this.itemIds.add(id);
+            }
+
+            if (this.timelineItems.length > 1) {
+                this.timelineItems[this.timelineItems.length - 2].classList.remove('active');
+                this.timelineItems[this.timelineItems.length - 2].classList.add('completed');
+            }
+
+            item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        },
+
+        hasItem(id) {
+            return this.itemIds.has(id);
+        },
+
+        reset() {
+            const timeline = document.getElementById('update-timeline');
+            if (timeline) timeline.innerHTML = '';
+            this.timelineItems = [];
+            this.itemIds.clear();
+        }
+    };
+
+    function updateProgress(status, details, percentage) {
+        document.getElementById('progress-status').textContent = status;
+        document.getElementById('progress-details').textContent = details;
+
+        const progressBar = document.getElementById('progress-bar');
+        if (percentage >= 0) {
+            progressBar.style.width = `${percentage}%`;
+            progressBar.classList.remove('indeterminate');
+        } else {
+            progressBar.classList.add('indeterminate');
+        }
+
+        const iconMap = {
+            'Initializing': '🔍',
+            'Preparing': '📋',
+            'Waiting': '⏳',
+            'Starting': '🚀',
+            'Updating': '📦',
+            'Updates complete': '✅',
+            'Update failed': '❌',
+            'Forcing': '⚡',
+            'Force': '⚡',
+            'Restart': '🔄',
+            'Checking': '🔍',
+            'Scanning': '📊',
+            'Idling': '⏸️',
+            'Connection': '🔌',
+            'Master': '👑',
+            'Verifying': '🔍'
+        };
+
+        const icon = Object.entries(iconMap).find(([key]) =>
+            status.toLowerCase().includes(key.toLowerCase())
+        )?.[1] || '⏳';
+
+        const stepIcon = document.getElementById('step-icon');
+        if (stepIcon) stepIcon.textContent = icon;
+    }
+
+    function addLogEntry(message, type = 'info') {
+        const log = document.getElementById('update-log');
+        const time = new Date().toLocaleTimeString();
+        const entry = document.createElement('div');
+        entry.className = `log-entry log-${type}`;
+        entry.innerHTML = `<span class="log-time">${time}</span>${message}`;
+        log.appendChild(entry);
+        log.scrollTop = log.scrollHeight;
+    }
+
+    window.confirmUpdate = confirmUpdate;
+    window.closeUpdateModal = () => closeModal('update-modal');
+    window.closeModal = closeModal;
+
+    // ============================================================================
+    // LOG VIEWER
+    // ============================================================================
+
+    const logViewer = {
+        refreshInterval: null,
+        currentPort: null,
+        autoScroll: true,
+        isInitialLoad: false,
+        lastLogSet: new Set(),
+        filters: {
+            search: '',
+            level: '',
+            source: ''
+        },
+
+        openForInstance(port) {
+            this.currentPort = port;
+
+            if (isMobile()) {
+                ui.closeAllMenus();
+            }
+
+            const modal = document.getElementById('log-viewer-modal');
+            if (!modal) {
+                console.error('Log viewer modal not found in HTML');
+                return;
+            }
+
+            const modalHeader = modal.querySelector('.modal-header h2');
+            if (modalHeader) {
+                const title = isMobile() ?
+                    `Logs - Port ${port}` :
+                    `📋 Live Log Viewer - ${port === 'all' ? 'All Instances' : `Instance Port ${port}`}`;
+                modalHeader.textContent = title;
+            }
+
+            document.getElementById('log-search').value = '';
+            document.getElementById('log-instance-filter').value = '';
+            document.getElementById('log-level-filter').value = '';
+            this.filters.search = '';
+            this.filters.level = '';
+            this.filters.source = '';
+
+            const autoScrollCheckbox = document.getElementById('log-autoscroll');
+            if (autoScrollCheckbox) {
+                autoScrollCheckbox.checked = true;
+                this.autoScroll = true;
+            }
+
+            modal.style.display = ''; // Remove any inline display style
+            modal.classList.add('show');
+
+            const escapeHandler = (e) => {
+                if (e.key === 'Escape') {
+                    this.close();
+                }
+            };
+            document.addEventListener('keydown', escapeHandler);
+            modal._escapeHandler = escapeHandler;
+
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    this.close();
+                }
+            }, { once: true });
+
+            this.isInitialLoad = true;
+
+            const statusElement = document.getElementById('log-status');
+            if (statusElement) {
+                statusElement.innerHTML = '<span class="status-indicator status-connected"></span> Connected';
+            }
+
+            document.getElementById('log-total').textContent = '0';
+            document.getElementById('log-filtered').textContent = '0';
+
+            this.refreshLogs();
+            this.refreshInterval = setInterval(() => this.refreshLogs(), 2000);
+
+            setTimeout(() => {
+                const searchInput = document.getElementById('log-search');
+                if (searchInput && !isMobile()) searchInput.focus();
+            }, 100);
+        },
+
+        async refreshLogs() {
+            try {
+                const params = new URLSearchParams({
+                    port: this.currentPort,
+                    search: this.filters.search,
+                    level: this.filters.level,
+                    source: this.filters.source
+                });
+
+                const response = await api.get(`/api/logs?${params}`);
+
+                this.displayLogs(response.logs);
+            } catch (error) {
+                console.error('Failed to fetch logs:', error);
+                if (isMobile()) {
+                    const container = document.getElementById('log-virtual-scroll');
+                    if (container) {
+                        container.innerHTML = `<div class="log-placeholder">
+                        <div class="log-placeholder-icon">⚠️</div>
+                        <div class="log-placeholder-text">Failed to load logs</div>
+                        <div class="log-placeholder-hint">${error.message}</div>
+                    </div>`;
+                    }
+                }
+            }
+        },
+
+        displayLogs(logs) {
+            const container = document.getElementById('log-virtual-scroll');
+            if (!container) {
+                console.error('Log container not found');
+                return;
+            }
+
+            if (isMobile()) {
+                container.style.display = 'block';
+                container.style.visibility = 'visible';
+                container.style.opacity = '1';
+            }
+
+            if (!logs || logs.length === 0) {
+                if (this.isInitialLoad) {
+                    container.innerHTML = '<div class="log-placeholder"><div class="log-placeholder-icon">📋</div><div class="log-placeholder-text">No logs found</div></div>';
+                }
+                return;
+            }
+
+            const wasAtBottom = this.isScrolledToBottom();
+            const logContainer = document.getElementById('log-container');
+            const scrollPos = logContainer ? logContainer.scrollTop : 0;
+
+            const newLogSet = new Set(logs.map(log => `${log.timestamp}-${log.identity}-${log.message}`));
+
+            const logsChanged = newLogSet.size !== this.lastLogSet.size ||
+                [...newLogSet].some(id => !this.lastLogSet.has(id));
+
+            if (!logsChanged && !this.isInitialLoad) {
+                return;
+            }
+
+            this.lastLogSet = newLogSet;
+
+            const html = logs.map(log => {
+                const levelClass = this.getLevelClass(log.level);
+                const timestamp = new Date(log.timestamp).toLocaleTimeString();
+                const levelText = log.level.toUpperCase().padEnd(5);
+
+                return `
+                <div class="log-entry ${levelClass}">
+                    <span class="log-time">${timestamp}</span>
+                    <span class="log-level">[${levelText}]</span>
+                    <span class="log-identity">${log.identity}</span>
+                    <span class="log-message">${this.escapeHtml(log.message)}</span>
+                </div>
+            `;
+            }).join('');
+
+            requestAnimationFrame(() => {
+                container.innerHTML = html;
+
+                document.getElementById('log-total').textContent = logs.length.toString();
+                document.getElementById('log-filtered').textContent = logs.length.toString();
+
+                if (this.isInitialLoad) {
+                    this.scrollToBottom();
+                    this.isInitialLoad = false;
+                } else if (this.autoScroll && wasAtBottom) {
+                    this.scrollToBottom();
+                } else if (!this.autoScroll && logContainer) {
+                    logContainer.scrollTop = scrollPos;
+                }
+            });
+        },
+
+        getLevelClass(level) {
+            switch (level.toLowerCase()) {
+                case 'error': return 'log-error';
+                case 'warn': case 'warning': return 'log-warn';
+                case 'info': return 'log-info';
+                default: return '';
+            }
+        },
+
+        escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        },
+
+        isScrolledToBottom() {
+            const container = document.getElementById('log-container');
+            if (!container) return false;
+            return container.scrollHeight - container.scrollTop <= container.clientHeight + 100;
+        },
+
+        scrollToBottom() {
+            const container = document.getElementById('log-container');
+            if (container) {
+                requestAnimationFrame(() => {
+                    container.scrollTop = container.scrollHeight;
+                });
+            }
+        },
+
+        toggleAutoScroll() {
+            const checkbox = document.getElementById('log-autoscroll');
+            if (checkbox) {
+                this.autoScroll = checkbox.checked;
+            }
+
+            if (this.autoScroll) {
+                this.scrollToBottom();
+            }
+        },
+
+        togglePause() {
+            const btn = document.getElementById('log-pause-btn');
+            if (!btn) return;
+
+            if (this.refreshInterval) {
+                clearInterval(this.refreshInterval);
+                this.refreshInterval = null;
+                btn.textContent = '▶️ Resume';
+                btn.classList.add('paused');
+            } else {
+                this.refreshLogs();
+                this.refreshInterval = setInterval(() => this.refreshLogs(), 2000);
+                btn.textContent = '⏸️ Pause';
+                btn.classList.remove('paused');
+            }
+        },
+
+        handleSearch(event) {
+            if (event.key === 'Enter' || event.type === 'keyup') {
+                this.filters.search = event.target.value;
+                this.refreshLogs();
+            }
+        },
+
+        applyFilters() {
+            this.filters.source = document.getElementById('log-instance-filter').value;
+            this.filters.level = document.getElementById('log-level-filter').value;
+            this.refreshLogs();
+        },
+
+        clearLogs() {
+            const container = document.getElementById('log-virtual-scroll');
+            if (container) {
+                container.innerHTML = '<div class="log-placeholder"><div class="log-placeholder-icon">🗑️</div><div class="log-placeholder-text">Logs cleared</div></div>';
+                this.lastLogSet.clear();
+            }
+        },
+
+        close() {
+            if (this.refreshInterval) {
+                clearInterval(this.refreshInterval);
+                this.refreshInterval = null;
+            }
+
+            const modal = document.getElementById('log-viewer-modal');
+            if (modal) {
+                if (modal._escapeHandler) {
+                    document.removeEventListener('keydown', modal._escapeHandler);
+                    modal._escapeHandler = null;
+                }
+
+                const statusElement = document.getElementById('log-status');
+                if (statusElement) {
+                    statusElement.innerHTML = '<span class="status-indicator status-disconnected"></span> Disconnected';
+                }
+
+                modal.classList.remove('show');
+                // Ensure modal is fully hidden after transition
+                setTimeout(() => {
+                    if (!modal.classList.contains('show')) {
+                        modal.style.display = 'none';
+                    }
+                }, 300);
+            }
+        }
+    };
+
+    // ============================================================================
+    // INITIALIZATION
+    // ============================================================================
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        console.log('📱 ========================================');
+        console.log('📱 DOMContentLoaded - Initializing ZE_FusionBot Control Panel');
+        console.log('📱 User Agent:', navigator.userAgent);
+        console.log('📱 Window size:', window.innerWidth, 'x', window.innerHeight);
+        console.log('📱 Is Mobile:', isMobile());
+        
+        // Ensure all modals are initially hidden to prevent touch event blocking
+        const modals = document.querySelectorAll('.modal');
+        modals.forEach(modal => {
+            if (!modal.classList.contains('show')) {
+                modal.style.display = 'none';
+            }
+        });
+        console.log('📱 ========================================');
+
+        const container = document.getElementById('instances-container');
+        if (container && isMobile()) {
+            container.querySelectorAll('.skeleton-card').forEach(card => card.remove());
+        }
+
+        console.log('📱 Setting up event handlers...');
+        setupEventHandlers();
+
+        // Debug what buttons exist
+        console.log('📱 Buttons found after setup:');
+        console.log('📱 - Refresh button:', !!document.getElementById('refresh-button'));
+        console.log('📱 - Global action buttons:', document.querySelectorAll('[data-global-action]').length);
+        document.querySelectorAll('[data-global-action]').forEach(btn => {
+            console.log(`📱   - ${btn.getAttribute('data-global-action')}: ${btn.textContent.trim()}`);
+        });
+
+        // Double-check after a delay in case DOM isn't ready
+        setTimeout(() => {
+            console.log('📱 ========================================');
+            console.log('📱 DELAYED CHECK (after 1 second):');
+            const delayedButtons = document.querySelectorAll('[data-global-action]');
+            console.log(`📱 Found ${delayedButtons.length} global buttons after delay`);
+            if (delayedButtons.length === 0) {
+                console.log('📱 ❌ WARNING: No global action buttons found even after delay!');
+                console.log('📱 HTML of control-buttons div:', document.querySelector('.control-buttons')?.innerHTML);
+            }
+            console.log('📱 ========================================');
+        }, 1000);
+
+        await checkForOngoingOperations();
+
+        if (!appState.updateState.id) {
+            refreshManager.refresh();
+        }
+        refreshManager.start();
+        startConnectionMonitor();
+        await loadRestartSchedule();
+        checkRestartSchedule();
+
+        document.addEventListener('mouseenter', (e) => {
+            const target = getElementFromTarget(e.target);
+            if (!target) return;
+
+            const card = target.closest('.instance-card');
+            if (card) {
+                appState.isInteracting = true;
+            }
+        }, true);
+
+        document.addEventListener('mouseleave', (e) => {
+            const target = getElementFromTarget(e.target);
+            if (!target) return;
+
+            const card = target.closest('.instance-card');
+            if (card) {
+                appState.isInteracting = false;
+            }
+        }, true);
+
+        document.addEventListener('touchstart', (e) => {
+            const target = getElementFromTarget(e.target);
+            if (!target) return;
+
+            const card = target.closest('.instance-card');
+            if (card) {
+                appState.isInteracting = true;
+            }
+        });
+
+        document.addEventListener('touchend', () => {
+            setTimeout(() => {
+                appState.isInteracting = false;
+            }, 500);
+        });
+    });
+
+    window.addEventListener('beforeunload', () => {
+        if (appState.refreshInterval) clearInterval(appState.refreshInterval);
+        if (appState.restartScheduleInterval) clearInterval(appState.restartScheduleInterval);
+        if (appState.updateState.interval) clearInterval(appState.updateState.interval);
+        if (appState.restartState.idleCheckInterval) clearInterval(appState.restartState.idleCheckInterval);
+        if (appState.restartState.countdownInterval) clearInterval(appState.restartState.countdownInterval);
+    });

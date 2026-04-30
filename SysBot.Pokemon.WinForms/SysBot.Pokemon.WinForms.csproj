@@ -1,0 +1,115 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <DisableFastUpToDateCheck>true</DisableFastUpToDateCheck>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>ZE_FusionBot</AssemblyName>
+    <SelfContained>false</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <DebugType>pdbonly</DebugType>
+  </PropertyGroup>
+  
+  <PropertyGroup>
+    <PackageId>SysBot.Pokemon.WinForms</PackageId>
+    <Description>Nintendo Switch Pokémon Bot Manager</Description>
+    <ApplicationIcon>icon.ico</ApplicationIcon>
+    <StartupObject>SysBot.Pokemon.WinForms.Program</StartupObject>
+    <Version>01.00.00</Version>
+    <GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>
+  </PropertyGroup>
+  
+  <PropertyGroup>
+    <EmbedAllSources>true</EmbedAllSources>
+    <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+    <PublishTrimmed>false</PublishTrimmed>
+    <Authors>Kaphotics, hexbyt3, Secludedly</Authors>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+  
+  <ItemGroup>
+    <EmbeddedResource Include="Fonts\bahnschrift.ttf" />
+    <EmbeddedResource Include="Fonts\Bobbleboddy_light.ttf" />
+    <EmbeddedResource Include="Fonts\EnterTheGrid.ttf" />
+    <EmbeddedResource Include="Fonts\gadugi.ttf" />
+    <EmbeddedResource Include="Fonts\gadugib.ttf" />
+    <EmbeddedResource Include="Fonts\GNUOLANERG.TTF" />
+    <EmbeddedResource Include="Fonts\Montserrat-Bold.ttf" />
+    <EmbeddedResource Include="Fonts\Montserrat-Regular.ttf" />
+    <EmbeddedResource Include="Fonts\segoeui.ttf" />
+    <EmbeddedResource Include="Fonts\segoeuib.ttf" />
+    <EmbeddedResource Include="Fonts\segoeuii.ttf" />
+    <EmbeddedResource Include="Fonts\segoeuil.ttf" />
+    <EmbeddedResource Include="Fonts\segoeuisl.ttf" />
+    <EmbeddedResource Include="Fonts\segoeuiz.ttf" />
+    <EmbeddedResource Include="Fonts\seguibl.ttf" />
+    <EmbeddedResource Include="Fonts\seguibli.ttf" />
+    <EmbeddedResource Include="Fonts\seguili.ttf" />
+    <EmbeddedResource Include="Fonts\seguisb.ttf" />
+    <EmbeddedResource Include="Fonts\seguisbi.ttf" />
+    <EmbeddedResource Include="Fonts\seguisli.ttf" />
+    <EmbeddedResource Include="Fonts\SegUIVar.ttf" />
+    <EmbeddedResource Include="Fonts\UbuntuMono-B.ttf" />
+    <EmbeddedResource Include="Fonts\UbuntuMono-BI.ttf" />
+    <EmbeddedResource Include="Fonts\UbuntuMono-R.ttf" />
+    <EmbeddedResource Include="Fonts\UbuntuMono-RI.ttf" />
+    <EmbeddedResource Include="Resources\bdsp_mode_image.png" />
+    <EmbeddedResource Include="Resources\BotControlPanel.css" />
+    <EmbeddedResource Include="Resources\BotControlPanel.html" />
+    <EmbeddedResource Include="Resources\BotControlPanel.js" />
+    <EmbeddedResource Include="Resources\LeftJoyCon.png" />
+    <EmbeddedResource Include="Resources\lgpe_mode_image.png" />
+    <EmbeddedResource Include="Resources\lgpe_mode_upper.png" />
+    <EmbeddedResource Include="Resources\new-release-update.png" />
+    <EmbeddedResource Include="Resources\pla_mode_image.png" />
+    <EmbeddedResource Include="Resources\pla_mode_upper.png" />
+    <EmbeddedResource Include="Resources\plza_mode_upper.png" />
+    <EmbeddedResource Include="Resources\RightJoyCon.png" />
+    <EmbeddedResource Include="Resources\swsh_mode_image.png" />
+    <EmbeddedResource Include="Resources\swsh_mode_upper.png" />
+    <EmbeddedResource Include="Resources\sv_mode_image.png" />
+    <EmbeddedResource Include="Resources\sv_mode_upper.png" />
+    <EmbeddedResource Include="Resources\bdsp_mode_upper.png" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <PackageReference Include="FontAwesome.Sharp" Version="6.6.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Core" Version="2.3.0" />
+    <PackageReference Include="System.Resources.Extensions" Version="9.0.4" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <ProjectReference Include="..\SysBot.Base\SysBot.Base.csproj" />
+    <ProjectReference Include="..\SysBot.Pokemon.Discord\SysBot.Pokemon.Discord.csproj" />
+    <ProjectReference Include="..\SysBot.Pokemon.Twitch\SysBot.Pokemon.Twitch.csproj" />
+    <ProjectReference Include="..\SysBot.Pokemon.YouTube\SysBot.Pokemon.YouTube.csproj" />
+    <ProjectReference Include="..\SysBot.Pokemon\SysBot.Pokemon.csproj" />
+    <ProjectReference Include="..\SysBot.Pokemon.Z3\SysBot.Pokemon.Z3.csproj" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <Reference Include="PKHeX.Core">
+      <HintPath>..\SysBot.Pokemon\deps\PKHeX.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="PKHeX.Drawing">
+      <HintPath>deps\PKHeX.Drawing.dll</HintPath>
+    </Reference>
+    <Reference Include="PKHeX.Drawing.PokeSprite">
+      <HintPath>deps\PKHeX.Drawing.PokeSprite.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Update="Properties\Resources.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Update="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+</Project>
