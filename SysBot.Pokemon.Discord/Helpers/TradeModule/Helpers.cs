@@ -269,12 +269,20 @@ public static class Helpers<T> where T : PKM, new()
         // species like Vivillon is always the same base form (e.g., Meadow) regardless of
         // what form was requested in the ShowdownSet.  Apply the requested form here so
         // the downstream legality check validates the correct form.
+        //
+        // Guard: if form correction makes the PKM illegal but the original was fine, revert.
+        // This handles encounters where the game locks a specific form (e.g. ZA Zygarde
+        // has only Form 2 / 10%, so correcting to Form 0 / 50% breaks legality).
         // ============================================================================
         if (!isEgg && pkm.Form != set.Form)
         {
+            var formBackup = pkm.Clone();
             pkm.Form = set.Form;
             pkm.ResetPartyStats();
             pkm.RefreshChecksum();
+
+            if (!new LegalityAnalysis(pkm).Valid)
+                pkm = formBackup;
         }
         // ============================================================================
         // END OF FORM CORRECTION
