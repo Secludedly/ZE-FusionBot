@@ -26,10 +26,6 @@ namespace SysBot.Pokemon.WinForms
         public Button RebootStopButton => _B_RebootStop;
         public Button UpdateButton => _updater;
         public Button AddBotButton => _B_New;
-        public Button PKHeXButton => _B_PKHeX;
-        public Button SwitchRemoteButton => _B_SwitchRemote;
-        public Button SysDVRButton => _B_SysDVR;
-
         public TextBox IPBox => _TB_IP;
         public NumericUpDown PortBox => _NUD_Port;
 
@@ -44,9 +40,6 @@ namespace SysBot.Pokemon.WinForms
         private FancyButton _updater = null!;
         private FancyButton _B_New = null!;
         private FancyButton _B_Reload = null!;
-        private FancyButton _B_PKHeX = null!;
-        private FancyButton _B_SwitchRemote = null!;
-        private FancyButton _B_SysDVR = null!;
         private ToolTip _toolTips = null!;
 
         private TextBox _TB_IP = null!;
@@ -132,144 +125,6 @@ namespace SysBot.Pokemon.WinForms
             _toolTips.ShowAlways = true;        // Show even if the form isn't active
 
             _B_Reload.Click += (_, _) => RestartApplication();
-
-            _B_PKHeX = new FancyButton { Text = "", Location = new Point(610, 7), Size = new Size(32, 32) };
-            _B_PKHeX.GlowColor = Color.White;
-
-            // Try multiple paths to find the PKHeX icon
-            try
-            {
-                string[] possiblePaths = new[]
-                {
-                    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", "pkhex_icon.png"),
-                    "C:\\Users\\Admin\\source\\repos\\PKHeX\\icon.png",
-                    "C:\\Users\\Admin\\source\\repos\\ZE-FusionBot\\SysBot.Pokemon.WinForms\\Resources\\pkhex_icon.png"
-                };
-
-                foreach (var iconPath in possiblePaths)
-                {
-                    if (File.Exists(iconPath))
-                    {
-                        var img = Image.FromFile(iconPath);
-                        _B_PKHeX.Image = img;
-                        _B_PKHeX.BackgroundImage = img;  // Set both properties
-                        _B_PKHeX.BackgroundImageLayout = ImageLayout.Zoom;
-                        System.Diagnostics.Debug.WriteLine($"PKHeX icon loaded from: {iconPath}");
-                        break;
-                    }
-                }
-
-                // Debug: Check if image was loaded
-                if (_B_PKHeX.BackgroundImage == null)
-                {
-                    System.Diagnostics.Debug.WriteLine("PKHeX icon not found in any path");
-                    _B_PKHeX.Text = "PKH";
-                }
-            }
-            catch (Exception ex)
-            {
-                // Fallback to text if image loading fails
-                _B_PKHeX.Text = "PKH";
-                System.Diagnostics.Debug.WriteLine($"Failed to load PKHeX icon: {ex.Message}");
-            }
-
-            _toolTips.SetToolTip(_B_PKHeX, "Launch PKHeX from configured folder.");
-            _toolTips.AutoPopDelay = 2500;
-            _toolTips.InitialDelay = 2000;
-            _toolTips.ReshowDelay = 1000;
-            _toolTips.ShowAlways = true;
-
-            _B_SwitchRemote = new FancyButton { Text = "", Location = new Point(640, 7), Size = new Size(32, 32) };
-            _B_SwitchRemote.GlowColor = Color.White;
-
-            // Try multiple paths to find the SwitchRemote icon
-            try
-            {
-                string[] possiblePaths = new[]
-                {
-                    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", "switchremote_icon.png"),
-                    "C:\\Users\\Admin\\source\\repos\\SwitchRemoteForPC_icon.png",
-                    "C:\\Users\\Admin\\source\\repos\\ZE-FusionBot\\SysBot.Pokemon.WinForms\\Resources\\switchremote_icon.png"
-                };
-
-                foreach (var iconPath in possiblePaths)
-                {
-                    if (File.Exists(iconPath))
-                    {
-                        var img = Image.FromFile(iconPath);
-                        _B_SwitchRemote.Image = img;
-                        _B_SwitchRemote.BackgroundImage = img;
-                        _B_SwitchRemote.BackgroundImageLayout = ImageLayout.Zoom;
-                        System.Diagnostics.Debug.WriteLine($"SwitchRemote icon loaded from: {iconPath}");
-                        break;
-                    }
-                }
-
-                // Debug: Check if image was loaded
-                if (_B_SwitchRemote.BackgroundImage == null)
-                {
-                    System.Diagnostics.Debug.WriteLine("SwitchRemote icon not found in any path");
-                    _B_SwitchRemote.Text = "SW";
-                }
-            }
-            catch (Exception ex)
-            {
-                // Fallback to text if image loading fails
-                _B_SwitchRemote.Text = "SW";
-                System.Diagnostics.Debug.WriteLine($"Failed to load SwitchRemote icon: {ex.Message}");
-            }
-
-            _toolTips.SetToolTip(_B_SwitchRemote, "Launch Switch Remote for PC from configured folder.");
-            _toolTips.AutoPopDelay = 2500;
-            _toolTips.InitialDelay = 2000;
-            _toolTips.ReshowDelay = 1000;
-            _toolTips.ShowAlways = true;
-
-            _B_SysDVR = new FancyButton { Text = "", Location = new Point(670, 7), Size = new Size(32, 32) };
-            _B_SysDVR.GlowColor = Color.White;
-
-            // Try multiple paths to find the SysDVR icon
-            try
-            {
-                string[] possiblePaths = new[]
-                {
-                    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", "sysdvr_icon.png"),
-                    "C:\\Users\\Admin\\source\\repos\\SysDVR_icon.png",
-                    "C:\\Users\\Admin\\source\\repos\\ZE-FusionBot\\SysBot.Pokemon.WinForms\\Resources\\sysdvr_icon.png"
-                };
-
-                foreach (var iconPath in possiblePaths)
-                {
-                    if (File.Exists(iconPath))
-                    {
-                        var img = Image.FromFile(iconPath);
-                        _B_SysDVR.Image = img;
-                        _B_SysDVR.BackgroundImage = img;
-                        _B_SysDVR.BackgroundImageLayout = ImageLayout.Zoom;
-                        System.Diagnostics.Debug.WriteLine($"SysDVR icon loaded from: {iconPath}");
-                        break;
-                    }
-                }
-
-                // Debug: Check if image was loaded
-                if (_B_SysDVR.BackgroundImage == null)
-                {
-                    System.Diagnostics.Debug.WriteLine("SysDVR icon not found in any path");
-                    _B_SysDVR.Text = "DVR";
-                }
-            }
-            catch (Exception ex)
-            {
-                // Fallback to text if image loading fails
-                _B_SysDVR.Text = "DVR";
-                System.Diagnostics.Debug.WriteLine($"Failed to load SysDVR icon: {ex.Message}");
-            }
-
-            _toolTips.SetToolTip(_B_SysDVR, "Launch SysDVR (requires SysDVR.bat in FusionBot folder).");
-            _toolTips.AutoPopDelay = 2500;
-            _toolTips.InitialDelay = 2000;
-            _toolTips.ReshowDelay = 1000;
-            _toolTips.ShowAlways = true;
 
             // Update Notification Image
             _updateNotificationLabel = new PictureBox
@@ -382,7 +237,7 @@ namespace SysBot.Pokemon.WinForms
 
                 Controls.AddRange(new Control[] {
                 _B_Start, _B_Stop, _B_RebootStop, _updater, _B_New,
-                _B_Reload, _B_PKHeX, _B_SwitchRemote, _B_SysDVR, _TB_IP, _NUD_Port, _CB_Protocol, _CB_Routine, _CB_GameMode,
+                _B_Reload, _TB_IP, _NUD_Port, _CB_Protocol, _CB_Routine, _CB_GameMode,
                 _FLP_Bots, _updateNotificationLabel, _updateVersionLabel
             });
 

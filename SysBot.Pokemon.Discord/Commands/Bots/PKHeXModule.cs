@@ -43,7 +43,7 @@ public class PKHeXModule<T> : SudoModule<T> where T : PKM, new()
                 UseShellExecute = true
             });
 
-            await ReplyAsync("🧬 PKHeX launched successfully.").ConfigureAwait(false);
+            await ReplyAsync("PKHeX launched successfully.").ConfigureAwait(false);
         }
         catch (Exception ex)
         {

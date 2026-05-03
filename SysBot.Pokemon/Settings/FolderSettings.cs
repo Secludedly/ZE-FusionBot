@@ -18,14 +18,14 @@ public class FolderSettings : IDumper
     [Category(Files), Description("Destination folder: where all received PKM files are dumped to."), DisplayName("Dump Folder")]
     public string DumpFolder { get; set; } = string.Empty;
 
-    [Category(Files), Description("Directory where your Switch Remote For PC is located."), DisplayName("Switch Remote for PC Location")]
-    public string SwitchRemoteForPC { get; set; } = string.Empty;
-
     [Category(Files), Description("Directory where your HOME Tracked Pokémon are located."), DisplayName("HOME-Ready Folder")]
     public string HOMEReadyPKMFolder { get; set; } = string.Empty;
 
     [Category(Files), Description("Directory where your PKHeX executable is located."), DisplayName("PKHeX Folder")]
     public string PKHeXDirectory { get; set; } = string.Empty;
+
+    [Category(Files), Description("Directory where your Switch Remote For PC is located."), DisplayName("Switch Remote for PC Location")]
+    public string SwitchRemoteForPC { get; set; } = string.Empty;
 
     public void CreateDefaults(string path)
     {

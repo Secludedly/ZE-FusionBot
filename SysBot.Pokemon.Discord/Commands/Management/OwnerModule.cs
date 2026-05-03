@@ -545,7 +545,6 @@ public class OwnerModule<T> : SudoModule<T> where T : PKM, new()
         embed0.WithImageUrl("https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/homereadybreak.png");
         var message0 = await ReplyAsync(embed: embed0.Build());
 
-
         var embed1 = new EmbedBuilder()
             .AddField("01) SETTING UP THE SYSBOT WITH SYSDVR",
                       "- [Click here](https://github.com/exelix11/SysDVR/releases/tag/v5.5.6) to download **SysDVR-Client-Windows-x64.7z**.\n" +
@@ -561,7 +560,6 @@ public class OwnerModule<T> : SudoModule<T> where T : PKM, new()
 
         embed1.WithImageUrl("https://raw.githubusercontent.com/Secludedly/ZE-FusionBot-Sprite-Images/main/homereadybreak.png");
         var message1 = await ReplyAsync(embed: embed1.Build());
-
 
         var embed2 = new EmbedBuilder()
             .AddField("02) SETTING UP SYSDVR ON THE SWITCH",
@@ -630,6 +628,7 @@ public class OwnerModule<T> : SudoModule<T> where T : PKM, new()
             await ReplyAsync($"**SwitchRemoteForPC Error:** {ex.Message}");
         }
     }
+
 }
 
 
