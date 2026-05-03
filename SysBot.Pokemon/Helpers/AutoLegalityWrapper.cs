@@ -53,6 +53,7 @@ public static class AutoLegalityWrapper
         APILegality.AllowTrainerOverride = cfg.AllowTrainerDataOverride;
         APILegality.AllowBatchCommands = cfg.AllowBatchCommands;
         APILegality.GameVersionPriority = cfg.GameVersionPriority;
+        APILegality.PriorityOrder = SanitizePriorityOrder(cfg.PriorityOrder);
         APILegality.SetBattleVersion = cfg.SetBattleVersion;
         APILegality.Timeout = cfg.Timeout;
         var settings = ParseSettings.Settings;
@@ -106,9 +107,11 @@ public static class AutoLegalityWrapper
             foreach (var version in versions)
                 RegisterIfNoneExist(fallback, generation, version);
         }
-        // Manually register for LGP/E since Gen7 above will only register the 3DS versions.  
+        // Manually register for LGP/E since Gen7 above will only register the 3DS versions.
         RegisterIfNoneExist(fallback, 7, GameVersion.GP);
         RegisterIfNoneExist(fallback, 7, GameVersion.GE);
+        // Manually register ZA since it uses a separate EntityContext from SV.
+        RegisterIfNoneExist(fallback, 9, GameVersion.ZA);
     }
 
     private static SimpleTrainerInfo GetDefaultTrainer(LegalitySettings cfg)
